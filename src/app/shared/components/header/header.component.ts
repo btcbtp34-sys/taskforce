@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../../core/services/customer.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -12,20 +13,15 @@ import { IconComponent } from '../icon/icon.component';
     <header class="header-container">
       <!-- Search & Active Customer Context -->
       <div class="left-section">
-        <!-- Customer Context Selector Dropdown -->
-        <div class="customer-selector">
-          <app-icon name="user" [size]="14" color="#0284c7"></app-icon>
-          <span class="cust-label">MÜŞTERİ:</span>
-          <select 
-            [value]="customerService.activeCustomerId()" 
-            (change)="onCustomerSelect($event)" 
-            class="customer-select">
-            @for (cust of customerService.customers(); track cust.id) {
-              <option [value]="cust.id">
-                {{ cust.name }} ({{ cust.sector }})
-              </option>
-            }
-          </select>
+        <!-- Customer Context Badge (Static, no switcher) -->
+        <div class="customer-badge-box">
+          <div class="cust-icon-wrap">
+            <app-icon name="database" [size]="14" color="#0284c7"></app-icon>
+          </div>
+          <div class="cust-text-info">
+            <span class="cust-label">MÜŞTERİ</span>
+            <strong class="cust-name-val">{{ customerService.activeCustomer().name }}</strong>
+          </div>
         </div>
 
         <!-- Global Search Bar -->
@@ -38,7 +34,7 @@ import { IconComponent } from '../icon/icon.component';
 
       <!-- Quick Upload Button, Notifications & Profile -->
       <div class="right-section">
-        <!-- Prominent Quick Data Upload Button (No emoji) -->
+        <!-- Prominent Quick Data Upload Button -->
         <a routerLink="/data-import" class="upload-quick-btn" title="Yeni Excel/CSV Verisi Yükle">
           <app-icon name="upload" [size]="14" color="#ffffff"></app-icon>
           <span>Excel / CSV Yükle</span>
@@ -60,7 +56,7 @@ import { IconComponent } from '../icon/icon.component';
               <div class="dropdown-item unread">
                 <div class="item-body">
                   <strong>Yeni Fırsat Tespit Edildi</strong>
-                  <p>ABC Holding için €35.000 Lisans Optimizasyonu</p>
+                  <p>{{ customerService.activeCustomer().name }} için €35.000 Lisans Optimizasyonu</p>
                   <small>10 dakika önce</small>
                 </div>
               </div>
@@ -75,13 +71,20 @@ import { IconComponent } from '../icon/icon.component';
           </div>
         </div>
 
-        <!-- User Profile (Hasan Cavit Koçak) -->
+        <!-- User Profile -->
         <div class="user-profile">
           <div class="avatar">HCK</div>
           <div class="user-info">
-            <span class="user-name">Hasan Cavit Koçak</span>
-            <span class="user-role">SAP Lead Architect</span>
+            <span class="user-name">{{ authService.currentUser().name }}</span>
+            <span class="user-role">{{ authService.currentUser().role }}</span>
           </div>
+          <button class="btn-logout-icon" (click)="authService.logout()" title="Çıkış Yap / Müşteri Portalı">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -105,32 +108,64 @@ import { IconComponent } from '../icon/icon.component';
       align-items: center;
       gap: 1rem;
       flex: 1;
-      max-width: 600px;
+      max-width: 650px;
     }
 
-    .customer-selector {
+    .customer-badge-box {
       display: flex;
       align-items: center;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
       border-radius: 6px;
-      padding: 0.2rem 0.5rem;
-      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      gap: 0.5rem;
 
-      .cust-label {
+      .cust-icon-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cust-text-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.1;
+
+        .cust-label {
+          font-size: 0.58rem;
+          font-weight: 700;
+          color: #0284c7;
+          letter-spacing: 0.05em;
+        }
+
+        .cust-name-val {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #0c4a6e;
+          white-space: nowrap;
+        }
+      }
+
+      .btn-switch-cust {
+        background: #ffffff;
+        border: 1px solid #bae6fd;
+        border-radius: 4px;
+        padding: 0.15rem 0.45rem;
         font-size: 0.68rem;
         font-weight: 700;
         color: #0284c7;
-      }
-
-      .customer-select {
-        border: none;
-        background: transparent;
-        font-weight: 600;
-        font-size: 0.8rem;
-        color: #111827;
         cursor: pointer;
-        outline: none;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #0284c7;
+          color: #ffffff;
+          border-color: #0284c7;
+          app-icon { color: #ffffff !important; }
+        }
       }
     }
 
@@ -292,15 +327,32 @@ import { IconComponent } from '../icon/icon.component';
         .user-name { font-size: 0.8rem; font-weight: 600; color: #111827; }
         .user-role { font-size: 0.68rem; color: #6b7280; }
       }
+
+      .btn-logout-icon {
+        background: transparent;
+        border: 1px solid #e5e7eb;
+        border-radius: 5px;
+        padding: 0.3rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        margin-left: 0.25rem;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #fee2e2;
+          color: #ef4444;
+          border-color: #fecaca;
+        }
+      }
     }
   `]
 })
 export class HeaderComponent {
   customerService = inject(CustomerService);
+  authService = inject(AuthService);
   showNotifications = false;
-
-  onCustomerSelect(event: Event): void {
-    const val = (event.target as HTMLSelectElement).value;
-    this.customerService.selectCustomer(val);
-  }
 }
+

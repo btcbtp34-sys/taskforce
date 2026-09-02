@@ -1,18 +1,22 @@
-<div class="app-layout">
-  <!-- Collapsible Navigation Sidebar -->
-  <app-sidebar 
-    [collapsed]="sidebarCollapsed()" 
-    (toggleSidebar)="toggleSidebar()">
-  </app-sidebar>
+@if (isLoginPage()) {
+  <router-outlet></router-outlet>
+} @else {
+  <div class="app-layout">
+    <!-- Collapsible Navigation Sidebar -->
+    <app-sidebar 
+      [collapsed]="sidebarCollapsed()" 
+      (toggleSidebar)="toggleSidebar()">
+    </app-sidebar>
 
-  <!-- Main Content Shell -->
-  <div class="main-wrapper">
-    <!-- Top Header Navigation -->
-    <app-header></app-header>
+    <!-- Main Content Shell -->
+    <div class="main-wrapper">
+      <!-- Top Header Navigation -->
+      <app-header></app-header>
 
-    <!-- Page Content View -->
-    <main class="content-area">
-      <router-outlet></router-outlet>
-    </main>
+      <!-- Page Content View -->
+      <main class="content-area">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
   </div>
-</div>
+}

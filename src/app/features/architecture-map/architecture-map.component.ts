@@ -1,5 +1,6 @@
 import { Component, inject, signal, ElementRef, ViewChild, HostListener, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { DataImportService } from '../../core/services/data-import.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -56,14 +57,14 @@ export interface ArchitectureEdge {
             <span>Mevcut Durum (AS-IS 11 Sunucu)</span>
           </button>
 
-          <button class="mode-btn" [class.active-po]="architectureMode() === 'po'" (click)="setArchitectureMode('po')">
-            <app-icon name="bolt" [size]="15" [color]="architectureMode() === 'po' ? '#ffffff' : '#0284c7'"></app-icon>
-            <span>PO Canlı Entegrasyon Haritası</span>
-          </button>
-
           <button class="mode-btn" [class.active-rise]="architectureMode() === 'rise'" (click)="setArchitectureMode('rise')">
             <app-icon name="sparkles" [size]="15" [color]="architectureMode() === 'rise' ? '#ffffff' : '#059669'"></app-icon>
             <span>RISE with SAP Hedef Mimari</span>
+          </button>
+
+          <button class="mode-btn" [class.active-po]="architectureMode() === 'po'" (click)="setArchitectureMode('po')">
+            <app-icon name="bolt" [size]="15" [color]="architectureMode() === 'po' ? '#ffffff' : '#0284c7'"></app-icon>
+            <span>PO Canlı Entegrasyon Haritası</span>
           </button>
         </div>
 
@@ -271,42 +272,204 @@ export interface ArchitectureEdge {
               }
             </svg>
 
-            <!-- Rendered System Nodes on Canvas matching Slide Layout (Clean Corporate Card without icon clutter) -->
+            <!-- Rendered System Nodes on Canvas matching Slide Layout -->
             @for (node of nodes(); track node.id) {
-              <div 
-                class="canvas-node" 
-                [style.left.px]="node.x - (node.id === 'node-core' ? 125 : 110)" 
-                [style.top.px]="node.y - 45"
-                [class.core-node]="node.id === 'node-core'"
-                [class.asis-node]="architectureMode() === 'asis' && node.id !== 'node-core'"
-                [class.eos-node]="node.isEosRisk"
-                [class.active-selected]="selectedNode()?.id === node.id"
-                [class.is-dragging]="draggingNodeId === node.id"
-                (mousedown)="startDrag(node, $event)"
-                (click)="openDetailModal(node)">
+              @if (architectureMode() === 'rise' && node.id === 'node-s4p') {
+                <!-- Flagship RISE with SAP S4P Center Node with SaaS Card & Aura -->
+                <div 
+                  class="rise-s4p-card" 
+                  [style.left.px]="node.x - 110" 
+                  [style.top.px]="node.y - 75"
+                  [class.is-dragging]="draggingNodeId === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="openDetailModal(node)">
 
-                <!-- Red Square Instance Badge (bottom-right matching PPT slide) -->
-                <div class="red-instance-badge" *ngIf="architectureMode() !== 'po'" title="Instance / Sunucu Adedi: {{ node.instanceCount || 1 }}">
-                  {{ node.instanceCount || 1 }}
+                  <!-- Flagship Card Header -->
+                  <div class="s4p-top-header">
+                    <div class="s4p-badge-icon">
+                      <app-icon name="database" [size]="15" color="#0284c7"></app-icon>
+                    </div>
+                    <div class="s4p-title-wrap">
+                      <strong class="s4p-main-title">S4P</strong>
+                      <span class="s4p-edition-tag">S/4HANA Private Cloud</span>
+                    </div>
+                    <span class="s4p-pulse-indicator" title="Canlı Bulut Sistemi"></span>
+                  </div>
+
+                  <!-- S4/HANA & Fiori Core Layer Box -->
+                  <div class="s4p-core-box">
+                    <span class="core-layer">S4/HANA Core</span>
+                    <span class="fiori-layer">Embedded Fiori</span>
+                  </div>
+
+                  <!-- RISE with SAP Brand Badge -->
+                  <div class="rise-brand-pill">
+                    <div class="rise-pill-left">
+                      <app-icon name="sparkles" [size]="13" color="#38bdf8"></app-icon>
+                      <span class="rise-txt">RISE with SAP</span>
+                    </div>
+                    <span class="rise-status">Target Cloud</span>
+                  </div>
+
+                  <!-- SLES OS & DB Specs Pill -->
+                  <div class="s4p-os-box">
+                    <span class="os-text">SLES for SAP Applications</span>
+                    <span class="db-spec">HANA 2.0 In-Memory</span>
+                  </div>
                 </div>
-
-                <div class="c-node-card-body">
-                  <div class="c-header-row">
-                    <strong class="c-name">{{ node.name }}</strong>
-                    <span class="sap-brand-pill">SAP</span>
+              } @else if (architectureMode() === 'rise') {
+                <!-- Sleek RISE Service Node (CS / WebDisp / CI) with BTP integration -->
+                <div 
+                  class="rise-service-card" 
+                  [style.left.px]="node.x - 70" 
+                  [style.top.px]="node.y - 50"
+                  [class.is-dragging]="draggingNodeId === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="openDetailModal(node)">
+                  
+                  <div class="service-top-row">
+                    <div class="svc-icon-box">
+                      <app-icon [name]="node.iconName" [size]="14" color="#0284c7"></app-icon>
+                    </div>
+                    <strong class="service-name">{{ node.name }}</strong>
+                    <span class="sap-mini-tag">SAP</span>
                   </div>
 
-                  <div class="c-sub-info-pill">
-                    {{ node.dbInfo || node.category }}
+                  <div class="service-role-text">
+                    {{ node.name === 'CS' ? 'Document Mgmt' : (node.name === 'WebDisp' ? 'Reverse Proxy' : 'Integration Suite') }}
                   </div>
 
-                  <div class="c-footer-meta">
-                    <span class="user-meta">{{ node.userCount }} Kullanıcı</span>
-                    <span class="eos-sub-tag" *ngIf="node.isEosRisk">EoS 2020</span>
+                  <div class="service-btp-badge">
+                    <span class="btp-dot"></span>
+                    <span>SAP BTP</span>
                   </div>
+                </div>
+              } @else {
+                <!-- Standard AS-IS / PO Node Cards -->
+                <div 
+                  class="canvas-node" 
+                  [style.left.px]="node.x - (node.id === 'node-core' ? 125 : 110)" 
+                  [style.top.px]="node.y - 45"
+                  [class.core-node]="node.id === 'node-core'"
+                  [class.asis-node]="architectureMode() === 'asis' && node.id !== 'node-core'"
+                  [class.eos-node]="node.isEosRisk"
+                  [class.active-selected]="selectedNode()?.id === node.id"
+                  [class.is-dragging]="draggingNodeId === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="openDetailModal(node)">
+
+                  <!-- Red Square Instance Badge -->
+                  <div class="red-instance-badge" *ngIf="architectureMode() !== 'po'" title="Instance / Sunucu Adedi: {{ node.instanceCount || 1 }}">
+                    {{ node.instanceCount || 1 }}
+                  </div>
+
+                  <div class="c-node-card-body">
+                    <div class="c-header-row">
+                      <strong class="c-name">{{ node.name }}</strong>
+                      <span class="sap-brand-pill">SAP</span>
+                    </div>
+
+                    <div class="c-sub-info-pill">
+                      {{ node.dbInfo || node.category }}
+                    </div>
+
+                    <div class="c-footer-meta">
+                      <span class="user-meta">{{ node.userCount }} Kullanıcı</span>
+                      <span class="eos-sub-tag" *ngIf="node.isEosRisk">EoS 2020</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            <!-- RISE with SAP Sizing & Capacity Card Widget on Right Side -->
+            <div class="rise-side-table-panel" *ngIf="architectureMode() === 'rise'">
+              <div class="panel-header">
+                <div class="panel-title-area">
+                  <div class="panel-icon">
+                    <app-icon name="database" [size]="15" color="#0284c7"></app-icon>
+                  </div>
+                  <div>
+                    <h4 class="panel-title">S/4HANA Boyutlandırma & Kapasite</h4>
+                    <span class="panel-sub">HANA DB & Uygulama Sunucu Özeti</span>
+                  </div>
+                </div>
+                <span class="spec-tag">RISE Spec</span>
+              </div>
+
+              <div class="table-container">
+                <table class="sizing-table">
+                  <thead>
+                    <tr>
+                      <th>Bileşen / Ürün</th>
+                      <th>Mevcut (Current)</th>
+                      <th>Hedef (Target)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot db"></span>
+                        <strong>S4 HANA DB Prod</strong>
+                      </td>
+                      <td><span class="spec-badge cur">1 TB</span></td>
+                      <td><span class="spec-badge target">1 TB HANA Cloud</span></td>
+                    </tr>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot db"></span>
+                        <strong>S4 HANA DB QA</strong>
+                      </td>
+                      <td><span class="spec-badge cur">768 GB</span></td>
+                      <td><span class="spec-badge target">768 GB HANA Cloud</span></td>
+                    </tr>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot db"></span>
+                        <strong>S4 HANA DB Dev</strong>
+                      </td>
+                      <td><span class="spec-badge cur">256 GB</span></td>
+                      <td><span class="spec-badge target">256 GB HANA Cloud</span></td>
+                    </tr>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot app"></span>
+                        <strong>S4 App Prod</strong>
+                      </td>
+                      <td><span class="spec-badge cur">2x64 GB</span></td>
+                      <td><span class="spec-badge target">2x64 GB App Server</span></td>
+                    </tr>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot app"></span>
+                        <strong>S4 App Qa</strong>
+                      </td>
+                      <td><span class="spec-badge cur">32 GB</span></td>
+                      <td><span class="spec-badge target">32 GB App Server</span></td>
+                    </tr>
+                    <tr>
+                      <td class="prod-cell">
+                        <span class="p-dot app"></span>
+                        <strong>S4 App Dev</strong>
+                      </td>
+                      <td><span class="spec-badge cur">32 GB</span></td>
+                      <td><span class="spec-badge target">32 GB App Server</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="panel-footer">
+                <div class="stat-summary">
+                  <span class="f-label">Toplam HANA Memory:</span>
+                  <strong class="f-val">2.02 TB</strong>
+                </div>
+                <div class="stat-summary">
+                  <span class="f-label">Uygulama RAM:</span>
+                  <strong class="f-val">192 GB</strong>
                 </div>
               </div>
-            }
+            </div>
           </div>
 
           <!-- Selected Node Details Drawer Bar -->
@@ -935,6 +1098,395 @@ export interface ArchitectureEdge {
       }
     }
 
+    /* FLAGSHIP RISE WITH SAP S4P CORE CARD (TASK FORCE SAAS DESIGN) */
+    .rise-s4p-card {
+      position: absolute;
+      width: 220px;
+      background: #ffffff;
+      border: 2px solid #0284c7;
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.18), 0 0 45px rgba(56, 189, 248, 0.28);
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      z-index: 35;
+      transition: transform 0.15s, box-shadow 0.15s;
+
+      &:active, &.is-dragging {
+        cursor: grabbing !important;
+        transform: scale(1.03);
+        box-shadow: 0 14px 36px rgba(2, 132, 199, 0.35) !important;
+        z-index: 50 !important;
+      }
+
+      .s4p-top-header {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+
+        .s4p-badge-icon {
+          width: 28px;
+          height: 28px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .s4p-title-wrap {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          line-height: 1.15;
+
+          .s4p-main-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
+
+          .s4p-edition-tag {
+            font-size: 0.65rem;
+            color: #0284c7;
+            font-weight: 700;
+          }
+        }
+
+        .s4p-pulse-indicator {
+          width: 8px;
+          height: 8px;
+          background: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+        }
+      }
+
+      .s4p-core-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.35rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .core-layer {
+          font-size: 0.75rem;
+          font-weight: 800;
+          color: #1e293b;
+        }
+
+        .fiori-layer {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #64748b;
+        }
+      }
+
+      .rise-brand-pill {
+        background: #0f172a;
+        color: #ffffff;
+        border-radius: 6px;
+        padding: 0.35rem 0.55rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .rise-pill-left {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+
+          .rise-txt {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+          }
+        }
+
+        .rise-status {
+          font-size: 0.62rem;
+          background: rgba(56, 189, 248, 0.2);
+          color: #38bdf8;
+          padding: 0.08rem 0.35rem;
+          border-radius: 4px;
+          font-weight: 700;
+        }
+      }
+
+      .s4p-os-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.66rem;
+        color: #475569;
+        font-weight: 600;
+        padding: 0 0.15rem;
+
+        .db-spec {
+          color: #0284c7;
+          font-weight: 700;
+        }
+      }
+    }
+
+    /* MODERN RISE SERVICE CARDS (CS, WebDisp, CI) */
+    .rise-service-card {
+      position: absolute;
+      width: 140px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      z-index: 25;
+      transition: all 0.15s;
+
+      &:hover {
+        border-color: #0284c7;
+        box-shadow: 0 6px 18px rgba(2, 132, 199, 0.18);
+      }
+
+      &:active, &.is-dragging {
+        cursor: grabbing !important;
+        transform: scale(1.05);
+        border-color: #0284c7;
+        box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3) !important;
+        z-index: 50 !important;
+      }
+
+      .service-top-row {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+
+        .svc-icon-box {
+          width: 22px;
+          height: 22px;
+          background: #f0f9ff;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .service-name {
+          font-size: 0.84rem;
+          font-weight: 800;
+          color: #0f172a;
+          flex: 1;
+        }
+
+        .sap-mini-tag {
+          font-size: 0.58rem;
+          font-weight: 900;
+          background: #0284c7;
+          color: #ffffff;
+          padding: 0.06rem 0.25rem;
+          border-radius: 3px;
+        }
+      }
+
+      .service-role-text {
+        font-size: 0.68rem;
+        color: #64748b;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .service-btp-badge {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 4px;
+        padding: 0.2rem 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.66rem;
+        font-weight: 700;
+        color: #0369a1;
+
+        .btp-dot {
+          width: 5px;
+          height: 5px;
+          background: #0284c7;
+          border-radius: 50%;
+        }
+      }
+    }
+
+    /* BEAUTIFIED TASK FORCE SAAS SIZING & CAPACITY PANEL (RIGHT SIDE) */
+    .rise-side-table-panel {
+      position: absolute;
+      top: 25px;
+      right: 25px;
+      width: 440px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+
+      .panel-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .panel-title-area {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .panel-icon {
+            width: 30px;
+            height: 30px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .panel-title {
+            margin: 0;
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
+
+          .panel-sub {
+            font-size: 0.68rem;
+            color: #64748b;
+            font-weight: 500;
+          }
+        }
+
+        .spec-tag {
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #0284c7;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          padding: 0.15rem 0.45rem;
+          border-radius: 4px;
+        }
+      }
+
+      .table-container {
+        padding: 0;
+        max-height: 280px;
+        overflow-y: auto;
+
+        .sizing-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.74rem;
+
+          thead th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+          }
+
+          tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.1s;
+
+            &:hover {
+              background: #f8fafc;
+            }
+
+            td {
+              padding: 0.45rem 0.75rem;
+              vertical-align: middle;
+            }
+
+            .prod-cell {
+              display: flex;
+              align-items: center;
+              gap: 0.35rem;
+
+              .p-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+
+                &.db { background: #0284c7; }
+                &.app { background: #8b5cf6; }
+              }
+
+              strong {
+                color: #1e293b;
+                font-size: 0.75rem;
+              }
+            }
+
+            .spec-badge {
+              display: inline-block;
+              padding: 0.12rem 0.4rem;
+              border-radius: 4px;
+              font-weight: 700;
+              font-size: 0.7rem;
+
+              &.cur {
+                background: #f1f5f9;
+                color: #475569;
+                border: 1px solid #cbd5e1;
+              }
+
+              &.target {
+                background: #ecfdf5;
+                color: #047857;
+                border: 1px solid #a7f3d0;
+              }
+            }
+          }
+        }
+      }
+
+      .panel-footer {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 0.55rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .stat-summary {
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          font-size: 0.7rem;
+
+          .f-label { color: #64748b; }
+          .f-val { color: #0284c7; font-weight: 800; }
+        }
+      }
+    }
+
     .node-detail-bar {
       margin-top: 0.65rem;
       background: #f0f9ff;
@@ -1145,14 +1697,13 @@ export interface ArchitectureEdge {
 export class ArchitectureMapComponent {
   customerService = inject(CustomerService);
   importService = inject(DataImportService);
+  route = inject(ActivatedRoute);
 
   @ViewChild('canvasRef') canvasRef!: ElementRef<HTMLDivElement>;
 
-  // Architecture Mode: AS-IS (Mevcut 11 Sunucu) vs PO (Excel Entegrasyonlar) vs RISE (Hedef)
+  // Architecture Mode: AS-IS (Mevcut 11 Sunucu) vs RISE (Hedef) vs PO (Excel Entegrasyonlar)
   architectureMode = signal<'asis' | 'po' | 'rise'>('asis');
   excelImportSuccess = signal<boolean>(false);
-  detailModalNode = signal<ArchitectureNode | null>(null);
-
   // Core ERP Center Node Position matching PPT Slide 3 (Spaced Out)
   coreNode = { x: 520, y: 160 };
 
@@ -1273,11 +1824,17 @@ export class ArchitectureMapComponent {
 
   // Smooth Window-Level Dragging State
   draggingNodeId: string | null = null;
-  dragOffset = { x: 0, y: 0 };
-
   currentEdges = signal<ArchitectureEdge[]>(this.asisEdges);
+  detailModalNode = signal<ArchitectureNode | null>(null);
 
   constructor() {
+    this.route.queryParams.subscribe(params => {
+      const mode = params['mode'];
+      if (mode && (mode === 'asis' || mode === 'po' || mode === 'rise')) {
+        this.setArchitectureMode(mode);
+      }
+    });
+
     // Reactive Effect: Automatically draws diagram when an Excel file is uploaded!
     effect(() => {
       const recs = this.importService.records();
@@ -1297,105 +1854,74 @@ export class ArchitectureMapComponent {
   }
 
   // Dynamic RISE with SAP Target Architecture Generator Engine!
-  // Analyzes AS-IS systems and PO interfaces, then calculates target cloud architecture
   generateRiseNodesFromCurrentData(): { nodes: ArchitectureNode[]; edges: ArchitectureEdge[] } {
-    const isPoMode = this.importService.importCategory() === 'po' || this.importService.uploadedFileName().toLowerCase().includes('po');
     const recs = this.importService.records();
     const activeUserCount = recs.length > 0 ? recs.length : 380;
 
     const nodes: ArchitectureNode[] = [
       { 
-        id: 'node-core', 
-        name: 'SAP S/4HANA Private Cloud (RISE)', 
+        id: 'node-s4p', 
+        name: 'S4P', 
         category: 'Core', 
         userCount: activeUserCount, 
         instanceCount: 1, 
-        dbInfo: 'Prod 1TB / QA 768GB / Dev 256GB', 
+        dbInfo: 'S4/HANA • Fiori Launchpad', 
         status: 'Active', 
-        x: 520, 
-        y: 300, 
+        x: 300, 
+        y: 140, 
         iconName: 'database', 
         color: '#0284c7', 
-        protocol: 'S/4HANA Cloud (1 Konsolide DB)' 
+        protocol: 'SLES for SAP Applications',
+        osInfo: 'SLES for SAP Applications'
       },
       { 
-        id: 'node-btp-int', 
-        name: 'SAP BTP Integration Suite', 
-        category: 'Integration', 
-        userCount: 50, 
-        instanceCount: 1, 
-        dbInfo: 'BTP Cloud Tenant', 
-        status: 'Active', 
-        x: 520, 
-        y: 110, 
-        iconName: 'layers', 
-        color: '#0284c7', 
-        protocol: isPoMode ? '10 Canlı PO Arayüzü BTP iFlows’a Taşındı' : 'Cloud iFlows (replaces PO 7.5)' 
-      },
-      { 
-        id: 'node-embedded-fiori', 
-        name: 'Embedded Fiori Launchpad S/4HANA', 
-        category: 'Cloud App', 
-        userCount: activeUserCount, 
-        instanceCount: 1, 
-        dbInfo: 'Embedded S/4HANA Cloud', 
-        status: 'Active', 
-        x: 180, 
-        y: 220, 
-        iconName: 'sparkles', 
-        color: '#059669', 
-        protocol: 'S/4HANA Cloud Fiori (0 EoS Risk)' 
-      },
-      { 
-        id: 'node-btp-doc', 
-        name: 'SAP Document Management Service', 
+        id: 'node-cs', 
+        name: 'CS', 
         category: 'Cloud App', 
         userCount: 50, 
         instanceCount: 1, 
         dbInfo: 'BTP Object Storage', 
         status: 'Active', 
-        x: 860, 
-        y: 220, 
+        x: 90, 
+        y: 440, 
         iconName: 'file-text', 
-        color: '#047857', 
-        protocol: 'BTP Storage (replaces Content Server 6.5)' 
+        color: '#0284c7', 
+        protocol: 'SAP BTP Document Management' 
       },
       { 
-        id: 'node-sac', 
-        name: 'SAP Analytics Cloud (SAC)', 
-        category: 'Analytics', 
-        userCount: 30, 
+        id: 'node-webdisp', 
+        name: 'WebDisp', 
+        category: 'Integration', 
+        userCount: 2, 
         instanceCount: 1, 
-        dbInfo: 'SAC Tenant', 
-        status: 'Planned', 
-        x: 180, 
-        y: 490, 
-        iconName: 'chart', 
-        color: '#4f46e5', 
-        protocol: 'Live S/4HANA SAC Connection' 
-      },
-      { 
-        id: 'node-fue', 
-        name: '70 FUE Optimized Cloud License', 
-        category: 'Automation', 
-        userCount: 70, 
-        instanceCount: 1, 
-        dbInfo: 'FUE Cloud License', 
+        dbInfo: 'Cloud Connector', 
         status: 'Active', 
-        x: 860, 
-        y: 490, 
-        iconName: 'bolt', 
-        color: '#059669', 
-        protocol: 'FUE License Consolidation' 
+        x: 300, 
+        y: 440, 
+        iconName: 'cloud', 
+        color: '#0284c7', 
+        protocol: 'SAP BTP Gateway & Reverse Proxy' 
+      },
+      { 
+        id: 'node-ci', 
+        name: 'CI', 
+        category: 'Integration', 
+        userCount: 50, 
+        instanceCount: 1, 
+        dbInfo: 'BTP Integration Suite', 
+        status: 'Active', 
+        x: 510, 
+        y: 440, 
+        iconName: 'layers', 
+        color: '#0284c7', 
+        protocol: 'SAP BTP Cloud Integration (iFlows)' 
       }
     ];
 
     const edges: ArchitectureEdge[] = [
-      { id: 're1', fromId: 'node-btp-int', toId: 'node-core', label: isPoMode ? 'BTP iFlows (10 Live) ➔' : 'BTP iFlows ➔' },
-      { id: 're2', fromId: 'node-embedded-fiori', toId: 'node-core', label: 'Fiori Launchpad ➔' },
-      { id: 're3', fromId: 'node-btp-doc', toId: 'node-core', label: 'Document Storage ➔' },
-      { id: 're4', fromId: 'node-sac', toId: 'node-core', label: 'SAC Live ➔' },
-      { id: 're5', fromId: 'node-fue', toId: 'node-core', label: 'FUE Lisans ➔' }
+      { id: 're-cs', fromId: 'node-cs', toId: 'node-s4p', label: 'BTP Storage ➔' },
+      { id: 're-webdisp', fromId: 'node-webdisp', toId: 'node-s4p', label: 'Web Traffic ➔' },
+      { id: 're-ci', fromId: 'node-ci', toId: 'node-s4p', label: 'Cloud iFlows ➔' }
     ];
 
     return { nodes, edges };

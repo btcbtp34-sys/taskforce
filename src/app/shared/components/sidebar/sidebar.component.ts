@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -30,46 +30,107 @@ import { IconComponent } from '../icon/icon.component';
       <!-- Navigation Menu -->
       <nav class="sidebar-nav">
         <div class="nav-section-title" *ngIf="!collapsed">MENÜ</div>
-        
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="dashboard" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Dashboard</span>
+
+        <!-- 1. Basis/Infra (Expandable Group) -->
+        <div class="nav-group" [class.open]="basisExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isBasisActive()"
+            (click)="toggleBasis()"
+            [title]="collapsed ? 'Basis/Infra' : ''">
+            <div class="nav-icon"><app-icon name="database" [size]="17"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">Basis/Infra</span>
+            <div class="chevron-icon" *ngIf="!collapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="basisExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Alt Kırılımlar (Sub Items) -->
+          <div class="nav-sub-list" *ngIf="basisExpanded && !collapsed">
+            <a 
+              routerLink="/architecture-map" 
+              [queryParams]="{ mode: 'asis' }" 
+              routerLinkActive="sub-active" 
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Lanscape/Versiyon / EoS</span>
+            </a>
+
+            <a 
+              routerLink="/analytics" 
+              routerLinkActive="sub-active" 
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">FUE / License</span>
+            </a>
+
+            <a 
+              routerLink="/architecture-map" 
+              [queryParams]="{ mode: 'rise' }" 
+              routerLinkActive="sub-active" 
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Source (Current/Target)</span>
+            </a>
+
+            <a 
+              routerLink="/analytics" 
+              [queryParams]="{ tab: 'dvm' }" 
+              routerLinkActive="sub-active" 
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Largest Table (DVM)</span>
+            </a>
+
+            <a 
+              routerLink="/architecture-map" 
+              [queryParams]="{ mode: 'po' }" 
+              routerLinkActive="sub-active" 
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Integration</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 2. Modules -->
+        <a routerLink="/opportunities" [queryParams]="{ category: 'modules' }" routerLinkActive="active" class="nav-item">
+          <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Modules</span>
         </a>
 
-        <!-- PROMINENT #2 VERİ YÜKLEME ITEM -->
+        <!-- 3. Development -->
+        <a routerLink="/opportunities" [queryParams]="{ category: 'development' }" routerLinkActive="active" class="nav-item">
+          <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Development</span>
+        </a>
+
+        <!-- 4. TCO -->
+        <a routerLink="/business-case" routerLinkActive="active" class="nav-item">
+          <div class="nav-icon"><app-icon name="dollar" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">TCO</span>
+        </a>
+
+        <!-- 5. Executive Summary -->
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+          <div class="nav-icon"><app-icon name="dashboard" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Executive Summary</span>
+        </a>
+
+        <!-- Section: Hızlı İşlemler -->
+        <div class="nav-section-title mt-section" *ngIf="!collapsed">HIZLI ARAÇLAR</div>
+
+        <!-- Veri Yükleme -->
         <a routerLink="/data-import" routerLinkActive="active" class="nav-item nav-highlight">
           <div class="nav-icon"><app-icon name="upload" [size]="17" color="#0284c7"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Veri Yükleme</span>
           <span class="nav-badge highlight" *ngIf="!collapsed">+ Excel</span>
         </a>
 
-        <a routerLink="/architecture-map" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="map" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Şirket Haritası</span>
-          <span class="nav-badge" *ngIf="!collapsed">Çizim</span>
-        </a>
-
-        <a routerLink="/analytics" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="analytics" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Analizler</span>
-        </a>
-
-        <a routerLink="/opportunities" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="opportunities" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Fırsatlar</span>
-          <span class="nav-badge highlight" *ngIf="!collapsed">4 New</span>
-        </a>
-
-        <a routerLink="/business-case" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="business-case" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Business Case</span>
-        </a>
-
-        <a routerLink="/customers" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="customers" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Müşteriler</span>
-        </a>
-
+        <!-- Raporlar -->
         <a routerLink="/reports" routerLinkActive="active" class="nav-item">
           <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#0284c7"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Raporlar</span>
@@ -167,8 +228,19 @@ import { IconComponent } from '../icon/icon.component';
       font-weight: 700;
       letter-spacing: 0.08em;
       color: #9ca3af;
-      padding: 0.4rem 0.6rem;
+      padding: 0.4rem 0.6rem 0.2rem;
       text-transform: uppercase;
+
+      &.mt-section {
+        margin-top: 0.6rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid #f3f4f6;
+      }
+    }
+
+    .nav-group {
+      display: flex;
+      flex-direction: column;
     }
 
     .nav-item {
@@ -181,6 +253,7 @@ import { IconComponent } from '../icon/icon.component';
       border-radius: 6px;
       font-size: 0.82rem;
       font-weight: 500;
+      cursor: pointer;
       transition: all 0.15s ease;
 
       .nav-icon {
@@ -188,12 +261,21 @@ import { IconComponent } from '../icon/icon.component';
         align-items: center;
         justify-content: center;
         color: #6b7280;
+        flex-shrink: 0;
       }
 
       .nav-label {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .chevron-icon {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        color: #9ca3af;
+        svg { width: 13px; height: 13px; transition: transform 0.2s ease; }
       }
 
       .nav-badge {
@@ -216,14 +298,74 @@ import { IconComponent } from '../icon/icon.component';
         background: #f9fafb;
         color: #111827;
         .nav-icon { color: #111827; }
+        .chevron-icon { color: #111827; }
       }
 
       &.active {
         background: #f0f9ff;
         color: #0284c7;
-        font-weight: 700;
+        font-weight: 600;
 
         .nav-icon { color: #0284c7; }
+        .chevron-icon { color: #0284c7; }
+      }
+    }
+
+    /* Sub Navigation */
+    .nav-sub-list {
+      display: flex;
+      flex-direction: column;
+      padding-left: 1.85rem;
+      margin: 0.15rem 0 0.35rem;
+      gap: 0.15rem;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 1.25rem;
+        top: 4px;
+        bottom: 6px;
+        width: 1.5px;
+        background: #e5e7eb;
+      }
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.32rem 0.5rem;
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 0.77rem;
+      font-weight: 500;
+      border-radius: 5px;
+      transition: all 0.15s ease;
+
+      .sub-dot {
+        color: #9ca3af;
+        font-size: 0.9rem;
+        line-height: 1;
+      }
+
+      .sub-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      &:hover {
+        background: #f9fafb;
+        color: #111827;
+        .sub-dot { color: #0284c7; }
+      }
+
+      &.sub-active {
+        background: #f0f9ff;
+        color: #0284c7;
+        font-weight: 600;
+        .sub-dot { color: #0284c7; }
       }
     }
   `]
@@ -231,4 +373,16 @@ import { IconComponent } from '../icon/icon.component';
 export class SidebarComponent {
   @Input() collapsed = false;
   @Output() toggleSidebar = new EventEmitter<void>();
+
+  router = inject(Router);
+  basisExpanded = true;
+
+  toggleBasis(): void {
+    this.basisExpanded = !this.basisExpanded;
+  }
+
+  isBasisActive(): boolean {
+    const url = this.router.url;
+    return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category'));
+  }
 }
