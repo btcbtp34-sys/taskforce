@@ -12,6 +12,8 @@ import { ReportsComponent } from './features/reports/reports.component';
 import { ArchitectureMapComponent } from './features/architecture-map/architecture-map.component';
 import { SourceSizingComponent } from './features/source-sizing/source-sizing.component';
 import { LargestTablesComponent } from './features/largest-tables/largest-tables.component';
+import { ModulesComponent } from './features/modules/modules.component';
+import { DevelopmentComponent } from './features/development/development.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -24,10 +26,13 @@ export const routes: Routes = [
   { path: 'source', redirectTo: 'source-sizing' },
   { path: 'largest-tables', component: LargestTablesComponent },
   { path: 'dvm', redirectTo: 'largest-tables' },
+  { path: 'modules', component: ModulesComponent },
+  { path: 'development', component: DevelopmentComponent },
   { path: 'data-import', component: DataImportComponent },
   { path: 'analytics', component: AnalyticsComponent },
   { path: 'opportunities', component: OpportunitiesComponent },
   { path: 'business-case', component: BusinessCaseComponent },
+  { path: 'tco', redirectTo: 'business-case' },
   { path: 'reports', component: ReportsComponent },
   { path: 'summary', redirectTo: 'reports' },
   { path: 'executive-summary', redirectTo: 'reports' },

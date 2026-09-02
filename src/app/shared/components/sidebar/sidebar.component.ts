@@ -111,13 +111,13 @@ import { IconComponent } from '../icon/icon.component';
         </div>
 
         <!-- 2. Modules -->
-        <a routerLink="/opportunities" [queryParams]="{ category: 'modules' }" routerLinkActive="active" class="nav-item">
+        <a routerLink="/modules" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Modules' : ''">
           <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Modules</span>
         </a>
 
         <!-- 3. Development -->
-        <a routerLink="/opportunities" [queryParams]="{ category: 'development' }" routerLinkActive="active" class="nav-item">
+        <a routerLink="/development" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Development' : ''">
           <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Development</span>
         </a>
