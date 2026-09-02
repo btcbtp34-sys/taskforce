@@ -31,6 +31,17 @@ import { IconComponent } from '../icon/icon.component';
       <nav class="sidebar-nav">
         <div class="nav-section-title" *ngIf="!collapsed">MENÜ</div>
 
+        <!-- 0. Overview Dashboard -->
+        <a 
+          routerLink="/dashboard" 
+          routerLinkActive="active" 
+          [routerLinkActiveOptions]="{ exact: true }" 
+          class="nav-item"
+          [title]="collapsed ? 'Dashboard' : ''">
+          <div class="nav-icon"><app-icon name="dashboard" [size]="17" color="#0284c7"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Dashboard</span>
+        </a>
+
         <!-- 1. Basis/Infra (Expandable Group) -->
         <div class="nav-group" [class.open]="basisExpanded">
           <div 
@@ -49,6 +60,7 @@ import { IconComponent } from '../icon/icon.component';
 
           <!-- Alt Kırılımlar (Sub Items) -->
           <div class="nav-sub-list" *ngIf="basisExpanded && !collapsed">
+            <!-- 1. Lanscape/Versiyon / EoS (Mevcut Durum) -->
             <a 
               routerLink="/architecture-map" 
               [queryParams]="{ mode: 'asis' }" 
@@ -58,6 +70,7 @@ import { IconComponent } from '../icon/icon.component';
               <span class="sub-text">Lanscape/Versiyon / EoS</span>
             </a>
 
+            <!-- 2. FUE / License -->
             <a 
               routerLink="/analytics" 
               routerLinkActive="sub-active" 
@@ -67,24 +80,25 @@ import { IconComponent } from '../icon/icon.component';
               <span class="sub-text">FUE / License</span>
             </a>
 
+            <!-- 3. Source (Current/Target) -->
             <a 
-              routerLink="/architecture-map" 
-              [queryParams]="{ mode: 'rise' }" 
+              routerLink="/source-sizing" 
               routerLinkActive="sub-active" 
               class="sub-item">
               <span class="sub-dot">•</span>
               <span class="sub-text">Source (Current/Target)</span>
             </a>
 
+            <!-- 4. Largest Table (DVM) -->
             <a 
-              routerLink="/analytics" 
-              [queryParams]="{ tab: 'dvm' }" 
+              routerLink="/largest-tables" 
               routerLinkActive="sub-active" 
               class="sub-item">
               <span class="sub-dot">•</span>
               <span class="sub-text">Largest Table (DVM)</span>
             </a>
 
+            <!-- 5. Integration (PO Entegrasyon Listesi) -->
             <a 
               routerLink="/architecture-map" 
               [queryParams]="{ mode: 'po' }" 
@@ -114,27 +128,21 @@ import { IconComponent } from '../icon/icon.component';
           <span class="nav-label" *ngIf="!collapsed">TCO</span>
         </a>
 
-        <!-- 5. Executive Summary -->
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="dashboard" [size]="17"></app-icon></div>
+        <!-- 5. Executive Summary (Comprehensive Report & PDF) -->
+        <a routerLink="/reports" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Executive Summary' : ''">
+          <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#059669"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Executive Summary</span>
+          <span class="nav-badge" *ngIf="!collapsed">PDF</span>
         </a>
 
         <!-- Section: Hızlı İşlemler -->
         <div class="nav-section-title mt-section" *ngIf="!collapsed">HIZLI ARAÇLAR</div>
 
-        <!-- Veri Yükleme -->
+        <!-- Veri Yükleme (Sadece Bu Kalıyor) -->
         <a routerLink="/data-import" routerLinkActive="active" class="nav-item nav-highlight">
           <div class="nav-icon"><app-icon name="upload" [size]="17" color="#0284c7"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Veri Yükleme</span>
           <span class="nav-badge highlight" *ngIf="!collapsed">+ Excel</span>
-        </a>
-
-        <!-- Raporlar -->
-        <a routerLink="/reports" routerLinkActive="active" class="nav-item">
-          <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#0284c7"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Raporlar</span>
-          <span class="nav-badge" *ngIf="!collapsed">PDF</span>
         </a>
       </nav>
     </aside>

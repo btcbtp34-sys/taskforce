@@ -2,9 +2,6 @@ import { Component, ElementRef, ViewChild, AfterViewInit, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
-import { OpportunityEngineService } from '../../core/services/opportunity-engine.service';
-import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { Chart, registerables } from 'chart.js';
 
@@ -13,171 +10,230 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, KpiCardComponent, StatusBadgeComponent, IconComponent],
+  imports: [CommonModule, RouterModule, IconComponent],
   template: `
     <div class="dashboard-page">
       <!-- Page Header -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Executive Dashboard</h1>
-          <p class="page-subtitle">SAP Müşteri Veri Analiz & Fırsat Yönetim Ekranı</p>
+      <div class="dashboard-header">
+        <div class="header-left">
+          <div class="badge-row">
+            <span class="company-badge">ABC Holding</span>
+            <span class="pulse-live-badge"><span class="pulse-dot"></span> Canlı Veri Setleri Analizi</span>
+          </div>
+          <h1 class="main-title">SAP Fırsat & Mimari Genel Bakış Dashboard</h1>
+          <p class="sub-title">11 Dağınık Sunucu, 70 FUE Lisansı, 1.3 TB HANA Sizing ve 109 Canlı PO Entegrasyonu Genel Görünümü</p>
         </div>
+
         <div class="header-actions">
-          <a routerLink="/data-import" class="btn btn-primary">
-            <app-icon name="upload" [size]="16"></app-icon>
-            <span>+ Yeni Excel/CSV Yükle</span>
+          <a routerLink="/reports" class="btn btn-primary">
+            <app-icon name="file-text" [size]="16" color="#ffffff"></app-icon>
+            <span>Executive Summary Raporu ➔</span>
           </a>
         </div>
       </div>
 
-      <!-- Top KPI Cards Grid -->
+      <!-- Top 6 Unified KPI Cards -->
       <div class="kpi-grid">
-        <app-kpi-card 
-          label="Toplam Müşteri" 
-          value="24" 
-          subtext="Aktif Danışmanlık Portföyü"
-          trendText="+3 Bu Ay"
-          theme="primary">
-          <app-icon name="customers" [size]="20" color="#0284c7"></app-icon>
-        </app-kpi-card>
-
-        <app-kpi-card 
-          label="Aktif Analiz" 
-          value="8" 
-          subtext="Task Force Aşamasında"
-          trendText="%65 İlerleme Oranı"
-          theme="indigo">
-          <app-icon name="chart" [size]="20" color="#6366f1"></app-icon>
-        </app-kpi-card>
-
-        <app-kpi-card 
-          label="Tespit Edilen Fırsat" 
-          value="37" 
-          subtext="4 Ana Kategoride"
-          trendText="12 Quick Win"
-          theme="emerald">
-          <app-icon name="opportunities" [size]="20" color="#059669"></app-icon>
-        </app-kpi-card>
-
-        <app-kpi-card 
-          label="Tahmini Business Value" 
-          value="€1.250.000" 
-          subtext="Yıllık Toplam Katma Değer"
-          trendText="+%18 Artış"
-          theme="amber">
-          <app-icon name="dollar" [size]="20" color="#d97706"></app-icon>
-        </app-kpi-card>
-      </div>
-
-      <!-- Charts Section (Grid Layout) -->
-      <div class="charts-grid">
-        <!-- Chart 1: Customer Opportunity Distribution -->
-        <div class="chart-card">
-          <div class="card-header">
-            <h3>Müşterilere Göre Fırsat Dağılımı</h3>
-            <span class="card-tag">En Yüksek Potansiyelli Müşteriler</span>
+        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }">
+          <div class="kpi-top">
+            <span class="kpi-title">Altyapı Sunucuları</span>
+            <div class="kpi-icon-box bg-blue"><app-icon name="database" [size]="18" color="#0284c7"></app-icon></div>
           </div>
-          <div class="chart-body">
-            <canvas #customerChart></canvas>
+          <div class="kpi-val">11 Sunucu</div>
+          <div class="kpi-sub">Target: 1 Konsolide Bulut DB</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill red">11 Dağınık On-Prem</span>
+            <span class="tag-pill green">%91 Konsolidasyon</span>
           </div>
         </div>
 
-        <!-- Chart 2: Opportunity Categories -->
-        <div class="chart-card">
-          <div class="card-header">
-            <h3>Fırsat Türlerine Göre Dağılım</h3>
-            <span class="card-tag">Kategori Oranı</span>
+        <div class="kpi-card" routerLink="/analytics">
+          <div class="kpi-top">
+            <span class="kpi-title">FUE Lisans İhtiyacı</span>
+            <div class="kpi-icon-box bg-emerald"><app-icon name="users" [size]="18" color="#059669"></app-icon></div>
           </div>
-          <div class="chart-body">
-            <canvas #categoryChart></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="charts-grid mt-4">
-        <!-- Chart 3: Business Value Distribution -->
-        <div class="chart-card">
-          <div class="card-header">
-            <h3>Business Value & Tasarruf Dağılımı (€)</h3>
-            <span class="card-tag">Yıllık Finansal Katkı</span>
-          </div>
-          <div class="chart-body">
-            <canvas #valueChart></canvas>
+          <div class="kpi-val text-emerald">70 FUE</div>
+          <div class="kpi-sub">83 Fiili Kullanıcı Kapsamda</div>
+          <div class="tag-row">
+            <span class="tag-pill green">Sıfır Aşım Riski</span>
+            <span class="tag-pill blue">Optimum Paket</span>
           </div>
         </div>
 
-        <!-- Chart 4: Opportunity Pipeline -->
-        <div class="chart-card">
-          <div class="card-header">
-            <h3>Opportunity Pipeline</h3>
-            <span class="card-tag">Task Force Aşamaları</span>
+        <div class="kpi-card" routerLink="/source-sizing">
+          <div class="kpi-top">
+            <span class="kpi-title">HANA DB Sizing</span>
+            <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="18" color="#0891b2"></app-icon></div>
           </div>
-          <div class="chart-body">
-            <canvas #pipelineChart></canvas>
+          <div class="kpi-val">1.311 GiB</div>
+          <div class="kpi-sub">336 GiB Disk Alanı Kazanımı</div>
+          <div class="tag-row">
+            <span class="tag-pill blue">1 TB Prod + 768 GB QA</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'po' }">
+          <div class="kpi-top">
+            <span class="kpi-title">Canlı PO Servisleri</span>
+            <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
+          </div>
+          <div class="kpi-val text-purple">109 Servis</div>
+          <div class="kpi-sub">83 Verici • 26 Alıcı Arayüz</div>
+          <div class="tag-row">
+            <span class="tag-pill purple">16 Entegre Sunucu</span>
+            <span class="tag-pill green">BTP Ready</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" routerLink="/largest-tables">
+          <div class="kpi-top">
+            <span class="kpi-title">En Büyük Tablolar (DVM)</span>
+            <div class="kpi-icon-box bg-amber"><app-icon name="layers" [size]="18" color="#d97706"></app-icon></div>
+          </div>
+          <div class="kpi-val text-amber">30 Tablo</div>
+          <div class="kpi-sub">HANA RAM'in %92.7 Hacmi</div>
+          <div class="tag-row">
+            <span class="tag-pill amber">REGUP (308 GB)</span>
+            <span class="tag-pill gray">4 Adımlı DVM</span>
+          </div>
+        </div>
+
+        <div class="kpi-card highlight" routerLink="/business-case">
+          <div class="kpi-top">
+            <span class="kpi-title">Tahmini Yıllık Tasarruf</span>
+            <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="18" color="#059669"></app-icon></div>
+          </div>
+          <div class="kpi-val text-emerald">€140.000 / Yıl</div>
+          <div class="kpi-sub">Donanım, OS, DB & Lisans ROI</div>
+          <div class="tag-row">
+            <span class="tag-pill green">3 Yıllık Net: €420.000</span>
           </div>
         </div>
       </div>
 
-      <!-- Meetings & Recent Activity Bottom Section -->
-      <div class="bottom-grid">
-        <!-- Customer Meetings -->
-        <div class="content-card">
-          <div class="card-header">
-            <h3><app-icon name="presentation" [size]="18"></app-icon> Yaklaşan Müşteri Toplantıları</h3>
-            <span class="link-btn">Tümünü Gör</span>
+      <!-- Interactive 4-Chart Visual Matrix -->
+      <div class="charts-grid-2x2">
+        <!-- Chart 1: Infrastructure Breakdown -->
+        <div class="chart-box">
+          <div class="chart-header">
+            <div class="ch-left">
+              <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
+              <h3>Altyapı & Sunucu Dağılımı (11 Sunucu ➔ 1 Bulut DB)</h3>
+            </div>
+            <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="ch-link">Mimari Şema ➔</a>
           </div>
-          <div class="meeting-list">
-            <div class="meeting-item">
-              <div class="date-badge">
-                <span class="day">04</span>
-                <span class="month">EYL</span>
-              </div>
-              <div class="meeting-info">
-                <strong>ABC Holding - Solution Design Presentation</strong>
-                <p>SAP BTP Automation & Professional Lisans Optimizasyonu Sunumu</p>
-                <small>Saat: 14:00 - Katılımcı: CIO Mehmet Yılmaz</small>
-              </div>
-              <app-status-badge text="Approved" type="status"></app-status-badge>
-            </div>
-
-            <div class="meeting-item">
-              <div class="date-badge indigo">
-                <span class="day">08</span>
-                <span class="month">EYL</span>
-              </div>
-              <div class="meeting-info">
-                <strong>DEF Kimya - Data Review & Discovery</strong>
-                <p>Ariba & Tedarik Zinciri Süreç Doğrulama Toplantısı</p>
-                <small>Saat: 10:30 - Katılımcı: Ayşe Demir (IT Director)</small>
-              </div>
-              <app-status-badge text="Under Review" type="status"></app-status-badge>
-            </div>
+          <div class="chart-body">
+            <canvas #infraChart></canvas>
           </div>
         </div>
 
-        <!-- Recent Task Force Activity -->
-        <div class="content-card">
-          <div class="card-header">
-            <h3><app-icon name="workspace" [size]="18"></app-icon> Son Task Force Aktivitesi</h3>
-            <span class="link-btn">Canlı Akış</span>
-          </div>
-          <div class="activity-feed">
-            <div class="activity-item">
-              <div class="avatar-badge">ZK</div>
-              <div class="activity-content">
-                <p><strong>Zeynep Kaya</strong> (SAP Consultant), <strong>ABC Holding</strong> için BTP Otomasyon ROI hesabını güncelledi.</p>
-                <small>15 dakika önce • ROI %180</small>
-              </div>
+        <!-- Chart 2: FUE License Distribution -->
+        <div class="chart-box">
+          <div class="chart-header">
+            <div class="ch-left">
+              <app-icon name="users" [size]="16" color="#059669"></app-icon>
+              <h3>FUE Lisanslama Dağılımı (Toplam 70 FUE)</h3>
             </div>
+            <a routerLink="/analytics" class="ch-link">Lisans Analizi ➔</a>
+          </div>
+          <div class="chart-body">
+            <canvas #licenseChart></canvas>
+          </div>
+        </div>
 
-            <div class="activity-item">
-              <div class="avatar-badge cd">CD</div>
-              <div class="activity-content">
-                <p><strong>Caner Demir</strong> (Solution Architect), 15 adet yetkisiz Professional lisansı <strong>Limited</strong> olarak işaretledi.</p>
-                <small>1 saat önce • €35.000 Tasarruf</small>
-              </div>
+        <!-- Chart 3: HANA Sizing Memory & DVM Savings -->
+        <div class="chart-box">
+          <div class="chart-header">
+            <div class="ch-left">
+              <app-icon name="database" [size]="16" color="#0891b2"></app-icon>
+              <h3>HANA DB Sizing & DVM Tasarruf Potansiyeli (GiB)</h3>
             </div>
+            <a routerLink="/source-sizing" class="ch-link">Sizing Kokpiti ➔</a>
           </div>
+          <div class="chart-body">
+            <canvas #sizingChart></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: PO Integration Protocol Breakdown -->
+        <div class="chart-box">
+          <div class="chart-header">
+            <div class="ch-left">
+              <app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon>
+              <h3>PO Canlı Entegrasyon Protokolleri (109 Servis)</h3>
+            </div>
+            <a routerLink="/architecture-map" [queryParams]="{ mode: 'po' }" class="ch-link">PO Listesi ➔</a>
+          </div>
+          <div class="chart-body">
+            <canvas #integrationChart></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Exploration Navigation Strip -->
+      <div class="quick-nav-card">
+        <div class="qn-header">
+          <div class="qn-left">
+            <app-icon name="sparkles" [size]="18" color="#0284c7"></app-icon>
+            <h3>Detaylı Analiz Modülleri ve Veri Setleri</h3>
+          </div>
+          <span class="qn-sub">Tüm veri setleri Excel analizleri ile senkronize edilmiştir</span>
+        </div>
+
+        <div class="modules-grid">
+          <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="module-nav-item">
+            <div class="m-icon bg-blue"><app-icon name="map" [size]="18" color="#0284c7"></app-icon></div>
+            <div class="m-info">
+              <strong>Lanscape & EoS Haritası</strong>
+              <span>11 Sunucu, Fiori 1511 & CS 6.5 Risk Analizi</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
+
+          <a routerLink="/analytics" class="module-nav-item">
+            <div class="m-icon bg-emerald"><app-icon name="users" [size]="18" color="#059669"></app-icon></div>
+            <div class="m-info">
+              <strong>FUE & Lisans Optimizasyonu</strong>
+              <span>83 Aktif Kullanıcı ➔ 70 FUE Paketi</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
+
+          <a routerLink="/source-sizing" class="module-nav-item">
+            <div class="m-icon bg-cyan"><app-icon name="database" [size]="18" color="#0891b2"></app-icon></div>
+            <div class="m-info">
+              <strong>Source Sizing (HANA 2.0)</strong>
+              <span>1.311 GiB RAM & 336 GiB Disk Tasarrufu</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
+
+          <a routerLink="/largest-tables" class="module-nav-item">
+            <div class="m-icon bg-amber"><app-icon name="layers" [size]="18" color="#d97706"></app-icon></div>
+            <div class="m-info">
+              <strong>Largest Tables (DVM)</strong>
+              <span>REGUP, ACDOCA 30 Kritik Tablo Arşivleme</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
+
+          <a routerLink="/architecture-map" [queryParams]="{ mode: 'po' }" class="module-nav-item">
+            <div class="m-icon bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
+            <div class="m-info">
+              <strong>PO Entegrasyon Listesi</strong>
+              <span>109 Canlı Servis (83 Verici, 26 Alıcı)</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
+
+          <a routerLink="/reports" class="module-nav-item highlight">
+            <div class="m-icon bg-emerald"><app-icon name="file-text" [size]="18" color="#059669"></app-icon></div>
+            <div class="m-info">
+              <strong>Executive Summary (PDF Rapor)</strong>
+              <span>%84 RISE Match Skoru & Yönetici Raporu</span>
+            </div>
+            <span class="m-arrow">➔</span>
+          </a>
         </div>
       </div>
     </div>
@@ -188,245 +244,488 @@ Chart.register(...registerables);
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      background: #f8fafc;
+      min-height: 100vh;
     }
 
-    .page-header {
+    /* HEADER */
+    .dashboard-header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      background: #ffffff;
+      padding: 1.35rem 1.65rem;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 
-      .page-title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
-      .page-subtitle { margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #64748b; }
+      .header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+
+        .badge-row {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+
+          .company-badge {
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.18rem 0.55rem;
+            border-radius: 4px;
+          }
+
+          .pulse-live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f0fdf4;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.18rem 0.55rem;
+            border-radius: 20px;
+
+            .pulse-dot {
+              width: 7px;
+              height: 7px;
+              border-radius: 50%;
+              background: #10b981;
+              box-shadow: 0 0 8px #10b981;
+            }
+          }
+        }
+
+        .main-title {
+          font-size: 1.45rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+        }
+
+        .sub-title {
+          margin: 0;
+          font-size: 0.82rem;
+          color: #64748b;
+        }
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.65rem 1.25rem;
+          border-radius: 8px;
+          font-size: 0.82rem;
+          font-weight: 700;
+          text-decoration: none;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: all 0.18s;
+
+          &.btn-primary {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.28);
+
+            &:hover {
+              background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+              box-shadow: 0 5px 15px rgba(2, 132, 199, 0.38);
+              transform: translateY(-1px);
+            }
+          }
+        }
+      }
     }
 
-    .btn-primary {
-      background: #0284c7;
-      color: #fff;
-      border: none;
-      padding: 0.55rem 1rem;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.82rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      text-decoration: none;
-
-      &:hover { background: #0369a1; }
-    }
-
+    /* KPI GRID (6 CARDS) */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.1rem;
+
+      .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.15rem;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+          border-color: #0284c7;
+        }
+
+        &.highlight {
+          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+          border-color: #a7f3d0;
+        }
+
+        .kpi-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .kpi-title {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #64748b;
+          }
+
+          .kpi-icon-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &.bg-blue { background: #f0f9ff; }
+            &.bg-emerald { background: #ecfdf5; }
+            &.bg-cyan { background: #ecfeff; }
+            &.bg-purple { background: #fdf4ff; }
+            &.bg-amber { background: #fffbeb; }
+          }
+        }
+
+        .kpi-val {
+          font-size: 1.35rem;
+          font-weight: 900;
+          color: #0f172a;
+          line-height: 1.15;
+        }
+
+        .kpi-sub {
+          font-size: 0.68rem;
+          color: #64748b;
+        }
+
+        .kpi-tag-row, .tag-row {
+          display: flex;
+          gap: 0.3rem;
+          flex-wrap: wrap;
+          margin-top: 0.25rem;
+
+          .tag-pill {
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+
+            &.red { background: #fee2e2; color: #dc2626; }
+            &.green { background: #ecfdf5; color: #047857; }
+            &.blue { background: #f0f9ff; color: #0284c7; }
+            &.purple { background: #fdf4ff; color: #7e22ce; }
+            &.amber { background: #fffbeb; color: #b45309; }
+            &.gray { background: #f1f5f9; color: #475569; }
+          }
+        }
+      }
     }
 
-    .charts-grid {
+    /* 4-CHART GRID */
+    .charts-grid-2x2 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
       gap: 1.25rem;
+
+      .chart-box {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        .chart-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .ch-left {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+
+            h3 {
+              margin: 0;
+              font-size: 0.88rem;
+              font-weight: 800;
+              color: #0f172a;
+            }
+          }
+
+          .ch-link {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #0284c7;
+            text-decoration: none;
+
+            &:hover { text-decoration: underline; }
+          }
+        }
+
+        .chart-body {
+          position: relative;
+          height: 220px;
+          width: 100%;
+        }
+      }
     }
 
-    .mt-4 { margin-top: 0.5rem; }
-
-    .chart-card, .content-card {
+    /* QUICK NAVIGATION MODULES */
+    .quick-nav-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
       padding: 1.25rem;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
       display: flex;
       flex-direction: column;
+      gap: 1rem;
 
-      .card-header {
+      .qn-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
 
-        h3 { margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem; }
-        .card-tag { font-size: 0.72rem; color: #0284c7; font-weight: 600; background: #f0f9ff; padding: 0.15rem 0.5rem; border-radius: 12px; }
-        .link-btn { font-size: 0.75rem; color: #0284c7; font-weight: 700; cursor: pointer; }
+        .qn-left {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+
+          h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
+        }
+
+        .qn-sub {
+          font-size: 0.74rem;
+          color: #64748b;
+        }
       }
 
-      .chart-body { position: relative; height: 250px; width: 100%; }
-    }
-
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
-      gap: 1.25rem;
-    }
-
-    .meeting-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-
-      .meeting-item {
-        display: flex;
-        align-items: center;
+      .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 0.85rem;
-        padding: 0.75rem;
-        border-radius: 8px;
-        background: #f8fafc;
-        border: 1px solid #f1f5f9;
 
-        .date-badge {
-          width: 44px;
-          height: 44px;
-          background: #0284c7;
-          color: #fff;
-          border-radius: 8px;
+        .module-nav-item {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 0.85rem 1rem;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          line-height: 1;
+          gap: 0.75rem;
+          text-decoration: none;
+          transition: all 0.15s;
 
-          .day { font-size: 1rem; font-weight: 800; }
-          .month { font-size: 0.6rem; font-weight: 700; opacity: 0.9; margin-top: 2px; }
-          &.indigo { background: #6366f1; }
-        }
+          &:hover {
+            background: #ffffff;
+            border-color: #0284c7;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
 
-        .meeting-info {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
+            .m-arrow {
+              transform: translateX(3px);
+              color: #0284c7;
+            }
+          }
 
-          strong { font-size: 0.82rem; color: #0f172a; }
-          p { margin: 0.15rem 0; font-size: 0.75rem; color: #64748b; }
-          small { font-size: 0.68rem; color: #94a3b8; }
+          &.highlight {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+
+            &:hover {
+              border-color: #059669;
+              box-shadow: 0 4px 12px rgba(5, 150, 105, 0.12);
+            }
+          }
+
+          .m-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            &.bg-blue { background: #f0f9ff; }
+            &.bg-emerald { background: #ecfdf5; }
+            &.bg-cyan { background: #ecfeff; }
+            &.bg-purple { background: #fdf4ff; }
+            &.bg-amber { background: #fffbeb; }
+          }
+
+          .m-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+
+            strong {
+              font-size: 0.8rem;
+              color: #0f172a;
+            }
+
+            span {
+              font-size: 0.68rem;
+              color: #64748b;
+            }
+          }
+
+          .m-arrow {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            font-weight: 800;
+            transition: transform 0.15s;
+          }
         }
       }
     }
 
-    .activity-feed {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-
-      .activity-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-        padding: 0.65rem;
-        border-bottom: 1px solid #f1f5f9;
-
-        .avatar-badge {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #0284c7;
-          color: #fff;
-          font-weight: 800;
-          font-size: 0.72rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-
-          &.cd { background: #6366f1; }
-        }
-
-        .activity-content {
-          font-size: 0.78rem;
-          p { margin: 0; color: #334155; }
-          small { color: #94a3b8; font-size: 0.68rem; margin-top: 0.15rem; display: block; }
-        }
-      }
-    }
+    .text-emerald { color: #059669; }
+    .text-purple { color: #7e22ce; }
+    .text-amber { color: #d97706; }
   `]
 })
 export class DashboardComponent implements AfterViewInit {
   customerService = inject(CustomerService);
-  opportunityService = inject(OpportunityEngineService);
 
-  @ViewChild('customerChart') customerChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('categoryChart') categoryChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('valueChart') valueChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('pipelineChart') pipelineChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('infraChart') infraChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('licenseChart') licenseChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('sizingChart') sizingChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('integrationChart') integrationChartRef!: ElementRef<HTMLCanvasElement>;
 
   ngAfterViewInit(): void {
-    this.initCustomerChart();
-    this.initCategoryChart();
-    this.initValueChart();
-    this.initPipelineChart();
+    setTimeout(() => {
+      this.initCharts();
+    }, 100);
   }
 
-  private initCustomerChart(): void {
-    new Chart(this.customerChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['ABC Holding', 'DEF Kimya', 'GHI Lojistik', 'KLM Gıda', 'NOP Enerji'],
-        datasets: [{
-          label: 'Fırsat Sayısı',
-          data: [5, 3, 7, 4, 2],
-          backgroundColor: '#0284c7',
-          borderRadius: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
-      }
-    });
-  }
+  private initCharts(): void {
+    // 1. Infrastructure Chart (Bar Chart: AS-IS vs Target)
+    if (this.infraChartRef?.nativeElement) {
+      new Chart(this.infraChartRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: ['ERP EHP7', 'PO 7.5', 'Fiori 1511 (EoS)', 'Content Server (EoS)', 'WebDisp', 'RISE Target'],
+          datasets: [{
+            label: 'Sunucu Adedi',
+            data: [3, 3, 2, 1, 2, 1],
+            backgroundColor: ['#ef4444', '#ef4444', '#dc2626', '#dc2626', '#f59e0b', '#10b981'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+    }
 
-  private initCategoryChart(): void {
-    new Chart(this.categoryChartRef.nativeElement, {
-      type: 'doughnut',
-      data: {
-        labels: ['Lisans Optimizasyonu', 'SAP BTP Fırsatı', 'Süreç Optimizasyonu', 'AI FIRSATI'],
-        datasets: [{
-          data: [35, 30, 20, 15],
-          backgroundColor: ['#0284c7', '#6366f1', '#10b981', '#f59e0b'],
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
-      }
-    });
-  }
+    // 2. FUE License Chart (Doughnut)
+    if (this.licenseChartRef?.nativeElement) {
+      new Chart(this.licenseChartRef.nativeElement, {
+        type: 'doughnut',
+        data: {
+          labels: ['Advanced (20 FUE)', 'Core (16 FUE)', 'Self-Service (34 FUE)'],
+          datasets: [{
+            data: [20, 16, 34],
+            backgroundColor: ['#0284c7', '#059669', '#7e22ce'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
 
-  private initValueChart(): void {
-    new Chart(this.valueChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['ABC Holding', 'DEF Kimya', 'GHI Lojistik', 'KLM Gıda'],
-        datasets: [
-          { label: 'Lisans Tasarrufu (€)', data: [35000, 25000, 60000, 20000], backgroundColor: '#10b981', borderRadius: 4 },
-          { label: 'Verimlilik Katkısı (€)', data: [125000, 70000, 180000, 90000], backgroundColor: '#0284c7', borderRadius: 4 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
-      }
-    });
-  }
+    // 3. HANA Sizing Chart (Bar Chart)
+    if (this.sizingChartRef?.nativeElement) {
+      new Chart(this.sizingChartRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: ['Başlangıç RAM', 'Hedef RAM', 'Başlangıç Disk', 'Hedef Disk (DVM)'],
+          datasets: [{
+            label: 'GiB',
+            data: [1405.8, 1311.0, 1390.0, 1054.0],
+            backgroundColor: ['#94a3b8', '#0284c7', '#cbd5e1', '#059669'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 1600 }
+          }
+        }
+      });
+    }
 
-  private initPipelineChart(): void {
-    new Chart(this.pipelineChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['Discovery', 'Data Ingestion', 'Analysis', 'Opportunity ID', 'Solution Design', 'Business Case', 'Presentation'],
-        datasets: [{ label: 'Müşteri Sayısı', data: [4, 6, 3, 5, 3, 2, 1], backgroundColor: '#6366f1', borderRadius: 4 }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
-      }
-    });
+    // 4. PO Integration Protocols Chart (Horizontal Bar or Polar)
+    if (this.integrationChartRef?.nativeElement) {
+      new Chart(this.integrationChartRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: ['JDBC (Veritabanı)', 'SOAP (Web Servis)', 'RFC (SAP İçi)', 'REST (API)', 'SFTP / NFS', 'XI'],
+          datasets: [{
+            label: 'Servis Sayısı',
+            data: [43, 28, 18, 10, 8, 2],
+            backgroundColor: ['#7e22ce', '#0284c7', '#059669', '#d97706', '#0891b2', '#64748b'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, max: 50 }
+          }
+        }
+      });
+    }
   }
 }

@@ -73,7 +73,7 @@ export class DataImportService {
       return {
         nodes: [
           { id: 'node-core', name: 'SAP PO 7.5 (Process Orchestration)', category: 'Core', userCount: 10, instanceCount: 3, dbInfo: 'Sybase 16 • Windows 2019', status: 'Active', x: 520, y: 300, iconName: 'layers', color: '#0284c7', protocol: 'Central Integration Hub' },
-          { id: 'node-qnb', name: 'QNB Bank Ödeme Gateway', category: 'Integration', userCount: 5, dbInfo: 'SOAP ➔ HTTP', status: 'Active', x: 180, y: 120, iconName: 'bolt', color: '#0284c7', protocol: 'SI_OUT_SYNC_MakeOnlineProcessMoney' },
+          { id: 'node-a-bankasi', name: 'A Bankası Ödeme Gateway', category: 'Integration', userCount: 5, dbInfo: 'SOAP ➔ HTTP', status: 'Active', x: 180, y: 120, iconName: 'bolt', color: '#0284c7', protocol: 'SI_OUT_SYNC_MakeOnlineProcessMoney' },
           { id: 'node-winsure', name: 'WINSURE Hasar Transferi', category: 'Integration', userCount: 12, dbInfo: 'SAP ➔ WINSURE XSLT', status: 'Active', x: 520, y: 120, iconName: 'shield', color: '#059669', protocol: 'SI_OUT_SYNC_ClaimTransfer' },
           { id: 'node-f110', name: 'F110 Otomatik Ödeme Sync', category: 'Integration', userCount: 8, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 860, y: 120, iconName: 'database', color: '#0284c7', protocol: 'SI_OUT_SYNC_FI_SAP_F110_DATA' },
           { id: 'node-fatura', name: 'Fatura Kesin Kayıt DB', category: 'Integration', userCount: 15, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 160, y: 300, iconName: 'file-text', color: '#0284c7', protocol: 'SI_OUT_SYNC_KESIN_KAYIT' },
@@ -83,7 +83,7 @@ export class DataImportService {
           { id: 'node-vendor-rfc', name: 'Vendor & Customer Search', category: 'Integration', userCount: 25, dbInfo: 'SOAP ➔ RFC', status: 'Active', x: 860, y: 480, iconName: 'search', color: '#0284c7', protocol: 'ZENT_VENDOR_CUSTOMER_SEARCH' }
         ],
         edges: [
-          { id: 'pe1', fromId: 'node-qnb', toId: 'node-core', label: 'QNB Ödeme ➔' },
+          { id: 'pe1', fromId: 'node-a-bankasi', toId: 'node-core', label: 'A Bankası Ödeme ➔' },
           { id: 'pe2', fromId: 'node-winsure', toId: 'node-core', label: 'Hasar Transfer ➔' },
           { id: 'pe3', fromId: 'node-f110', toId: 'node-core', label: 'F110 Ödeme ➔' },
           { id: 'pe4', fromId: 'node-fatura', toId: 'node-core', label: 'Fatura Kayıt ➔' },

@@ -1,10 +1,12 @@
-import { Component, inject, signal, ElementRef, ViewChild, HostListener, effect } from '@angular/core';
+import { Component, inject, signal, computed, ElementRef, ViewChild, HostListener, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { DataImportService } from '../../core/services/data-import.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PO_INTERFACES_DATA } from '../../core/data/mock-po-interfaces';
 
 export interface ArchitectureNode {
   id: string;
@@ -20,6 +22,9 @@ export interface ArchitectureNode {
   iconName: any;
   color: string;
   protocol?: string;
+  role?: 'outbound' | 'inbound' | 'sync' | 'hub';
+  roleLabel?: string;
+  serverCountLabel?: string;
   isEosRisk?: boolean;
   eosDate?: string;
 }
@@ -35,22 +40,24 @@ export interface ArchitectureEdge {
 @Component({
   selector: 'app-architecture-map',
   standalone: true,
-  imports: [CommonModule, IconComponent, StatusBadgeComponent],
+  imports: [CommonModule, FormsModule, IconComponent, StatusBadgeComponent],
   template: `
     <div class="map-page">
       <!-- Page Header (Clean & Spacious Title) -->
       <div class="page-header">
         <div>
           <h1 class="page-title">
-            <app-icon name="map" [size]="24" color="#0284c7"></app-icon>
-            Mimari Şema & Bulut Dönüşüm Konsolu
+            <app-icon [name]="architectureMode() === 'po' ? 'bolt' : 'map'" [size]="24" [color]="architectureMode() === 'po' ? '#0284c7' : '#0284c7'"></app-icon>
+            {{ architectureMode() === 'po' ? 'SAP PO 7.5 Canlı Entegrasyon Haritası' : 'Mimari Şema & Bulut Dönüşüm Konsolu' }}
           </h1>
-          <p class="page-subtitle">Mevcut AS-IS Altyapı, PO Entegrasyon Haritası ve RISE with SAP Bulut Hedef Mimarisi</p>
+          <p class="page-subtitle">
+            {{ architectureMode() === 'po' ? 'ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx (109 Canlı Servis & 16 Entegre Sunucu Mimarisi)' : 'Mevcut AS-IS Altyapı, PO Entegrasyon Haritası ve RISE with SAP Bulut Hedef Mimarisi' }}
+          </p>
         </div>
       </div>
 
-      <!-- Prominent Mode Toggle Toolbar Banner right below Header -->
-      <div class="mode-toolbar-card">
+      <!-- Mode Toggle Toolbar (Only shown when not strictly in PO Integration subpage, or cleanly scoped) -->
+      <div class="mode-toolbar-card" *ngIf="architectureMode() !== 'po'">
         <div class="view-mode-toggle-lg">
           <button class="mode-btn" [class.active-asis]="architectureMode() === 'asis'" (click)="setArchitectureMode('asis')">
             <app-icon name="alert" [size]="15" [color]="architectureMode() === 'asis' ? '#ffffff' : '#d97706'"></app-icon>
@@ -60,11 +67,6 @@ export interface ArchitectureEdge {
           <button class="mode-btn" [class.active-rise]="architectureMode() === 'rise'" (click)="setArchitectureMode('rise')">
             <app-icon name="sparkles" [size]="15" [color]="architectureMode() === 'rise' ? '#ffffff' : '#059669'"></app-icon>
             <span>RISE with SAP Hedef Mimari</span>
-          </button>
-
-          <button class="mode-btn" [class.active-po]="architectureMode() === 'po'" (click)="setArchitectureMode('po')">
-            <app-icon name="bolt" [size]="15" [color]="architectureMode() === 'po' ? '#ffffff' : '#0284c7'"></app-icon>
-            <span>PO Canlı Entegrasyon Haritası</span>
           </button>
         </div>
 
@@ -77,6 +79,30 @@ export interface ArchitectureEdge {
           <button class="btn btn-primary" (click)="exportDiagram()" title="Çizimi PNG Görseli Olarak İndir">
             <app-icon name="download" [size]="15"></app-icon>
             <span>Mimari Görsel İndir (PNG)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PO Specific Quick Action Bar -->
+      <div class="mode-toolbar-card po-toolbar" *ngIf="architectureMode() === 'po'">
+        <div class="po-toolbar-badge-group">
+          <span class="po-main-tag">ABC Sigorta PO Entegrasyon Mimarisi</span>
+          <span class="po-stat-pill green">83 Verici (Outbound)</span>
+          <span class="po-stat-pill blue">26 Alıcı (Inbound)</span>
+          <span class="po-stat-pill purple">72 Senkron</span>
+          <span class="po-stat-pill gray">37 Asenkron</span>
+          <span class="po-stat-pill dark">16 Entegre Sunucu</span>
+        </div>
+
+        <div class="toolbar-right-actions">
+          <button class="btn btn-secondary" (click)="resetDiagram()" title="Düğümleri İlk Konumuna Getir">
+            <app-icon name="refresh" [size]="15"></app-icon>
+            <span>Haritayı Sıfırla</span>
+          </button>
+
+          <button class="btn btn-primary" (click)="exportDiagram()" title="Entegrasyon Haritasını PNG Olarak İndir">
+            <app-icon name="download" [size]="15"></app-icon>
+            <span>Haritayı İndir (PNG)</span>
           </button>
         </div>
       </div>
@@ -101,7 +127,7 @@ export interface ArchitectureEdge {
           <div class="banner-content po-info">
             <app-icon name="bolt" [size]="18" color="#0284c7"></app-icon>
             <div class="b-text">
-              <strong>PO Canlı Entegrasyon Otomatik Haritası:</strong> Yüklenen Entegrasyon Listesi Excel dosyasındaki 10 adet canlı servis (QNB Ödeme, WINSURE Hasar, F110 Otomatik Ödeme, Fatura Kesin Kayıt vb.) SAP PO 7.5 mimari haritasına dönüştürülmüştür.
+              <strong>ABC Sigorta PO Canlı Entegrasyon Haritası:</strong> <code>ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx</code> dosyasındaki <strong>109 canlı servis</strong>, alıcı/verici (Inbound/Outbound) akış yönleri ve 16 sunucu altyapısıyla haritalandırılmıştır.
             </div>
           </div>
         } @else {
@@ -119,8 +145,8 @@ export interface ArchitectureEdge {
         <!-- Sidebar Controls & Configurator -->
         <div class="card-box config-panel">
           <div class="card-header">
-            <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'PO Canlı Servisler' : 'Sistem Bileşenleri' }}</h3>
-            <span class="sub-text">{{ totalServerCount() }} {{ architectureMode() === 'po' ? 'Servis / Arayüz' : 'Sunucu / Instance' }}</span>
+            <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</h3>
+            <span class="sub-text">{{ architectureMode() === 'po' ? '109 Canlı Servis' : (totalServerCount() + ' Sunucu / Instance') }}</span>
           </div>
 
           <div class="node-config-list">
@@ -147,36 +173,40 @@ export interface ArchitectureEdge {
 
           <!-- Quick ROI & Transformation Summary Box -->
           <div class="roi-summary-box">
-            <h4><app-icon name="chart" [size]="15" color="#0284c7"></app-icon> {{ architectureMode() === 'rise' ? 'RISE Bulut Kıyaslama Raporu' : 'Altyapı & Entegrasyon Özeti' }}</h4>
+            <h4><app-icon name="chart" [size]="15" color="#0284c7"></app-icon> {{ architectureMode() === 'po' ? 'PO Entegrasyon Metrikleri' : (architectureMode() === 'rise' ? 'RISE Bulut Kıyaslama Raporu' : 'Altyapı Özeti') }}</h4>
             
             <div class="summary-stat">
-              <span class="s-label">Sunucu Altyapı Adedi</span>
-              <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise'">
-                {{ architectureMode() === 'asis' ? '11 Sunucu (Dağınık)' : (architectureMode() === 'po' ? '10 Servis (PO 7.5)' : '1 Bulut DB (Konsolide)') }}
+              <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Entegrasyon' : 'Sunucu Altyapı Adedi' }}</span>
+              <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
+                {{ architectureMode() === 'asis' ? '11 Sunucu (Dağınık)' : (architectureMode() === 'po' ? '109 Canlı Arayüz' : '1 Bulut DB (Konsolide)') }}
               </strong>
             </div>
 
             <div class="summary-stat">
-              <span class="s-label">Entegrasyon Mimarisi</span>
-              <strong class="s-val" [class.green]="architectureMode() === 'rise'">
-                {{ architectureMode() === 'rise' ? 'SAP BTP Integration Suite' : 'PO 7.5 On-Premise' }}
+              <span class="s-label">{{ architectureMode() === 'po' ? 'Verici (Outbound)' : 'Entegrasyon Mimarisi' }}</span>
+              <strong class="s-val green">
+                {{ architectureMode() === 'po' ? '83 Servis (%76.1)' : (architectureMode() === 'rise' ? 'SAP BTP Integration Suite' : 'PO 7.5 On-Premise') }}
               </strong>
             </div>
 
             <div class="summary-stat">
-              <span class="s-label">Hedef Lisans Paketi</span>
-              <strong class="s-val green">70 FUE (Optimize Bulut)</strong>
+              <span class="s-label">{{ architectureMode() === 'po' ? 'Alıcı (Inbound)' : 'Hedef Lisans Paketi' }}</span>
+              <strong class="s-val" [class.text-blue]="architectureMode() === 'po'" [class.green]="architectureMode() !== 'po'">
+                {{ architectureMode() === 'po' ? '26 Servis (%23.9)' : '70 FUE (Optimize Bulut)' }}
+              </strong>
             </div>
 
             <div class="summary-stat">
-              <span class="s-label">Tahmini Yıllık Tasarruf</span>
-              <strong class="s-val green">€140.000 / Yıl Net TCO</strong>
+              <span class="s-label">{{ architectureMode() === 'po' ? 'Senkron / Anlık' : 'Tahmini Yıllık Tasarruf' }}</span>
+              <strong class="s-val green">
+                {{ architectureMode() === 'po' ? '72 Canlı Servis' : '€140.000 / Yıl Net TCO' }}
+              </strong>
             </div>
 
             <div class="summary-stat">
-              <span class="s-label">Destek Sonu (EoS) Riski</span>
-              <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise'">
-                {{ architectureMode() === 'asis' ? 'Fiori 1511 & CS (2 Kritik)' : '0 Risk (%100 SAP Bulut)' }}
+              <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Sunucu Adedi' : 'Destek Sonu (EoS) Riski' }}</span>
+              <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
+                {{ architectureMode() === 'po' ? '16 Sunucu / Instance' : (architectureMode() === 'asis' ? 'Fiori 1511 & CS (2 Kritik)' : '0 Risk (%100 SAP Bulut)') }}
               </strong>
             </div>
           </div>
@@ -281,8 +311,7 @@ export interface ArchitectureEdge {
                   [style.left.px]="node.x - 110" 
                   [style.top.px]="node.y - 75"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)"
-                  (click)="openDetailModal(node)">
+                  (mousedown)="startDrag(node, $event)">
 
                   <!-- Flagship Card Header -->
                   <div class="s4p-top-header">
@@ -293,7 +322,7 @@ export interface ArchitectureEdge {
                       <strong class="s4p-main-title">S4P</strong>
                       <span class="s4p-edition-tag">S/4HANA Private Cloud</span>
                     </div>
-                    <span class="s4p-pulse-indicator" title="Canlı Bulut Sistemi"></span>
+                    <button class="node-info-trigger-btn" (click)="openDetailModal(node); $event.stopPropagation()" title="Detaylı Sistem Raporu">ℹ</button>
                   </div>
 
                   <!-- S4/HANA & Fiori Core Layer Box -->
@@ -324,15 +353,14 @@ export interface ArchitectureEdge {
                   [style.left.px]="node.x - 70" 
                   [style.top.px]="node.y - 50"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)"
-                  (click)="openDetailModal(node)">
+                  (mousedown)="startDrag(node, $event)">
                   
                   <div class="service-top-row">
                     <div class="svc-icon-box">
                       <app-icon [name]="node.iconName" [size]="14" color="#0284c7"></app-icon>
                     </div>
                     <strong class="service-name">{{ node.name }}</strong>
-                    <span class="sap-mini-tag">SAP</span>
+                    <button class="node-info-trigger-btn mini" (click)="openDetailModal(node); $event.stopPropagation()" title="Detay">ℹ</button>
                   </div>
 
                   <div class="service-role-text">
@@ -344,8 +372,51 @@ export interface ArchitectureEdge {
                     <span>SAP BTP</span>
                   </div>
                 </div>
+              } @else if (architectureMode() === 'po') {
+                <!-- PO Integration Service Card with Explicit Sender / Receiver Roles & Server Counts -->
+                <div 
+                  class="po-node-card" 
+                  [class.po-hub-card]="node.id === 'node-core'"
+                  [class.po-outbound-card]="node.role === 'outbound'"
+                  [class.po-inbound-card]="node.role === 'inbound'"
+                  [class.po-sync-card]="node.role === 'sync'"
+                  [style.left.px]="node.x - (node.id === 'node-core' ? 125 : 110)" 
+                  [style.top.px]="node.y - 48"
+                  [class.is-dragging]="draggingNodeId === node.id"
+                  (mousedown)="startDrag(node, $event)">
+                  
+                  <!-- Top Role & Server Count Badge Row -->
+                  <div class="po-badge-top-row">
+                    <span class="po-role-pill" [ngClass]="node.role">
+                      {{ node.role === 'hub' ? '★ MERKEZİ HUB' : (node.role === 'outbound' ? '▲ VERİCİ (Outbound)' : (node.role === 'inbound' ? '▼ ALICI (Inbound)' : '⇄ SENKRON')) }}
+                    </span>
+                    <div class="right-badge-group">
+                      <span class="po-server-count-pill" title="Sunucu / Instance Adedi">
+                        🏢 {{ node.instanceCount || 1 }} Sunucu
+                      </span>
+                      <button class="node-info-trigger-btn mini" (click)="openDetailModal(node); $event.stopPropagation()" title="Detaylı Rapor">ℹ</button>
+                    </div>
+                  </div>
+
+                  <div class="po-card-content">
+                    <div class="po-title-line">
+                      <app-icon [name]="node.iconName" [size]="14" [color]="node.role === 'outbound' ? '#059669' : (node.role === 'inbound' ? '#0284c7' : '#7e22ce')"></app-icon>
+                      <strong class="po-name-text">{{ node.name }}</strong>
+                    </div>
+
+                    <div class="po-proto-pill">
+                      <code>{{ node.protocol }}</code>
+                    </div>
+
+                    <div class="po-role-hint-row">
+                      <span class="hint-txt">
+                        {{ node.role === 'hub' ? 'Sybase ASE 16 • Win Server 2019' : (node.role === 'outbound' ? 'Burada VERİCİ konumdasınız (SAP ➔ Dış)' : (node.role === 'inbound' ? 'Burada ALICI konumdasınız (Dış ➔ SAP)' : 'Çift Yönlü Canlı RFC / API Sorgusu')) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               } @else {
-                <!-- Standard AS-IS / PO Node Cards -->
+                <!-- Standard AS-IS Node Cards -->
                 <div 
                   class="canvas-node" 
                   [style.left.px]="node.x - (node.id === 'node-core' ? 125 : 110)" 
@@ -355,8 +426,7 @@ export interface ArchitectureEdge {
                   [class.eos-node]="node.isEosRisk"
                   [class.active-selected]="selectedNode()?.id === node.id"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)"
-                  (click)="openDetailModal(node)">
+                  (mousedown)="startDrag(node, $event)">
 
                   <!-- Red Square Instance Badge -->
                   <div class="red-instance-badge" *ngIf="architectureMode() !== 'po'" title="Instance / Sunucu Adedi: {{ node.instanceCount || 1 }}">
@@ -366,7 +436,10 @@ export interface ArchitectureEdge {
                   <div class="c-node-card-body">
                     <div class="c-header-row">
                       <strong class="c-name">{{ node.name }}</strong>
-                      <span class="sap-brand-pill">SAP</span>
+                      <div class="header-right-tools">
+                        <span class="sap-brand-pill">SAP</span>
+                        <button class="node-info-trigger-btn mini" (click)="openDetailModal(node); $event.stopPropagation()" title="Detay">ℹ</button>
+                      </div>
                     </div>
 
                     <div class="c-sub-info-pill">
@@ -546,6 +619,143 @@ export interface ArchitectureEdge {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- PO LIVE INTEGRATION INTERFACES TABLE & SERVER COUNTS (ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx) -->
+      <div class="card-box po-integration-table-card" *ngIf="architectureMode() === 'po'">
+        <div class="card-header">
+          <div class="po-table-title-group">
+            <div class="icon-circle bg-blue">
+              <app-icon name="bolt" [size]="16" color="#0284c7"></app-icon>
+            </div>
+            <div>
+              <h3>ABC Sigorta PO Canlı Entegrasyon Listesi (109 Arayüz & Sunucu Dağılımı)</h3>
+              <span class="c-sub">ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx dosyasındaki 109 canlı servis, alıcı/verici rolleri ve sunucu adetleri</span>
+            </div>
+          </div>
+          <span class="badge-source-file">Excel: ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx (109 Servis)</span>
+        </div>
+
+        <!-- Sunucu Adetleri Özet Barı -->
+        <div class="po-server-summary-bar">
+          <div class="ps-item">
+            <span class="ps-lbl">Merkezi PO 7.5:</span>
+            <strong class="ps-val text-blue">3 Sunucu (Dev / QA / Prod)</strong>
+          </div>
+          <div class="ps-item">
+            <span class="ps-lbl">SAP ERP Backend:</span>
+            <strong class="ps-val text-blue">3 Sunucu (ECC/S4)</strong>
+          </div>
+          <div class="ps-item">
+            <span class="ps-lbl">Banka & Kurum Gatewayleri:</span>
+            <strong class="ps-val text-emerald">6 Sunucu</strong>
+          </div>
+          <div class="ps-item">
+            <span class="ps-lbl">Sigorta & Entegrasyon Sunucuları:</span>
+            <strong class="ps-val text-purple">4 Sunucu</strong>
+          </div>
+          <div class="ps-item highlight">
+            <span class="ps-lbl">TOPLAM ENTEGRASYON SUNUCUSU:</span>
+            <strong class="ps-val text-dark">16 Sunucu / Instance</strong>
+          </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="po-filter-toolbar">
+          <div class="search-box">
+            <app-icon name="search" [size]="14" color="#64748b"></app-icon>
+            <input 
+              type="text" 
+              [(ngModel)]="poSearchQuery" 
+              placeholder="Arayüz adı, servis, sistem veya protokol ara (Örn: ZFI, KUR, JDBC, WINSURE...)" 
+              class="search-input" />
+            <button *ngIf="poSearchQuery" class="clear-btn" (click)="poSearchQuery = ''">✕</button>
+          </div>
+
+          <div class="filter-pills-row">
+            <button class="f-pill" [class.active]="poFilter() === 'ALL'" (click)="poFilter.set('ALL')">
+              Tümü ({{ poIntegrationInterfaces.length }})
+            </button>
+            <button class="f-pill pill-green" [class.active]="poFilter() === 'OUTBOUND'" (click)="poFilter.set('OUTBOUND')">
+              ▲ Verici / Outbound (83)
+            </button>
+            <button class="f-pill pill-blue" [class.active]="poFilter() === 'INBOUND'" (click)="poFilter.set('INBOUND')">
+              ▼ Alıcı / Inbound (26)
+            </button>
+            <button class="f-pill pill-purple" [class.active]="poFilter() === 'SYNC'" (click)="poFilter.set('SYNC')">
+              ⚡ Senkron (72)
+            </button>
+            <button class="f-pill" [class.active]="poFilter() === 'ASYNC'" (click)="poFilter.set('ASYNC')">
+              ⏳ Asenkron (37)
+            </button>
+            <button class="f-pill" [class.active]="poFilter() === 'JDBC'" (click)="poFilter.set('JDBC')">
+              JDBC (43)
+            </button>
+            <button class="f-pill" [class.active]="poFilter() === 'SOAP'" (click)="poFilter.set('SOAP')">
+              SOAP (28)
+            </button>
+            <button class="f-pill" [class.active]="poFilter() === 'RFC'" (click)="poFilter.set('RFC')">
+              RFC (18)
+            </button>
+            <button class="f-pill" [class.active]="poFilter() === 'REST'" (click)="poFilter.set('REST')">
+              REST (10)
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive max-height-table">
+          <table class="saas-table po-excel-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Arayüz Adı (Interface Name)</th>
+                <th class="text-center">Rolünüz (Role)</th>
+                <th>Kaynak (Sender) ➔ Hedef (Receiver)</th>
+                <th>Protokol & Adaptör</th>
+                <th class="text-center">Tür</th>
+                <th>Operation Mapping / Senaryo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (iface of filteredPoInterfaces(); track iface.id; let idx = $index) {
+                <tr [class.row-outbound]="iface.role === 'outbound'" [class.row-inbound]="iface.role === 'inbound'">
+                  <td class="text-muted font-bold">{{ iface.id }}</td>
+                  
+                  <td>
+                    <strong class="iface-code">{{ iface.name }}</strong>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="role-badge" [ngClass]="iface.role">
+                      {{ iface.roleLabel }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="flow-path">{{ iface.sender }} ➔ <strong>{{ iface.receiver }}</strong></span>
+                  </td>
+
+                  <td>
+                    <span class="proto-tag">{{ iface.protocol }}</span>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="type-pill" [class.sync]="iface.type === 'Synchronous'">{{ iface.type }}</span>
+                  </td>
+
+                  <td>
+                    <span class="om-tag">{{ iface.operationMapping }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="po-table-footer">
+          <span>Toplam <strong>109</strong> servisten <strong>{{ filteredPoInterfaces().length }}</strong> servis listeleniyor.</span>
+          <span class="text-emerald font-bold">✓ RISE with SAP BTP Migration Hazır</span>
         </div>
       </div>
 
@@ -895,7 +1105,7 @@ export interface ArchitectureEdge {
     /* FULL HEIGHT CANVAS CONTAINER EXPANDING DOWNWARDS */
     .canvas-container {
       position: relative;
-      min-height: 720px;
+      min-height: 1060px;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -949,9 +1159,10 @@ export interface ArchitectureEdge {
       position: relative;
       background: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
       background-size: 22px 22px;
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
-      min-height: 640px;
+      min-height: 1040px;
+      height: 1040px;
       user-select: none;
     }
 
@@ -959,6 +1170,45 @@ export interface ArchitectureEdge {
       position: absolute;
       inset: 0;
       pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Info Trigger Button for Modal */
+    .node-info-trigger-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0284c7;
+      font-size: 0.7rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s;
+
+      &:hover {
+        background: #0284c7;
+        color: #ffffff;
+        border-color: #0284c7;
+        transform: scale(1.1);
+      }
+
+      &.mini {
+        width: 17px;
+        height: 17px;
+        font-size: 0.62rem;
+      }
+    }
+
+    .right-badge-group, .header-right-tools {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
     }
 
     /* CLEAN CORPORATE SAP NODE CARD (NO ICON BOX CLUTTER) */
@@ -1548,6 +1798,428 @@ export interface ArchitectureEdge {
       .text-teal { color: #047857; font-weight: 800; }
     }
 
+    /* PO INTEGRATION NODE CARDS (CANVAS) */
+    .po-toolbar {
+      background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+      border: 1.5px solid #bae6fd;
+      padding: 0.75rem 1.25rem;
+
+      .po-toolbar-badge-group {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+
+        .po-main-tag {
+          font-weight: 800;
+          font-size: 0.82rem;
+          color: #0369a1;
+          margin-right: 0.35rem;
+        }
+
+        .po-stat-pill {
+          font-size: 0.7rem;
+          font-weight: 800;
+          padding: 0.2rem 0.55rem;
+          border-radius: 6px;
+
+          &.green { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+          &.blue { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+          &.purple { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+          &.gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+          &.dark { background: #0f172a; color: #ffffff; }
+        }
+      }
+    }
+
+    .po-node-card {
+      position: absolute;
+      width: 235px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      z-index: 25;
+      transition: all 0.15s;
+
+      &:hover {
+        border-color: #0284c7;
+        box-shadow: 0 6px 18px rgba(2, 132, 199, 0.18);
+      }
+
+      &:active, &.is-dragging {
+        cursor: grabbing !important;
+        transform: scale(1.05);
+        border-color: #0284c7;
+        box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3) !important;
+        z-index: 50 !important;
+      }
+
+      &.po-hub-card {
+        width: 250px;
+        border: 2px solid #0284c7;
+        background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.15);
+      }
+
+      &.po-outbound-card {
+        border-left: 4px solid #059669;
+      }
+
+      &.po-inbound-card {
+        border-left: 4px solid #0284c7;
+      }
+
+      &.po-sync-card {
+        border-left: 4px solid #7e22ce;
+      }
+
+      .po-badge-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.3rem;
+
+        .po-role-pill {
+          font-size: 0.62rem;
+          font-weight: 800;
+          padding: 0.1rem 0.4rem;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+
+          &.outbound { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+          &.inbound { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+          &.sync { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+          &.hub { background: #0284c7; color: #ffffff; }
+        }
+
+        .po-server-count-pill {
+          font-size: 0.62rem;
+          font-weight: 800;
+          color: #334155;
+          background: #f1f5f9;
+          border: 1px solid #cbd5e1;
+          padding: 0.08rem 0.35rem;
+          border-radius: 4px;
+        }
+      }
+
+      .po-card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        .po-title-line {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+
+          .po-name-text {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.25;
+          }
+        }
+
+        .po-proto-pill {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          padding: 0.15rem 0.35rem;
+          overflow: hidden;
+
+          code {
+            font-size: 0.62rem;
+            color: #475569;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+          }
+        }
+
+        .po-role-hint-row {
+          .hint-txt {
+            font-size: 0.64rem;
+            color: #64748b;
+            font-weight: 600;
+          }
+        }
+      }
+    }
+
+    /* PO INTEGRATION TABLE & SERVER SUMMARY */
+    .po-integration-table-card {
+      margin-top: 1rem;
+      border-color: #cbd5e1;
+
+      .po-table-title-group {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+
+        .icon-circle {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .c-sub {
+          font-size: 0.72rem;
+          color: #64748b;
+        }
+      }
+
+      .badge-source-file {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #0284c7;
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        padding: 0.18rem 0.55rem;
+        border-radius: 4px;
+      }
+    }
+
+    .po-server-summary-bar {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+
+      .ps-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.74rem;
+
+        .ps-lbl { color: #64748b; font-weight: 500; }
+        .ps-val { font-weight: 800; }
+        .text-blue { color: #0284c7; }
+        .text-emerald { color: #059669; }
+        .text-purple { color: #7e22ce; }
+        .text-dark { color: #0f172a; font-size: 0.84rem; }
+
+        &.highlight {
+          background: #f0fdf4;
+          border: 1px solid #a7f3d0;
+          padding: 0.25rem 0.65rem;
+          border-radius: 6px;
+        }
+      }
+    }
+
+    .po-excel-table {
+      .iface-code {
+        font-family: monospace;
+        font-size: 0.74rem;
+        color: #0f172a;
+      }
+
+      .iface-desc {
+        font-size: 0.74rem;
+        color: #1e293b;
+        font-weight: 500;
+      }
+
+      .role-badge {
+        display: inline-block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 0.12rem 0.45rem;
+        border-radius: 4px;
+
+        &.outbound { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        &.inbound { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+        &.sync { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+      }
+
+      .flow-path {
+        font-size: 0.72rem;
+        color: #475569;
+      }
+
+      .proto-tag {
+        font-size: 0.68rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+
+      .server-pill {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #334155;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 0.1rem 0.45rem;
+        border-radius: 4px;
+      }
+
+      .status-live-pill {
+        display: inline-block;
+        font-size: 0.66rem;
+        font-weight: 800;
+        color: #059669;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+      }
+
+      tr.row-outbound {
+        background: #fcfffd;
+      }
+
+      tr.row-inbound {
+        background: #fafcff;
+      }
+
+      .type-pill {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #475569;
+
+        &.sync {
+          background: #fdf4ff;
+          color: #7e22ce;
+          border: 1px solid #f5d0fe;
+        }
+      }
+
+      .om-tag {
+        font-family: monospace;
+        font-size: 0.68rem;
+        color: #475569;
+      }
+    }
+
+    .po-filter-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+
+      .search-box {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 0.35rem 0.65rem;
+
+        .search-input {
+          border: none;
+          background: transparent;
+          outline: none;
+          font-size: 0.76rem;
+          color: #0f172a;
+          width: 100%;
+
+          &::placeholder { color: #94a3b8; }
+        }
+
+        .clear-btn {
+          border: none;
+          background: transparent;
+          color: #94a3b8;
+          font-size: 0.72rem;
+          cursor: pointer;
+        }
+      }
+
+      .filter-pills-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+
+        .f-pill {
+          padding: 0.25rem 0.55rem;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          border-radius: 5px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s;
+
+          &:hover { color: #0284c7; border-color: #0284c7; }
+
+          &.active {
+            background: #0284c7;
+            border-color: #0284c7;
+            color: #ffffff;
+          }
+
+          &.pill-green.active {
+            background: #059669;
+            border-color: #059669;
+            color: #ffffff;
+          }
+
+          &.pill-blue.active {
+            background: #0284c7;
+            border-color: #0284c7;
+            color: #ffffff;
+          }
+
+          &.pill-purple.active {
+            background: #7e22ce;
+            border-color: #7e22ce;
+            color: #ffffff;
+          }
+        }
+      }
+    }
+
+    .po-table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
     /* RICH SYSTEM DETAILS MODAL STYLING */
     .modal-backdrop {
       position: fixed;
@@ -1793,29 +2465,258 @@ export class ArchitectureMapComponent {
     { id: 'e4', fromId: 'node-webdisp', toId: 'node-fiori-eos', label: 'Fiori Trafik ➔', isEosRisk: true }
   ];
 
-  // Excel Sompo PO Live Integration Interfaces Nodes (Extracted from Sompo PO Entegrasyon Listesi.xlsx)
+  // Excel ABC Sigorta PO Live Integration Interfaces Nodes (Extracted from ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx)
   poNodes: ArchitectureNode[] = [
-    { id: 'node-core', name: 'SAP PO 7.5 (Process Orchestration)', category: 'Core', userCount: 10, instanceCount: 3, dbInfo: 'Sybase 16 • Windows 2019', status: 'Active', x: 520, y: 300, iconName: 'layers', color: '#0284c7', protocol: 'Central Integration Hub' },
-    { id: 'node-qnb', name: 'QNB Bank Ödeme Gateway', category: 'Integration', userCount: 5, dbInfo: 'SOAP ➔ HTTP', status: 'Active', x: 180, y: 120, iconName: 'bolt', color: '#0284c7', protocol: 'SI_OUT_SYNC_MakeOnlineProcessMoney' },
-    { id: 'node-winsure', name: 'WINSURE Hasar Transferi', category: 'Integration', userCount: 12, dbInfo: 'SAP ➔ WINSURE XSLT', status: 'Active', x: 520, y: 120, iconName: 'shield', color: '#059669', protocol: 'SI_OUT_SYNC_ClaimTransfer' },
-    { id: 'node-f110', name: 'F110 Otomatik Ödeme Sync', category: 'Integration', userCount: 8, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 860, y: 120, iconName: 'database', color: '#0284c7', protocol: 'SI_OUT_SYNC_FI_SAP_F110_DATA' },
-    { id: 'node-fatura', name: 'Fatura Kesin Kayıt DB', category: 'Integration', userCount: 15, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 160, y: 300, iconName: 'file-text', color: '#0284c7', protocol: 'SI_OUT_SYNC_KESIN_KAYIT' },
-    { id: 'node-satici', name: 'Satıcı & Banka Unsur DB', category: 'Integration', userCount: 6, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 880, y: 300, iconName: 'cart', color: '#b45309', protocol: 'SI_OUT_SYNC_SAP_SATICI_BANKA' },
-    { id: 'node-butce', name: 'Bütçe KO Tanım DB', category: 'Integration', userCount: 4, dbInfo: 'SOAP ➔ JDBC', status: 'Active', x: 180, y: 480, iconName: 'chart', color: '#4f46e5', protocol: 'SI_OUT_SYNC_SAP_BUTCE_KO' },
-    { id: 'node-cust-rfc', name: 'Master Data Müşteri RFC', category: 'Integration', userCount: 20, dbInfo: 'SOAP ➔ RFC', status: 'Active', x: 520, y: 480, iconName: 'users', color: '#047857', protocol: 'ZENT_CUSTOMER_CREATE_MASTER' },
-    { id: 'node-vendor-rfc', name: 'Vendor & Customer Search', category: 'Integration', userCount: 25, dbInfo: 'SOAP ➔ RFC', status: 'Active', x: 860, y: 480, iconName: 'search', color: '#0284c7', protocol: 'ZENT_VENDOR_CUSTOMER_SEARCH' }
+    // MERKEZİ HUB
+    { 
+      id: 'node-core', 
+      name: 'SAP PO 7.5 (Process Orchestration)', 
+      category: 'Core', 
+      userCount: 10, 
+      instanceCount: 3, 
+      dbInfo: 'Sybase ASE 16 • Windows Server 2019', 
+      status: 'Active', 
+      x: 520, 
+      y: 280, 
+      iconName: 'layers', 
+      color: '#0284c7', 
+      protocol: 'Central Integration Hub (ESR & Integration Directory)',
+      role: 'hub',
+      roleLabel: 'Merkezi Entegrasyon Hub',
+      serverCountLabel: '3 Sunucu (Dev, QA, Prod)'
+    },
+
+    // SOL SÜTUN: VERİCİ (OUTBOUND) KONUMDASINIZ (SAP ➔ DIŞ KURUMLAR - GENİŞ BOŞLUKLU DİZİLİM)
+    { 
+      id: 'node-a-bankasi', 
+      name: 'A Bankası Online Ödeme Gateway', 
+      category: 'Integration', 
+      userCount: 5, 
+      instanceCount: 2,
+      dbInfo: 'SOAP ➔ HTTP WebService', 
+      status: 'Active', 
+      x: 180, 
+      y: 80, 
+      iconName: 'bolt', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_MakeOnlineProcessMoney',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '2 Sunucu (Aktif/Pasif)'
+    },
+    { 
+      id: 'node-winsure', 
+      name: 'WINSURE Hasar Transferi', 
+      category: 'Integration', 
+      userCount: 12, 
+      instanceCount: 2,
+      dbInfo: 'SAP ➔ WINSURE XML/XSLT', 
+      status: 'Active', 
+      x: 180, 
+      y: 230, 
+      iconName: 'shield', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_ClaimTransfer',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '2 Sunucu (Prod/QA)'
+    },
+    { 
+      id: 'node-f110', 
+      name: 'F110 Otomatik Ödeme Sync', 
+      category: 'Integration', 
+      userCount: 8, 
+      instanceCount: 1,
+      dbInfo: 'SOAP ➔ JDBC Database', 
+      status: 'Active', 
+      x: 180, 
+      y: 380, 
+      iconName: 'database', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_FI_SAP_F110_DATA',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '1 Sunucu (Prod)'
+    },
+    { 
+      id: 'node-fatura', 
+      name: 'Fatura Kesin Kayıt Gateway', 
+      category: 'Integration', 
+      userCount: 15, 
+      instanceCount: 2,
+      dbInfo: 'SOAP ➔ WebService API', 
+      status: 'Active', 
+      x: 180, 
+      y: 530, 
+      iconName: 'file-text', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_KESIN_KAYIT',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '2 Sunucu (Aktif/Pasif)'
+    },
+    { 
+      id: 'node-satici', 
+      name: 'Satıcı & Banka Doğrulama', 
+      category: 'Integration', 
+      userCount: 6, 
+      instanceCount: 1,
+      dbInfo: 'SOAP ➔ JDBC Database', 
+      status: 'Active', 
+      x: 180, 
+      y: 680, 
+      iconName: 'cart', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_SAP_SATICI_BANKA',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '1 Sunucu (Prod)'
+    },
+    { 
+      id: 'node-butce', 
+      name: 'Bütçe & Masraf Merkezi KO', 
+      category: 'Integration', 
+      userCount: 4, 
+      instanceCount: 1,
+      dbInfo: 'SOAP ➔ JDBC Database', 
+      status: 'Active', 
+      x: 180, 
+      y: 830, 
+      iconName: 'chart', 
+      color: '#059669', 
+      protocol: 'SI_OUT_SYNC_SAP_BUTCE_KO',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
+      serverCountLabel: '1 Sunucu (Prod)'
+    },
+
+    // SAĞ SÜTUN: ALICI (INBOUND) KONUMDASINIZ (DIŞ KURUMLAR ➔ SAP - GENİŞ BOŞLUKLU DİZİLİM)
+    { 
+      id: 'node-mt940', 
+      name: 'Banka Hesap Ekstresi (MT940)', 
+      category: 'Integration', 
+      userCount: 20, 
+      instanceCount: 2,
+      dbInfo: 'SFTP ➔ SAP Inbound RFC', 
+      status: 'Active', 
+      x: 880, 
+      y: 160, 
+      iconName: 'database', 
+      color: '#0284c7', 
+      protocol: 'SI_IN_SYNC_BankStatement_MT940',
+      role: 'inbound',
+      roleLabel: 'Alıcı (Inbound) Konumdasınız',
+      serverCountLabel: '2 Sunucu (Aktif/Pasif)'
+    },
+    { 
+      id: 'node-police', 
+      name: 'Acente Poliçe & Tahsilat', 
+      category: 'Integration', 
+      userCount: 30, 
+      instanceCount: 2,
+      dbInfo: 'REST API ➔ RFC Inbound', 
+      status: 'Active', 
+      x: 880, 
+      y: 450, 
+      iconName: 'shield', 
+      color: '#0284c7', 
+      protocol: 'SI_IN_SYNC_PolicyProduction',
+      role: 'inbound',
+      roleLabel: 'Alıcı (Inbound) Konumdasınız',
+      serverCountLabel: '2 Sunucu (Gateway/App)'
+    },
+    { 
+      id: 'node-efatura-in', 
+      name: 'Gelen E-Fatura & E-İrsaliye', 
+      category: 'Integration', 
+      userCount: 25, 
+      instanceCount: 1,
+      dbInfo: 'SOAP ➔ SAP MM/FI Inbound', 
+      status: 'Active', 
+      x: 880, 
+      y: 740, 
+      iconName: 'file-text', 
+      color: '#0284c7', 
+      protocol: 'SI_IN_SYNC_EFATURA_RECEIVE',
+      role: 'inbound',
+      roleLabel: 'Alıcı (Inbound) Konumdasınız',
+      serverCountLabel: '1 Sunucu (Prod)'
+    },
+
+    // ALT: İKİ YÖNLÜ (SENKRON) ENTEGRASYON
+    { 
+      id: 'node-cust-search', 
+      name: 'Müşteri & TC Kimlik Sorgulama', 
+      category: 'Integration', 
+      userCount: 50, 
+      instanceCount: 2,
+      dbInfo: 'SAP RFC ⇄ NVI / GİB API', 
+      status: 'Active', 
+      x: 530, 
+      y: 930, 
+      iconName: 'search', 
+      color: '#7e22ce', 
+      protocol: 'SI_SYNC_CUSTOMER_SEARCH',
+      role: 'sync',
+      roleLabel: 'İki Yönlü (Senkron)',
+      serverCountLabel: '2 Sunucu (Cluster)'
+    }
   ];
 
+  // Connection Edges with Directional Flow Markers
   poEdges: ArchitectureEdge[] = [
-    { id: 'pe1', fromId: 'node-qnb', toId: 'node-core', label: 'QNB Ödeme ➔' },
-    { id: 'pe2', fromId: 'node-winsure', toId: 'node-core', label: 'Hasar Transfer ➔' },
-    { id: 'pe3', fromId: 'node-f110', toId: 'node-core', label: 'F110 Ödeme ➔' },
-    { id: 'pe4', fromId: 'node-fatura', toId: 'node-core', label: 'Fatura Kayıt ➔' },
-    { id: 'pe5', fromId: 'node-satici', toId: 'node-core', label: 'Satıcı Banka ➔' },
-    { id: 'pe6', fromId: 'node-butce', toId: 'node-core', label: 'Bütçe KO ➔' },
-    { id: 'pe7', fromId: 'node-cust-rfc', toId: 'node-core', label: 'Müşteri RFC ➔' },
-    { id: 'pe8', fromId: 'node-vendor-rfc', toId: 'node-core', label: 'Vendor Search ➔' }
+    // Verici (Outbound): SAP PO Hub ➔ Dış Sistemler
+    { id: 'pe1', fromId: 'node-core', toId: 'node-a-bankasi', label: 'Verici (Outbound) ➔' },
+    { id: 'pe2', fromId: 'node-core', toId: 'node-winsure', label: 'Verici (Outbound) ➔' },
+    { id: 'pe3', fromId: 'node-core', toId: 'node-f110', label: 'Verici (Outbound) ➔' },
+    { id: 'pe4', fromId: 'node-core', toId: 'node-fatura', label: 'Verici (Outbound) ➔' },
+    { id: 'pe5', fromId: 'node-core', toId: 'node-satici', label: 'Verici (Outbound) ➔' },
+    { id: 'pe6', fromId: 'node-core', toId: 'node-butce', label: 'Verici (Outbound) ➔' },
+
+    // Alıcı (Inbound): Dış Sistemler ➔ SAP PO Hub
+    { id: 'pe7', fromId: 'node-mt940', toId: 'node-core', label: 'Alıcı (Inbound) ➔' },
+    { id: 'pe8', fromId: 'node-police', toId: 'node-core', label: 'Alıcı (Inbound) ➔' },
+    { id: 'pe9', fromId: 'node-efatura-in', toId: 'node-core', label: 'Alıcı (Inbound) ➔' },
+
+    // İki Yönlü Senkron
+    { id: 'pe10', fromId: 'node-core', toId: 'node-cust-search', label: 'Senkron (Çift Yönlü) ⇄' }
   ];
+
+  // Full ABC_Sigorta_PO_Entegrasyon_Listesi Excel Interfaces Data Table (109 Live Interfaces)
+  poIntegrationInterfaces = PO_INTERFACES_DATA;
+
+  poSearchQuery = '';
+  poFilter = signal<string>('ALL');
+
+  filteredPoInterfaces = computed(() => {
+    let list = this.poIntegrationInterfaces;
+    const filter = this.poFilter();
+    const query = this.poSearchQuery.trim().toLowerCase();
+
+    if (filter === 'OUTBOUND') {
+      list = list.filter(i => i.role === 'outbound');
+    } else if (filter === 'INBOUND') {
+      list = list.filter(i => i.role === 'inbound');
+    } else if (filter === 'SYNC') {
+      list = list.filter(i => i.type === 'Synchronous');
+    } else if (filter === 'ASYNC') {
+      list = list.filter(i => i.type === 'Asynchronous');
+    } else if (filter === 'JDBC' || filter === 'SOAP' || filter === 'RFC' || filter === 'REST' || filter === 'SFTP') {
+      list = list.filter(i => i.protocol.includes(filter) || i.senderAdapter.includes(filter) || i.receiverAdapter.includes(filter));
+    }
+
+    if (query) {
+      list = list.filter(i => 
+        i.name.toLowerCase().includes(query) || 
+        i.sender.toLowerCase().includes(query) || 
+        i.receiver.toLowerCase().includes(query) || 
+        i.protocol.toLowerCase().includes(query) || 
+        i.scenario.toLowerCase().includes(query)
+      );
+    }
+
+    return list;
+  });
 
   // Current Active Nodes & Edges Signals
   nodes = signal<ArchitectureNode[]>(this.asisNodes);

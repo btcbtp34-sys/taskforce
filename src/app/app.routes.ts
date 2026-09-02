@@ -10,6 +10,8 @@ import { BusinessCaseComponent } from './features/business-case/business-case.co
 import { WorkspaceComponent } from './features/workspace/workspace.component';
 import { ReportsComponent } from './features/reports/reports.component';
 import { ArchitectureMapComponent } from './features/architecture-map/architecture-map.component';
+import { SourceSizingComponent } from './features/source-sizing/source-sizing.component';
+import { LargestTablesComponent } from './features/largest-tables/largest-tables.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -18,11 +20,17 @@ export const routes: Routes = [
   { path: 'customers', component: CustomerListComponent },
   { path: 'customers/:id', component: CustomerDetailComponent },
   { path: 'architecture-map', component: ArchitectureMapComponent },
+  { path: 'source-sizing', component: SourceSizingComponent },
+  { path: 'source', redirectTo: 'source-sizing' },
+  { path: 'largest-tables', component: LargestTablesComponent },
+  { path: 'dvm', redirectTo: 'largest-tables' },
   { path: 'data-import', component: DataImportComponent },
   { path: 'analytics', component: AnalyticsComponent },
   { path: 'opportunities', component: OpportunitiesComponent },
   { path: 'business-case', component: BusinessCaseComponent },
   { path: 'reports', component: ReportsComponent },
+  { path: 'summary', redirectTo: 'reports' },
+  { path: 'executive-summary', redirectTo: 'reports' },
   { path: 'workspace', redirectTo: 'dashboard' },
   { path: 'presentation', redirectTo: 'reports' },
   { path: 'ai-assistant', redirectTo: 'dashboard' },
