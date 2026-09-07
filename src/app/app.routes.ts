@@ -16,7 +16,7 @@ import { ModulesComponent } from './features/modules/modules.component';
 import { DevelopmentComponent } from './features/development/development.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'customers', component: CustomerListComponent },
@@ -27,6 +27,7 @@ export const routes: Routes = [
   { path: 'largest-tables', component: LargestTablesComponent },
   { path: 'dvm', redirectTo: 'largest-tables' },
   { path: 'modules', component: ModulesComponent },
+  { path: 'moduller', redirectTo: 'modules', pathMatch: 'full' },
   { path: 'development', component: DevelopmentComponent },
   { path: 'data-import', component: DataImportComponent },
   { path: 'analytics', component: AnalyticsComponent },

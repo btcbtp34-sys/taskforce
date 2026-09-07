@@ -1,0 +1,208 @@
+<main class="page-content">
+  <!-- Module Navigation Tabs -->
+  <div class="module-nav-container">
+    <div class="module-nav-tabs">
+      <button 
+        *ngFor="let mod of moduleList; trackBy: trackByModuleKey"
+        type="button"
+        class="module-nav-btn"
+        [class.active]="selectedModuleKey === mod.key"
+        (click)="selectModule(mod.key)">
+        <span class="module-tab-name">{{ mod.name }}</span>
+        <span class="module-tab-badge">{{ mod.slides.length > 1 ? mod.slides.length + ' Bölüm' : mod.slides[0]?.cards?.length || 0 }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card-container">
+    <!-- Header Section with Title & BTC Presentation Branding -->
+    <div class="slide-presentation-header">
+      <div class="slide-header-left">
+        <span class="slide-tag" *ngIf="currentSlide">{{ currentSlide.slideTag }}</span>
+        <h2 class="slide-main-title" *ngIf="currentSlide">{{ currentSlide.mainTitle }}</h2>
+        <p class="slide-desc" *ngIf="currentModule">{{ currentModule.description }}</p>
+      </div>
+
+      <div class="slide-header-right">
+        <div class="btc-badge">
+          <span class="btc-text">BTC</span>
+        </div>
+        <button class="primary-btn add-card-btn" (click)="openAddModal()">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Kart Ekle</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Multi-Part Slide Sub-Tabs (e.g. FI 1/2 vs 2/2, CO 1/2 vs 2/2) -->
+    <div class="slide-parts-bar" *ngIf="currentModule && currentModule.slides.length > 1">
+      <div class="slide-parts-label">Bölümler:</div>
+      <div class="slide-parts-buttons">
+        <button 
+          *ngFor="let slide of currentModule.slides; let i = index; trackBy: trackBySlideId"
+          type="button"
+          class="slide-part-btn"
+          [class.active]="activeSlideIndex === i"
+          (click)="setSlide(i)">
+          <span>{{ slide.slideTag }} — {{ slide.mainTitle }}</span>
+          <span class="slide-count">({{ slide.cards.length }} madde)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="filter-toolbar">
+      <div class="filter-search-box">
+        <svg class="filter-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input 
+          type="text" 
+          class="filter-search-input" 
+          placeholder="Modül içinde ara (program adı, ana veri, süre, rapor)..." 
+          [(ngModel)]="searchFilter"
+          (ngModelChange)="onFilterChange()" />
+      </div>
+
+      <div class="severity-pills-group">
+        <button 
+          type="button" 
+          class="severity-pill-btn" 
+          [class.active]="selectedSeverityFilter === 'TÜMÜ'"
+          (click)="setSeverityFilter('TÜMÜ')">
+          Tümü ({{ currentSlide?.cards?.length || 0 }})
+        </button>
+        <button 
+          *ngFor="let item of availableSeverities"
+          type="button" 
+          class="severity-pill-btn" 
+          [ngClass]="'pill-' + getSeverityClass(item.severity)"
+          [class.active]="selectedSeverityFilter === item.severity"
+          (click)="setSeverityFilter(item.severity)">
+          <span class="dot" [ngClass]="'dot-' + getSeverityClass(item.severity)"></span>
+          {{ item.severity }} ({{ item.count }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Presentation Grid of Assessment Cards -->
+    <div class="cards-grid" *ngIf="filteredCards.length > 0">
+      <div 
+        *ngFor="let card of filteredCards; trackBy: trackByCardId" 
+        class="assessment-card"
+        [class.full-width-card]="card.isFullWidth"
+        [ngClass]="'card-' + getSeverityClass(card.severity)">
+        
+        <div class="card-top-row">
+          <div class="card-title-group">
+            <div class="card-title-with-dot">
+              <span class="severity-dot" [ngClass]="'dot-' + getSeverityClass(card.severity)"></span>
+              <h3 class="assessment-card-title">{{ card.title }}</h3>
+            </div>
+            <div class="card-badge-label" [ngClass]="'badge-' + getSeverityClass(card.severity)">
+              {{ card.severity }}
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-btn edit-btn" (click)="openEditModal(card)" title="Düzenle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <ul class="card-bullet-list">
+          <li *ngFor="let bullet of card.bullets">{{ bullet }}</li>
+        </ul>
+
+        <!-- Optional Footer Highlight (e.g. Tahmini Süre: 6 Ay / 12 Ay) -->
+        <div class="card-footer-note" *ngIf="card.footerNote">
+          <span class="footer-note-text">{{ card.footerNote }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Placeholder State for Sections awaiting photos/data -->
+    <div class="ready-placeholder-card" *ngIf="filteredCards.length === 0">
+      <div class="placeholder-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </div>
+      <h3>Sonuç Bulunamadı</h3>
+      <p>Arama veya filtreleme kriterlerine uygun kart bulunamadı.</p>
+      <button class="primary-btn" (click)="openAddModal()">
+        <span>+ Yeni Kart Ekle</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-backdrop" *ngIf="isModalOpen">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ editingCardId ? 'Değerlendirme Kartını Düzenle' : 'Yeni Değerlendirme Kartı Ekle' }}</h3>
+        <button class="modal-close-btn" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label-bold">KART BAŞLIĞI *</label>
+          <input 
+            type="text" 
+            class="form-input" 
+            [(ngModel)]="formTitle" 
+            placeholder="Örn: Brownfield (System Conversion)" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-bold">DURUM / SEVERITY *</label>
+          <select class="form-input" [(ngModel)]="formSeverity">
+            <option *ngFor="let opt of severityOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-bold">MADDE VE DETAYLAR (Her satır bir madde) *</label>
+          <textarea 
+            class="form-textarea" 
+            rows="5" 
+            [(ngModel)]="formBulletsText" 
+            placeholder="Maddeleri her satıra birer adet gelecek şekilde yazınız..."></textarea>
+          <span class="form-hint-subtle">Her yeni satır kartta ayrı bir madde (•) olarak gösterilir.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label-bold">DİPNOT / TAHMİNİ SÜRE (Opsiyonel)</label>
+          <input 
+            type="text" 
+            class="form-input" 
+            [(ngModel)]="formFooterNote" 
+            placeholder="Örn: Tahmini Süre: 6 Ay" />
+        </div>
+
+        <div class="form-group-checkbox">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="formIsFullWidth" />
+            <span>Tam Genişlikte Göster (Sonuç kartları için)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="secondary-btn" (click)="closeModal()">İptal</button>
+        <button class="primary-btn" (click)="saveCard()" [disabled]="!formTitle.trim()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</main>
+
