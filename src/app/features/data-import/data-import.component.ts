@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DataImportService, ExcelImportCategory } from '../../core/services/data-import.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -30,12 +31,23 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       <div class="category-cards-grid">
         <div 
           class="cat-card" 
+          [class.selected]="selectedCategory() === 'basis'"
+          (click)="selectedCategory.set('basis')">
+          <div class="cat-icon-box purple"><app-icon name="cpu" [size]="20" color="#7e22ce"></app-icon></div>
+          <div class="cat-text">
+            <strong>SAP Basis & Sizing QuickSizer</strong>
+            <span>S/4HANA Boyutlandırma, 30 En Büyük Tablo, FUE ve Lisans analiz Excel'i (örn: Basis_Sizing.xlsx)</span>
+          </div>
+        </div>
+
+        <div 
+          class="cat-card" 
           [class.selected]="selectedCategory() === 'asis'"
           (click)="selectedCategory.set('asis')">
           <div class="cat-icon-box orange"><app-icon name="layers" [size]="20" color="#d97706"></app-icon></div>
           <div class="cat-text">
             <strong>Mevcut Durum Mimari Excel'i (AS-IS)</strong>
-            <span>Sunucu adetleri (3x ERP, 2x Fiori vb.), DB, OS ve Destek Sonu (EoS) verilerini yükleyin (örn: ABC_Holding_Mevcut_Durum.xlsx)</span>
+            <span>Sunucu adetleri (3x ERP, 2x Fiori vb.), DB, OS ve Destek Sonu (EoS) verilerini yükleyin</span>
           </div>
         </div>
 
@@ -46,7 +58,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="cat-icon-box blue"><app-icon name="bolt" [size]="20" color="#0284c7"></app-icon></div>
           <div class="cat-text">
             <strong>PO Canlı Entegrasyon Listesi</strong>
-            <span>SOAP, JDBC, RFC canlı entegrasyon listesini görsel mimari haritaya çevirin (örn: PO Entegrasyon Listesi.xlsx)</span>
+            <span>SOAP, JDBC, RFC canlı entegrasyon listesini görsel mimari haritaya çevirin</span>
           </div>
         </div>
 
@@ -57,7 +69,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="cat-icon-box green"><app-icon name="chart" [size]="20" color="#059669"></app-icon></div>
           <div class="cat-text">
             <strong>SAP Kullanım & Lisans Verileri</strong>
-            <span>SAP kullanıcı modül işlemlerini, lisans maliyetlerini ve manuel çalışma saatlerini yükleyip analiz edin</span>
+            <span>SAP kullanıcı modül işlemlerini, lisans maliyetlerini ve manuel çalışma saatlerini yükleyin</span>
           </div>
         </div>
       </div>
@@ -78,7 +90,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         </div>
         
         <h3 class="drop-title">
-          {{ selectedCategory() === 'asis' ? 'Mevcut Durum Mimari Excel Dosyanızı Buraya Sürükleyin' : (selectedCategory() === 'po' ? 'PO Canlı Entegrasyon Listesi Excel Dosyanızı Buraya Sürükleyin' : 'SAP Kullanım & Lisans Excel Dosyanızı Buraya Sürükleyin') }}
+          {{ selectedCategory() === 'basis' ? 'SAP Basis & Sizing / SDF Raporu Excel Dosyanızı Buraya Sürükleyin' : (selectedCategory() === 'asis' ? 'Mevcut Durum Mimari Excel Dosyanızı Buraya Sürükleyin' : (selectedCategory() === 'po' ? 'PO Canlı Entegrasyon Listesi Excel Dosyanızı Buraya Sürükleyin' : 'SAP Kullanım & Lisans Excel Dosyanızı Buraya Sürükleyin')) }}
         </h3>
         <p class="drop-sub">Desteklenen Formatlar: <strong>.xlsx, .csv</strong> (Maksimum 50 MB)</p>
         <button class="btn btn-primary" (click)="$event.stopPropagation(); fileInput.click()">
@@ -121,7 +133,18 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
         </div>
 
-        <div class="map-shortcut-box">
+        <div class="map-shortcut-box" *ngIf="importService.importCategory() === 'basis'">
+          <button class="btn btn-primary" (click)="router.navigate(['/source-sizing'])" style="margin-right: 0.5rem;">
+            <app-icon name="cpu" [size]="16" color="#ffffff"></app-icon>
+            <span>S/4HANA Sizing Ekranı ➔</span>
+          </button>
+          <button class="btn btn-sample" (click)="router.navigate(['/largest-tables'])">
+            <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
+            <span>En Büyük Tablolar ➔</span>
+          </button>
+        </div>
+
+        <div class="map-shortcut-box" *ngIf="importService.importCategory() !== 'basis'">
           <button class="btn btn-map" (click)="goToArchitectureMap()">
             <app-icon name="map" [size]="16" color="#ffffff"></app-icon>
             <span>Şirket Haritasını Çiz ➔</span>
@@ -602,18 +625,44 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         text-align: left;
         font-weight: 700;
         color: #4b5563;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 2px solid #e2e8f0;
+        &.text-right { text-align: right; }
       }
 
-      td {
-        padding: 0.65rem 0.75rem;
-        border-bottom: 1px solid #f3f4f6;
-        vertical-align: middle;
+      tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        &:hover { background: #f8fafc; }
+
+        td {
+          padding: 0.55rem 0.85rem;
+          vertical-align: middle;
+          &.text-right { text-align: right; }
+          &.font-mono { font-family: monospace; font-weight: 600; }
+        }
       }
     }
 
-    .module-tag {
-      background: #f3f4f6;
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      .u-avatar {
+        width: 24px;
+        height: 24px;
+        background: #e0f2fe;
+        color: #0284c7;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 800;
+      }
+      strong { color: #0f172a; }
+    }
+
+    .module-badge {
+      background: #f1f5f9;
       color: #374151;
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
@@ -632,10 +681,11 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 })
 export class DataImportComponent {
   importService = inject(DataImportService);
+  basisService = inject(BasisSizingService);
   router = inject(Router);
 
   activeTab = signal<'mapping' | 'preview'>('mapping');
-  selectedCategory = signal<ExcelImportCategory>('asis');
+  selectedCategory = signal<ExcelImportCategory>('basis');
   isDragging = false;
 
   onDragOver(e: DragEvent): void { e.preventDefault(); this.isDragging = true; }
@@ -644,22 +694,33 @@ export class DataImportComponent {
     e.preventDefault();
     this.isDragging = false;
     if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-      this.importService.parseExcelFile(e.dataTransfer.files[0], this.selectedCategory());
-      this.goToArchitectureMap();
+      this.handleFile(e.dataTransfer.files[0]);
     }
   }
 
   onFileSelected(e: Event): void {
     const input = e.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.importService.parseExcelFile(input.files[0], this.selectedCategory());
+      this.handleFile(input.files[0]);
+    }
+  }
+
+  private handleFile(file: File): void {
+    this.importService.parseExcelFile(file, this.selectedCategory());
+    if (this.importService.importCategory() === 'basis') {
+      this.router.navigate(['/source-sizing']);
+    } else {
       this.goToArchitectureMap();
     }
   }
 
   loadSampleData(): void { 
     this.importService.loadSampleData();
-    this.goToArchitectureMap();
+    if (this.importService.importCategory() === 'basis') {
+      this.router.navigate(['/source-sizing']);
+    } else {
+      this.goToArchitectureMap();
+    }
   }
 
   onMappingChange(excelCol: string, event: Event): void {

@@ -7,7 +7,7 @@ import { MOCK_CUSTOMERS } from '../data/mock-customers';
 })
 export class CustomerService {
   private customersSignal = signal<Customer[]>(MOCK_CUSTOMERS);
-  private activeCustomerIdSignal = signal<string>('cust-1');
+  private activeCustomerIdSignal = signal<string>('cust-2');
 
   readonly customers = this.customersSignal.asReadonly();
   readonly activeCustomerId = this.activeCustomerIdSignal.asReadonly();
@@ -34,6 +34,25 @@ export class CustomerService {
     if (this.customersSignal().some(c => c.id === id)) {
       this.activeCustomerIdSignal.set(id);
     }
+  }
+
+  updateCustomerDataFromBasis(basisUserCount: number, fueValue: number, products: any[]): void {
+    this.customersSignal.update(list => 
+      list.map(c => {
+        if (c.id === this.activeCustomerIdSignal()) {
+          return {
+            ...c,
+            sapUserCount: basisUserCount,
+            activeUserCount: basisUserCount,
+            totalLicenseCost: Math.round(fueValue * 2200),
+            taskForceStatus: 'Analysis',
+            progressPercentage: 50,
+            lastAnalysisDate: new Date().toLocaleDateString('tr-TR')
+          };
+        }
+        return c;
+      })
+    );
   }
 
   updateCustomerStatus(id: string, status: Customer['taskForceStatus'], progress: number): void {

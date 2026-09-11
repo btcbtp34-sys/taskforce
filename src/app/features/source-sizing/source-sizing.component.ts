@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 @Component({
@@ -11,6 +12,24 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
   template: `
     <div class="source-page">
       
+      <!-- Live Upload Indicator Banner -->
+      <div class="uploaded-live-banner" *ngIf="basisService.hasUploadedData()">
+        <div class="banner-left">
+          <span class="live-dot"></span>
+          <span class="banner-text">
+            <strong>Canlı Sizing Raporu Yüklendi:</strong> {{ basisService.basisPackage()?.fileName }} 
+            • SID: <strong>{{ basisService.systemInfo().sid }}</strong> 
+            • Veritabanı: <strong>{{ basisService.systemInfo().dbType }}</strong>
+            • Tahmini RAM: <strong>{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.0-1' }} GiB</strong>
+          </span>
+        </div>
+        <div class="banner-right">
+          <button class="btn-banner-reset" (click)="basisService.clearUploadedData()">
+            Varsayılan Görünüme Dön
+          </button>
+        </div>
+      </div>
+
       <!-- 1. PAGE HEADER -->
       <div class="page-top-header">
         <div class="title-area">
@@ -30,7 +49,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
           <div class="status-pill blue">
             <app-icon name="database" [size]="13" color="#0284c7"></app-icon>
-            <span>SID: SEP (Production)</span>
+            <span>SID: {{ basisService.systemInfo().sid }} ({{ basisService.hasUploadedData() ? 'Yüklenen Rapor' : 'Production' }})</span>
           </div>
           <div class="status-pill amber">
             <app-icon name="alert" [size]="13" color="#d97706"></app-icon>
@@ -65,7 +84,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               </tr>
             </thead>
             <tbody>
-              @for (row of sizingMatrix; track row.product) {
+              @for (row of sizingMatrix(); track row.product) {
                 <tr [class.db-row]="row.isDb">
                   <td class="product-cell">
                     <span class="p-dot" [class.db]="row.isDb" [class.app]="!row.isDb"></span>
@@ -87,11 +106,11 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         <div class="matrix-footer-summary">
           <div class="summary-item">
             <span class="s-label">Toplam Mevcut HANA RAM:</span>
-            <strong class="s-val text-blue">2.02 TB</strong>
+            <strong class="s-val text-blue">{{ totalDbRam() }}</strong>
           </div>
           <div class="summary-item">
             <span class="s-label">Toplam Uygulama RAM:</span>
-            <strong class="s-val text-blue">192 GB (2x64GB + 32GB + 32GB)</strong>
+            <strong class="s-val text-blue">{{ totalAppRam() }}</strong>
           </div>
           <div class="summary-item">
             <span class="s-label">Hedef Konsolidasyon:</span>
@@ -206,19 +225,19 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="hana-general-meta">
             <div class="meta-row">
               <span class="m-lbl">Operational State:</span>
-              <strong class="m-val text-green">All services are started (In Sync)</strong>
+              <strong class="m-val text-green">{{ basisService.hasUploadedData() ? 'All services are started (Analiz Tamamlandı)' : 'All services are started (In Sync)' }}</strong>
             </div>
             <div class="meta-row">
               <span class="m-lbl">System Usage / ID:</span>
-              <strong class="m-val">Production System (SystemID = SEP)</strong>
+              <strong class="m-val">Analiz Edilen Sistem (SID = {{ basisService.systemInfo().sid }})</strong>
             </div>
             <div class="meta-row">
-              <span class="m-lbl">HANA Version / Build:</span>
-              <strong class="m-val">2.00.079.08 (fa/hana2sp07) • 2025-12-22</strong>
+              <span class="m-lbl">HANA / DB Sürümü:</span>
+              <strong class="m-val">{{ basisService.systemInfo().dbType }} ({{ basisService.systemInfo().dbVersion }})</strong>
             </div>
             <div class="meta-row">
               <span class="m-lbl">Platform / OS:</span>
-              <strong class="m-val">SUSE Linux Enterprise Server 15 SP7 (VMware)</strong>
+              <strong class="m-val">{{ basisService.systemInfo().operatingSystem }}</strong>
             </div>
           </div>
 
@@ -304,26 +323,26 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="sizing-kpi-grid">
             <div class="s-kpi-card">
               <span class="sk-lbl">Initial Memory Requirement</span>
-              <strong class="sk-val text-blue">1,405.8 GiB</strong>
+              <strong class="sk-val text-blue">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Maksimum Başlangıç RAM</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Memory After Optimization</span>
-              <strong class="sk-val text-emerald">1,311.0 GiB</strong>
+              <strong class="sk-val text-emerald">{{ (basisService.memoryDetails().anticipatedInitialMemoryGiB * 0.85) | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Optimizasyon Sonrası RAM</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Net Data Volume (Disk)</span>
-              <strong class="sk-val text-purple">1,139.0 GiB</strong>
+              <strong class="sk-val text-purple">{{ basisService.diskDetails().initialNetDiskGiB | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Disk Net Veri Hacmi</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Disk After Optimization</span>
-              <strong class="sk-val text-teal">803.0 GiB</strong>
-              <span class="sk-sub">336 GiB Disk Tasarrufu</span>
+              <strong class="sk-val text-teal">{{ (basisService.diskDetails().initialNetDiskGiB * 0.70) | number:'1.1-1' }} GiB</strong>
+              <span class="sk-sub">%30 Arşivleme Tasarrufu</span>
             </div>
           </div>
 
@@ -333,41 +352,41 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
             <div class="calc-tree-list">
               <div class="tree-row">
-                <span class="t-name">Column loadable data (Row Store dönüşümü: 4.4 GiB)</span>
-                <strong class="t-val">658.6 GiB</strong>
+                <span class="t-name">Column loadable data</span>
+                <strong class="t-val">{{ basisService.memoryDetails().columnLoadable | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
-                <span class="t-name">+ Row Store data (Column Store çıkarılan: 13.6 GiB)</span>
-                <strong class="t-val">2.5 GiB</strong>
+                <span class="t-name">+ Row Store data</span>
+                <strong class="t-val">{{ basisService.memoryDetails().rowStore | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row subtotal">
                 <span class="t-name">= Memory requirement for initial loadable data</span>
-                <strong class="t-val">661.2 GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails().initialLoadable | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Hybrid LOB cache (10% of size on disk)</span>
-                <strong class="t-val">34.7 GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails().hybridLobCache | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Work space (100% Column + 50% Row Store)</span>
-                <strong class="t-val">659.9 GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails().workSpace | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Fixed size for code, stack and other services</span>
-                <strong class="t-val">50.0 GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails().fixedSize | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row grand-total">
                 <span class="t-name"><strong>= Anticipated initial memory requirement</strong></span>
-                <strong class="t-val text-blue font-bold">1,405.8 GiB</strong>
+                <strong class="t-val text-blue font-bold">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
               </div>
             </div>
           </div>
 
           <!-- Technical Metadata Footer -->
           <div class="report-meta-footer">
-            <span>SAPS Kategorisi: <strong>XS</strong></span>
-            <span>Analiz Edilen Tablo: <strong>92,134</strong> (Hata: 0)</span>
-            <span>Kernel: <strong>753_REL (NW 740 SP12)</strong></span>
+            <span>SAPS: <strong>XS</strong></span>
+            <span>Analiz Edilen Tablo: <strong>{{ basisService.systemInfo().tablesAnalyzed | number }}</strong> (Hata: {{ basisService.systemInfo().tablesWithError }})</span>
+            <span>Kernel: <strong>{{ basisService.systemInfo().kernelVersion }} ({{ basisService.systemInfo().nwRelease }})</strong></span>
           </div>
         </div>
 
@@ -905,18 +924,71 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
       strong { color: #1e293b; }
     }
+
+    .uploaded-live-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: 0 1px 4px rgba(5, 150, 105, 0.08);
+
+      .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .live-dot {
+          width: 8px;
+          height: 8px;
+          background: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+          animation: pulse 2s infinite;
+        }
+
+        .banner-text {
+          font-size: 0.78rem;
+          color: #166534;
+        }
+      }
+
+      .btn-banner-reset {
+        background: #ffffff;
+        border: 1px solid #86efac;
+        color: #15803d;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #dcfce7;
+        }
+      }
+    }
   `]
 })
 export class SourceSizingComponent {
   customerService = inject(CustomerService);
+  basisService = inject(BasisSizingService);
 
-  // GÖRSEL 3: PRODUCT / CURRENT ➔ TARGET SIZING MATRİSİ
-  sizingMatrix = [
-    { product: 'S4 HANA DB Prod', current: '1 TB', target: '1 TB (SAP S/4HANA Private Cloud)', description: 'Canlı In-Memory HANA Veritabanı (SEP)', isDb: true },
-    { product: 'S4 HANA DB QA', current: '768 GB', target: '768 GB (Quality Assurance Cloud DB)', description: 'Kalite & Test ortamı HANA veritabanı', isDb: true },
-    { product: 'S4 HANA DB Dev', current: '256 GB', target: '256 GB (Development Cloud DB)', description: 'Geliştirme & Sandbox ortamı', isDb: true },
-    { product: 'S4 App Prod', current: '2x64 GB', target: '2x64 GB (Production App Cluster)', description: 'Yük dengelemeli uygulama sunucuları', isDb: false },
-    { product: 'S4 App Qa', current: '32 GB', target: '32 GB (QA App Server)', description: 'Test ve entegrasyon sunucusu', isDb: false },
-    { product: 'S4 App Dev', current: '32 GB', target: '32 GB (Dev App Server)', description: 'ABAP & Fiori geliştirme ortamı', isDb: false }
-  ];
+  sizingMatrix = this.basisService.sizingMatrix;
+
+  totalDbRam = computed(() => {
+    const matrix = this.sizingMatrix();
+    const dbRow = matrix.find(r => r.isDb && (r.product.toLowerCase().includes('prod') || r.product.toLowerCase().includes('product')));
+    return dbRow ? dbRow.target : '2.02 TB';
+  });
+
+  totalAppRam = computed(() => {
+    const matrix = this.sizingMatrix();
+    const appRows = matrix.filter(r => !r.isDb);
+    return appRows.length > 0 ? appRows.map(r => r.target).join(' • ') : '192 GB (2x64GB + 32GB + 32GB)';
+  });
 }

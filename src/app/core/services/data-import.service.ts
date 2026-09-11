@@ -1,6 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { ColumnMapping, DataImportSummary } from '../models/sap-data.model';
 import { ArchitectureNode, ArchitectureEdge } from '../../features/architecture-map/architecture-map.component';
+import { BasisSizingService } from './basis-sizing.service';
 import * as XLSX from 'xlsx';
 
 export interface SapUsageRecord {
@@ -21,12 +22,17 @@ export interface SystemFieldOption {
   required: boolean;
 }
 
-export type ExcelImportCategory = 'asis' | 'po' | 'usage';
+import { CustomerService } from './customer.service';
+
+export type ExcelImportCategory = 'asis' | 'po' | 'usage' | 'basis';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DataImportService {
+  basisService = inject(BasisSizingService);
+  customerService = inject(CustomerService);
+
   records = signal<SapUsageRecord[]>([]);
   columnMappings = signal<ColumnMapping[]>([]);
   summary = signal<DataImportSummary | null>(null);
@@ -161,6 +167,8 @@ export class DataImportService {
       const lower = file.name.toLowerCase();
       if (lower.includes('po') || lower.includes('entegrasyon')) {
         this.importCategory.set('po');
+      } else if (lower.includes('basis') || lower.includes('sizing') || lower.includes('hdb')) {
+        this.importCategory.set('basis');
       } else if (lower.includes('bilgiler') || lower.includes('sunucu') || lower.includes('asis')) {
         this.importCategory.set('asis');
       } else {
@@ -172,7 +180,39 @@ export class DataImportService {
     reader.onload = (e: any) => {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
+      const sheetNames = workbook.SheetNames;
+
+      // Check if this workbook is a multi-sheet SAP Basis / Sizing package
+      const isBasisPackage = this.importCategory() === 'basis' ||
+        sheetNames.some(n => {
+          const l = n.toLowerCase();
+          return l.includes('sizing') || l.includes('largest') || l.includes('fue') || l.includes('source') || l.includes('lisans');
+        });
+
+      if (isBasisPackage) {
+        this.importCategory.set('basis');
+        const pkg = this.basisService.parseBasisWorkbook(workbook, file.name, file.size);
+        
+        // Update active customer metrics (DEF Kimya or current selected) dynamically
+        this.customerService.updateCustomerDataFromBasis(
+          pkg.fueSummary?.totalUsers || 0,
+          pkg.fueSummary?.calculatedFUE || 0,
+          pkg.sourceTargetMatrix || []
+        );
+
+        this.summary.set({
+          fileName: file.name,
+          fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          totalRows: (pkg.largestTables?.length || 0) + (pkg.sourceTargetMatrix?.length || 0) + (pkg.licenses?.length || 0),
+          totalCols: sheetNames.length,
+          mappedCount: pkg.largestTables?.length || 30,
+          uploadDate: new Date().toLocaleDateString('tr-TR'),
+          dataQualityScore: 99
+        });
+        return;
+      }
+
+      const firstSheetName = sheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
 

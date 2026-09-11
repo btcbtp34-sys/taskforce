@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CustomerService } from '../../core/services/customer.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 export interface LargestTableItem {
@@ -23,6 +24,23 @@ export interface LargestTableItem {
   template: `
     <div class="largest-tables-page">
       
+      <!-- Live Upload Indicator Banner -->
+      <div class="uploaded-live-banner" *ngIf="basisService.hasUploadedData()">
+        <div class="banner-left">
+          <span class="live-dot"></span>
+          <span class="banner-text">
+            <strong>Canlı Sizing Raporu Yüklendi:</strong> {{ basisService.basisPackage()?.fileName }} 
+            • <strong>{{ allTables().length }} Tablo</strong> Okundu 
+            • Toplam Bellek: <strong>{{ totalTableVolume() | number:'1.1-1' }} GiB</strong>
+          </span>
+        </div>
+        <div class="banner-right">
+          <button class="btn-banner-reset" (click)="basisService.clearUploadedData()">
+            Varsayılan Görünüme Dön
+          </button>
+        </div>
+      </div>
+
       <!-- 1. PAGE HEADER -->
       <div class="page-top-header">
         <div class="title-area">
@@ -36,33 +54,33 @@ export interface LargestTableItem {
 
         <div class="header-action-badge">
           <app-icon name="database" [size]="14" color="#0284c7"></app-icon>
-          <span>Toplam En Büyük Tablo Hacmi: <strong>630.8 GiB</strong> (13.4 Milyar Kayıt)</span>
+          <span>Toplam En Büyük Tablo Hacmi: <strong>{{ totalTableVolume() | number:'1.1-1' }} GiB</strong> ({{ formatRecordCount(totalRecords()) }} Kayıt)</span>
         </div>
       </div>
 
       <!-- 2. EXECUTIVE KPI CARDS (DVM & SIZING POTENTIAL) -->
       <div class="kpi-summary-grid">
         <div class="kpi-card highlight-card">
-          <span class="k-label">Lider Tablo (REGUP)</span>
-          <div class="k-val text-blue">308.6 <span class="unit">GiB</span></div>
-          <span class="k-sub">7.14 Milyar Kayıt • %48.9 Bellek Payı</span>
+          <span class="k-label">Lider Tablo ({{ leaderTable().name }})</span>
+          <div class="k-val text-blue">{{ leaderTable().sizeGiB | number:'1.1-1' }} <span class="unit">GiB</span></div>
+          <span class="k-sub">{{ formatRecordCount(leaderTable().records) }} Kayıt • %{{ getSharePercentage(leaderTable().sizeGiB) }} Bellek Payı</span>
         </div>
 
-        <div class="kpi-card">
-          <span class="k-label">Universal Journal (ACDOCA)</span>
-          <div class="k-val text-purple">168.1 <span class="unit">GiB</span></div>
-          <span class="k-sub">2.81 Milyar Kayıt • %26.7 Bellek Payı</span>
+        <div class="kpi-card" *ngIf="acdocaTable() as acd">
+          <span class="k-label">{{ acd.name === 'ACDOCA' ? 'Universal Journal (ACDOCA)' : acd.name }}</span>
+          <div class="k-val text-purple">{{ acd.sizeGiB | number:'1.1-1' }} <span class="unit">GiB</span></div>
+          <span class="k-sub">{{ formatRecordCount(acd.records) }} Kayıt • %{{ getSharePercentage(acd.sizeGiB) }} Bellek Payı</span>
         </div>
 
         <div class="kpi-card">
           <span class="k-label">Özel Geliştirme (Z Tabloları)</span>
-          <div class="k-val text-amber">64.3 <span class="unit">GiB</span></div>
-          <span class="k-sub">1.33 Milyar Kayıt • 6 Büyük Z Tablosu</span>
+          <div class="k-val text-amber">{{ customTablesVolume() | number:'1.1-1' }} <span class="unit">GiB</span></div>
+          <span class="k-sub">{{ formatRecordCount(customTablesRecords()) }} Kayıt • {{ customTables().length }} Büyük Z Tablosu</span>
         </div>
 
         <div class="kpi-card">
           <span class="k-label">Potansiyel DVM Tasarrufu</span>
-          <div class="k-val text-green">~240 <span class="unit">GiB</span></div>
+          <div class="k-val text-green">~{{ (totalTableVolume() * 0.38) | number:'1.0-0' }} <span class="unit">GiB</span></div>
           <span class="k-sub">Arşivleme & Log Temizliği ile RAM Kazancı</span>
         </div>
       </div>
@@ -76,14 +94,14 @@ export interface LargestTableItem {
             </div>
             <div>
               <h3>En Çok Bellek Tüketen Tablolar (Top Consumers Distribution)</h3>
-              <span class="c-sub">En büyük 5 tablonun 630.8 GiB toplam bellek içerisindeki yüzdesel dağılımı</span>
+              <span class="c-sub">En büyük 5 tablonun {{ totalTableVolume() | number:'1.1-1' }} GiB toplam bellek içerisindeki yüzdesel dağılımı</span>
             </div>
           </div>
-          <span class="badge-total-share">Top 5 Payı: %92.7</span>
+          <span class="badge-total-share">Top 5 Payı: %{{ top5SharePercentage() }}</span>
         </div>
 
         <div class="top-bars-grid">
-          @for (top of topConsumers; track top.name) {
+          @for (top of topConsumers(); track top.name) {
             <div class="top-bar-item">
               <div class="bar-info">
                 <div class="tbl-name-group">
@@ -120,7 +138,7 @@ export interface LargestTableItem {
             class="cat-pill" 
             [class.active]="selectedCategory() === 'ALL'"
             (click)="selectedCategory.set('ALL')">
-            Tümü ({{ allTables.length }})
+            Tümü ({{ allTables().length }})
           </button>
           
           <button 
@@ -242,41 +260,16 @@ export interface LargestTableItem {
         </div>
 
         <div class="strategy-grid">
-          <div class="strategy-item">
-            <div class="st-num">1</div>
-            <div class="st-content">
-              <h4>REGUP / REGUH Ödeme Tabloları Arşivlemesi</h4>
-              <p>7.14 milyar kayıt ile <strong>308.6 GiB (%48.9)</strong> alan kaplayan ödeme tabloları için SAP standart <code>FI_PAYDATA</code> nesnesi ile geçmiş dönemler arşivlenmelidir.</p>
-              <span class="st-gain">Tahmini Kazanç: ~200 GiB RAM Tasarrufu</span>
+          @for (action of dvmActionPlan(); track action.num) {
+            <div class="strategy-item">
+              <div class="st-num">{{ action.num }}</div>
+              <div class="st-content">
+                <h4>{{ action.title }}</h4>
+                <p>{{ action.desc }}</p>
+                <span class="st-gain">{{ action.gain }}</span>
+              </div>
             </div>
-          </div>
-
-          <div class="strategy-item">
-            <div class="st-num">2</div>
-            <div class="st-content">
-              <h4>ACDOCA & BSEG Finansal Belge Arşivlemesi</h4>
-              <p>Universal Journal (168.1 GiB) ve BSEG (35.0 GiB) üzerinde yasal saklama süreleri dolmuş eski mali yıllar için <code>FI_DOCUMNT</code> arşivlemesi uygulanmalıdır.</p>
-              <span class="st-gain">Tahmini Kazanç: ~60 GiB RAM Tasarrufu</span>
-            </div>
-          </div>
-
-          <div class="strategy-item">
-            <div class="st-num">3</div>
-            <div class="st-content">
-              <h4>Özel Z Tabloları Housekeeping (ZACRON / ZFIT)</h4>
-              <p>1.16 milyar kayıtlı <code>ZACRON_EI_T_206</code> (57.9 GiB) ve 103 milyon kayıtlı <code>ZFIT_B_LOG</code> için otomatik periyodik log temizleme job'ları yazılmalıdır.</p>
-              <span class="st-gain">Tahmini Kazanç: ~45 GiB RAM Tasarrufu</span>
-            </div>
-          </div>
-
-          <div class="strategy-item">
-            <div class="st-num">4</div>
-            <div class="st-content">
-              <h4>CDPOS / BALDAT Değişiklik ve Log Temizliği</h4>
-              <p>Teknik değişiklik kalemleri (<code>CDPOS</code> - 15 GiB) ve uygulama logları (<code>BALDAT</code> - 3.2 GiB) için <code>RSCDTCLR</code> ve <code>SBAL_DELETE</code> job'ları çalıştırılmalıdır.</p>
-              <span class="st-gain">Tahmini Kazanç: ~15 GiB RAM Tasarrufu</span>
-            </div>
-          </div>
+          }
         </div>
       </div>
 
@@ -858,58 +851,113 @@ export interface LargestTableItem {
         }
       }
     }
+
+    .uploaded-live-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: 0 1px 4px rgba(5, 150, 105, 0.08);
+
+      .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .live-dot {
+          width: 8px;
+          height: 8px;
+          background: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+          animation: pulse 2s infinite;
+        }
+
+        .banner-text {
+          font-size: 0.78rem;
+          color: #166534;
+        }
+      }
+
+      .btn-banner-reset {
+        background: #ffffff;
+        border: 1px solid #86efac;
+        color: #15803d;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #dcfce7;
+        }
+      }
+    }
   `]
 })
 export class LargestTablesComponent {
   customerService = inject(CustomerService);
+  basisService = inject(BasisSizingService);
 
   searchQuery = '';
   selectedCategory = signal<'ALL' | 'FI' | 'CUSTOM' | 'BASIS'>('ALL');
 
-  // SCREENSHOT DATA: 30 LARGEST COLUMN LOADABLE TABLES
-  allTables: LargestTableItem[] = [
-    { name: 'REGUP', sizeGiB: 308.6, records: 7141689711, desc: 'Ödeme Programı İşlem Kalemleri', module: 'FI-AP/AR', isCustom: false, recommendation: 'FI_PAYDATA Arşivleme Nesnesi ile eski ödeme çalıştırmaları temizlenmeli', archivingPotential: '%65 Arşivleme' },
-    { name: 'ACDOCA', sizeGiB: 168.1, records: 2807910194, desc: 'Universal Journal (Evrensel Muhasebe Defteri)', module: 'FI/CO', isCustom: false, recommendation: 'Geçmiş mali yıllar için FI_DOCUMNT arşivlemesi uygulanmalı', archivingPotential: '%40 Arşivleme' },
-    { name: 'ZACRON_EI_T_206', sizeGiB: 57.9, records: 1165794101, desc: 'Özel Z E-İrsaliye Entegrasyon Tablosu', module: 'Z-Custom', isCustom: true, recommendation: 'Başarılı tamamlanan entegrasyon logları için Housekeeping Job yazılmalı', archivingPotential: '%70 Temizleme' },
-    { name: 'BSEG', sizeGiB: 35.0, records: 524124859, desc: 'Muhasebe Belge Kalemleri', module: 'FI', isCustom: false, recommendation: 'Eski mali dönemler FI_DOCUMNT arşivlemesine dahil edilmeli', archivingPotential: '%50 Arşivleme' },
-    { name: 'CDPOS', sizeGiB: 15.0, records: 390844903, desc: 'Değişiklik Belgeleri Kalem', module: 'BASIS', isCustom: false, recommendation: 'CHANGELOG silme/arşivleme job (RSCDTCLR) çalıştırılmalı', archivingPotential: '%60 Temizleme' },
-    { name: 'BKPF', sizeGiB: 11.3, records: 153413836, desc: 'Muhasebe Belge Başlıkları', module: 'FI', isCustom: false, recommendation: 'BSEG ile ilişkili olarak FI_DOCUMNT nesnesiyle arşivlenmeli', archivingPotential: '%50 Arşivleme' },
-    { name: 'FAGL_SPLINFO_VAL', sizeGiB: 7.3, records: 368075627, desc: 'Belge Bölme Değer Bilgileri', module: 'FI-GL', isCustom: false, recommendation: 'Yeni Defteri Kebir belge bölme geçmişi arşivlenmeli', archivingPotential: '%45 Arşivleme' },
-    { name: 'FAGL_SPLINFO', sizeGiB: 5.7, records: 183903851, desc: 'Belge Bölme Başlık Bilgileri', module: 'FI-GL', isCustom: false, recommendation: 'Yeni Defteri Kebir belge bölme geçmişi arşivlenmeli', archivingPotential: '%45 Arşivleme' },
-    { name: 'REGUH', sizeGiB: 4.2, records: 64622323, desc: 'Ödeme Programı Ödeme Başlıkları', module: 'FI-AP/AR', isCustom: false, recommendation: 'REGUP ile eş zamanlı FI_PAYDATA ile arşivlenmeli', archivingPotential: '%65 Arşivleme' },
-    { name: 'BALDAT', sizeGiB: 3.2, records: 10049442, desc: 'Uygulama Log Verileri (Application Log)', module: 'BASIS', isCustom: false, recommendation: 'SBP log temizleme job (BC_SBAL / SBAL_DELETE) çalıştırılmalı', archivingPotential: '%80 Temizleme' },
-    { name: 'ZACRON_EI_T_205', sizeGiB: 2.9, records: 47969039, desc: 'Özel Z E-Fatura Hareket Tablosu', module: 'Z-Custom', isCustom: true, recommendation: '3 yıldan eski e-fatura log kayıtları temizlenmeli', archivingPotential: '%60 Temizleme' },
-    { name: 'GLPCA', sizeGiB: 2.9, records: 47693923, desc: 'Kar Merkezi Muhasebesi Fiili Kalemleri', module: 'CO-PCA', isCustom: false, recommendation: 'PCA_OBJECT nesnesiyle arşivleme uygulanmalı', archivingPotential: '%40 Arşivleme' },
-    { name: 'FLQITEMFI', sizeGiB: 2.9, records: 39379211, desc: 'Likidite Tahmin Kalemleri', module: 'TR-CM', isCustom: false, recommendation: 'Eski nakit akış geçmişi temizleme programı çalıştırılmalı', archivingPotential: '%50 Temizleme' },
-    { name: 'FMIFIIT', sizeGiB: 2.4, records: 45988903, desc: 'Fon Yönetimi Fiili Kalemleri', module: 'PSM-FM', isCustom: false, recommendation: 'FM_ACT_DOC nesnesiyle eski bütçe kayıtları arşivlenmeli', archivingPotential: '%40 Arşivleme' },
-    { name: 'SOC3', sizeGiB: 2.4, records: 7038512, desc: 'SAPoffice Doküman Nesneleri', module: 'BC-SRV-COM', isCustom: false, recommendation: 'RSBCS_REORG ile eski e-posta ve ekler temizlenmeli', archivingPotential: '%70 Temizleme' },
-    { name: 'COEP', sizeGiB: 2.0, records: 42268453, desc: 'Maliyet Muhasebesi Fiili Kalemleri', module: 'CO-OM', isCustom: false, recommendation: 'CO_ITEM nesnesi ile arşivleme uygulanmalı', archivingPotential: '%40 Arşivleme' },
-    { name: 'D010TAB', sizeGiB: 1.9, records: 41445911, desc: 'ABAP Program Tablo Çapraz Referansı', module: 'BC-ABA', isCustom: false, recommendation: 'HANA In-Memory dönüşümünde otomatik yeniden derlenir', archivingPotential: '%30 Sıkıştırma' },
-    { name: 'ZFIT_B_LOG', sizeGiB: 1.6, records: 103013214, desc: 'Özel Finans Banka Entegrasyon Logu', module: 'Z-Custom', isCustom: true, recommendation: 'Eski banka iletişim logları 60 günden sonraya göre silinmeli', archivingPotential: '%85 Temizleme' },
-    { name: 'DOKTL', sizeGiB: 1.3, records: 26995508, desc: 'Dokümantasyon Metin Satırları', module: 'BC-DOC', isCustom: false, recommendation: 'Kullanılmayan diller ve eski versiyon metinleri elenmeli', archivingPotential: '%30 Sıkıştırma' },
-    { name: 'REPOSRC', sizeGiB: 1.1, records: 4077405, desc: 'ABAP Rapor Kaynak Kodları', module: 'BC-ABA', isCustom: false, recommendation: 'Geçersiz Z programları ve eski sürümler temizlenmeli', archivingPotential: '%25 Temizleme' },
-    { name: 'RF048', sizeGiB: 1.0, records: 64538301, desc: 'Ödeme Talepleri ve Geçici Kayıtlar', module: 'FI-AP', isCustom: false, recommendation: 'Tamamlanmış ödeme talepleri tasfiye edilmeli', archivingPotential: '%75 Temizleme' },
-    { name: 'D010INC', sizeGiB: 0.9, records: 15879035, desc: 'ABAP Include Program Referansları', module: 'BC-ABA', isCustom: false, recommendation: 'Sistem derleme önbelleği optimizasyonu', archivingPotential: '%20 Sıkıştırma' },
-    { name: 'ZACR_OB_HAREKETL', sizeGiB: 0.9, records: 7333055, desc: 'Özel Z Ortak Banka Hareket Tablosu', module: 'Z-Custom', isCustom: true, recommendation: 'Eski hareketler periyodik arşive aktarılmalı', archivingPotential: '%60 Arşivleme' },
-    { name: 'COBK', sizeGiB: 0.7, records: 11100770, desc: 'Maliyet Muhasebesi Belge Başlıkları', module: 'CO-OM', isCustom: false, recommendation: 'CO_ITEM ile senkron arşivlenmeli', archivingPotential: '%40 Arşivleme' },
-    { name: 'BSIP', sizeGiB: 0.7, records: 9154188, desc: 'Satıcı Çift Fatura Kontrol İndeksi', module: 'FI-AP', isCustom: false, recommendation: 'Ödenmiş eski faturaların indeks kayıtları temizlenmeli', archivingPotential: '%50 Temizleme' },
-    { name: 'DD03L', sizeGiB: 0.6, records: 7753940, desc: 'Data Dictionary Tablo Alanları', module: 'BC-DWB', isCustom: false, recommendation: 'HANA sütun bazlı sıkıştırma uygulanır', archivingPotential: '%25 Sıkıştırma' },
-    { name: 'BKORM', sizeGiB: 0.5, records: 8514714, desc: 'Muhasebe Yazışma Talepleri', module: 'FI', isCustom: false, recommendation: 'Gönderilmiş eski yazışmalar silinmeli', archivingPotential: '%80 Temizleme' },
-    { name: 'ZACRON_EI_T_201', sizeGiB: 0.5, records: 6202786, desc: 'Özel Z E-İrsaliye Başlık Tablosu', module: 'Z-Custom', isCustom: true, recommendation: 'T_206 ile birlikte eski dönemler arşivlenmeli', archivingPotential: '%70 Temizleme' },
-    { name: 'ZFIT_OD_LOG', sizeGiB: 0.5, records: 5629458, desc: 'Özel Otomatik Ödeme Logu', module: 'Z-Custom', isCustom: true, recommendation: 'Eski ödeme işlem logları silinmeli', archivingPotential: '%80 Temizleme' },
-    { name: 'ZENT_T_AKIBET', sizeGiB: 0.5, records: 5609500, desc: 'Özel Entegrasyon Akıbet Takip Tablosu', module: 'Z-Custom', isCustom: true, recommendation: 'Statüsü kapanmış entegrasyonlar tasfiye edilmeli', archivingPotential: '%85 Temizleme' }
-  ];
+  allTables = computed(() => this.basisService.largestTables());
 
-  topConsumers = [
-    { name: 'REGUP', desc: 'Ödeme İşlem Kalemleri', sizeGiB: 308.6, percentage: 48.9, colorClass: 'fill-blue' },
-    { name: 'ACDOCA', desc: 'Universal Journal Defteri', sizeGiB: 168.1, percentage: 26.7, colorClass: 'fill-purple' },
-    { name: 'ZACRON_EI_T_206', desc: 'Özel E-İrsaliye Tablosu', sizeGiB: 57.9, percentage: 9.2, colorClass: 'fill-amber' },
-    { name: 'BSEG', desc: 'Muhasebe Belge Kalemleri', sizeGiB: 35.0, percentage: 5.5, colorClass: 'fill-teal' },
-    { name: 'CDPOS', desc: 'Değişiklik Belgeleri Kalem', sizeGiB: 15.0, percentage: 2.4, colorClass: 'fill-slate' }
-  ];
+  totalTableVolume = computed(() => {
+    return this.allTables().reduce((sum, t) => sum + (t.sizeGiB || 0), 0);
+  });
+
+  totalRecords = computed(() => {
+    return this.allTables().reduce((sum, t) => sum + (t.records || 0), 0);
+  });
+
+  leaderTable = computed(() => {
+    const list = this.allTables();
+    return list[0] || { name: '—', sizeGiB: 0, records: 0 };
+  });
+
+  acdocaTable = computed(() => {
+    const list = this.allTables();
+    return list.find(t => t.name === 'ACDOCA') || list[1] || null;
+  });
+
+  customTables = computed(() => {
+    return this.allTables().filter(t => t.isCustom);
+  });
+
+  customTablesVolume = computed(() => {
+    return this.customTables().reduce((sum, t) => sum + (t.sizeGiB || 0), 0);
+  });
+
+  customTablesRecords = computed(() => {
+    return this.customTables().reduce((sum, t) => sum + (t.records || 0), 0);
+  });
+
+  topConsumers = computed(() => {
+    const total = this.totalTableVolume() || 1;
+    const colors = ['fill-blue', 'fill-purple', 'fill-amber', 'fill-teal', 'fill-slate'];
+    return this.allTables().slice(0, 5).map((t, idx) => ({
+      name: t.name,
+      desc: t.desc,
+      sizeGiB: t.sizeGiB,
+      percentage: parseFloat(((t.sizeGiB / total) * 100).toFixed(1)),
+      colorClass: colors[idx % colors.length]
+    }));
+  });
+
+  top5SharePercentage = computed(() => {
+    return this.topConsumers().reduce((sum, c) => sum + c.percentage, 0).toFixed(1);
+  });
 
   filteredTables = computed(() => {
-    let list = this.allTables;
+    let list = this.allTables();
     const cat = this.selectedCategory();
     const query = this.searchQuery.trim().toLowerCase();
 
@@ -933,7 +981,7 @@ export class LargestTablesComponent {
   });
 
   getSharePercentage(sizeGiB: number): string {
-    const total = 630.8;
+    const total = this.totalTableVolume() || 1;
     return ((sizeGiB / total) * 100).toFixed(1);
   }
 
@@ -943,6 +991,77 @@ export class LargestTablesComponent {
     } else if (records >= 1000000) {
       return (records / 1000000).toFixed(1) + ' Milyon';
     }
-    return records.toLocaleString();
+    return (records || 0).toLocaleString();
   }
+
+  // DVM Action Plan Cards - Dynamically generated from uploaded tables
+  dvmActionPlan = computed(() => {
+    const list = this.allTables();
+    if (!list || list.length === 0) return [];
+
+    const actions = [];
+
+    // Action 1: #1 Leader Table
+    const top1 = list[0];
+    if (top1) {
+      actions.push({
+        num: 1,
+        title: `${top1.name} Tablosu DVM & Arşivleme`,
+        desc: `${this.formatRecordCount(top1.records)} kayıt ile ${top1.sizeGiB.toFixed(1)} GiB (%${this.getSharePercentage(top1.sizeGiB)}) alan kaplayan lider tablo için ${top1.recommendation}.`,
+        gain: `Tahmini Kazanç: ~${(top1.sizeGiB * 0.55).toFixed(0)} GiB RAM Tasarrufu`
+      });
+    }
+
+    // Action 2: FI/CO Financial Tables
+    const fiTables = list.filter(t => t.module.startsWith('FI') || t.module.startsWith('CO') || t.module.startsWith('TR'));
+    if (fiTables.length > 0) {
+      const topFi = fiTables.slice(0, 2);
+      const fiVol = fiTables.reduce((sum, t) => sum + t.sizeGiB, 0);
+      const names = topFi.map(t => t.name).join(' & ');
+      actions.push({
+        num: 2,
+        title: `${names} Finansal & Maliyet Arşivlemesi`,
+        desc: `Toplam ${fiVol.toFixed(1)} GiB alan kaplayan ${fiTables.length} finans/maliyet tablosunda yasal saklama süreleri dolmuş eski mali yıllar için FI_DOCUMNT / ML_DOCUMNT arşivlemesi uygulanmalıdır.`,
+        gain: `Tahmini Kazanç: ~${(fiVol * 0.45).toFixed(0)} GiB RAM Tasarrufu`
+      });
+    }
+
+    // Action 3: Custom Z Tables OR Logistics/Production (PP/MM)
+    const zTables = list.filter(t => t.isCustom);
+    if (zTables.length > 0) {
+      const zVol = zTables.reduce((sum, t) => sum + t.sizeGiB, 0);
+      const zNames = zTables.slice(0, 2).map(t => t.name).join(' / ');
+      actions.push({
+        num: 3,
+        title: `Özel Z Tabloları Housekeeping (${zNames})`,
+        desc: `${zTables.length} adet özel Z tablosunda toplam ${zVol.toFixed(1)} GiB veri bulunmaktadır. Tamamlanan entegrasyonlar ve ara log kayıtları için Housekeeping Job yazılmalıdır.`,
+        gain: `Tahmini Kazanç: ~${(zVol * 0.65).toFixed(0)} GiB RAM Tasarrufu`
+      });
+    } else {
+      const mmppTables = list.filter(t => t.module.startsWith('MM') || t.module.startsWith('PP') || t.module.startsWith('SD'));
+      const mmVol = mmppTables.reduce((sum, t) => sum + t.sizeGiB, 0);
+      const mmNames = mmppTables.slice(0, 2).map(t => t.name).join(' & ');
+      actions.push({
+        num: 3,
+        title: `Lojistik & Üretim Planlama Temizliği (${mmNames || 'MM/PP'})`,
+        desc: `Toplam ${mmVol.toFixed(1)} GiB büyüklüğündeki üretim ve malzeme tabloları için periyodik DVM housekeeping ve malzeme belgesi arşivlemesi uygulanmalıdır.`,
+        gain: `Tahmini Kazanç: ~${(mmVol * 0.40).toFixed(0)} GiB RAM Tasarrufu`
+      });
+    }
+
+    // Action 4: BASIS / Technical Log Cleanup
+    const basisTables = list.filter(t => t.module.startsWith('BC') || t.module.startsWith('BASIS'));
+    if (basisTables.length > 0) {
+      const bVol = basisTables.reduce((sum, t) => sum + t.sizeGiB, 0);
+      const bNames = basisTables.slice(0, 2).map(t => t.name).join(' / ');
+      actions.push({
+        num: 4,
+        title: `${bNames} Değişiklik ve Sistem Log Temizliği`,
+        desc: `Sistem denetim ve teknik log tabloları (${bVol.toFixed(1)} GiB) için SAP standart temizlik job'ları (RSCDTCLR, SBAL_DELETE vb.) çalıştırılmalıdır.`,
+        gain: `Tahmini Kazanç: ~${(bVol * 0.70).toFixed(0)} GiB RAM Tasarrufu`
+      });
+    }
+
+    return actions;
+  });
 }

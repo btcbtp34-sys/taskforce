@@ -1,7 +1,8 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { Chart, registerables } from 'chart.js';
 
@@ -17,26 +18,29 @@ Chart.register(...registerables);
       <div class="dashboard-header">
         <div class="header-left">
           <div class="badge-row">
-            <span class="company-badge">ABC Holding</span>
-            <span class="pulse-live-badge"><span class="pulse-dot"></span> Canlı Veri Setleri Analizi</span>
+            <span class="company-badge">{{ customerService.activeCustomer().name }}</span>
+            <span class="status-tag">Canlı Mimari Analiz</span>
           </div>
-          <h1 class="main-title">SAP Fırsat & Mimari Genel Bakış Dashboard</h1>
-          <p class="sub-title">11 Dağınık Sunucu, 70 FUE Lisansı, 1.3 TB HANA Sizing ve 109 Canlı PO Entegrasyonu Genel Görünümü</p>
+          <h2>Enterprise Mimari Dönüşüm Gösterge Paneli</h2>
+          <p class="sub-title">S/4HANA Sizing, {{ fueDisplayValue() }} Lisanslama ve Canlı Entegrasyon Genel Görünümü</p>
         </div>
-
         <div class="header-actions">
-          <a routerLink="/reports" class="btn btn-primary">
-            <app-icon name="file-text" [size]="16" color="#ffffff"></app-icon>
-            <span>Executive Summary Raporu ➔</span>
-          </a>
+          <button class="btn btn-outline" routerLink="/reports">
+            <app-icon name="file-text" [size]="15"></app-icon>
+            <span>Yönetici Raporu</span>
+          </button>
+          <button class="btn btn-primary" routerLink="/business-case">
+            <app-icon name="business-case" [size]="15"></app-icon>
+            <span>İş Senaryosu & ROI</span>
+          </button>
         </div>
       </div>
 
-      <!-- Top 6 Unified KPI Cards -->
+      <!-- Live Architecture KPIs (4 Cards) -->
       <div class="kpi-grid">
-        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }">
+        <div class="kpi-card" routerLink="/architecture-map">
           <div class="kpi-top">
-            <span class="kpi-title">Altyapı Sunucuları</span>
+            <span class="kpi-title">Mevcut Sunucu Envanteri</span>
             <div class="kpi-icon-box bg-blue"><app-icon name="database" [size]="18" color="#0284c7"></app-icon></div>
           </div>
           <div class="kpi-val">11 Sunucu</div>
@@ -52,10 +56,10 @@ Chart.register(...registerables);
             <span class="kpi-title">FUE Lisans İhtiyacı</span>
             <div class="kpi-icon-box bg-emerald"><app-icon name="users" [size]="18" color="#059669"></app-icon></div>
           </div>
-          <div class="kpi-val text-emerald">70 FUE</div>
-          <div class="kpi-sub">83 Fiili Kullanıcı Kapsamda</div>
+          <div class="kpi-val text-emerald">{{ fueDisplayValue() }}</div>
+          <div class="kpi-sub">{{ fueUserSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill green">Sıfır Aşım Riski</span>
+            <span class="tag-pill green">Net Formül</span>
             <span class="tag-pill blue">Optimum Paket</span>
           </div>
         </div>
@@ -619,6 +623,29 @@ Chart.register(...registerables);
 })
 export class DashboardComponent implements AfterViewInit {
   customerService = inject(CustomerService);
+  basisService = inject(BasisSizingService);
+
+  fueDisplayValue = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${Math.round(this.basisService.fueSummary().calculatedFUE)} FUE`;
+    }
+    const c = this.customerService.activeCustomer();
+    if (c && c.id === 'cust-2') {
+      return '392 FUE';
+    }
+    return '392 FUE';
+  });
+
+  fueUserSubtitle = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${this.basisService.fueSummary().totalUsers} Fiili Kullanıcı Kapsamda`;
+    }
+    const c = this.customerService.activeCustomer();
+    if (c && c.id === 'cust-2') {
+      return '541 Fiili Kullanıcı Kapsamda';
+    }
+    return '541 Fiili Kullanıcı Kapsamda';
+  });
 
   @ViewChild('infraChart') infraChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('licenseChart') licenseChartRef!: ElementRef<HTMLCanvasElement>;

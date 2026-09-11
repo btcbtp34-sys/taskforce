@@ -1,7 +1,8 @@
-import { Component, inject, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,12 +17,12 @@ import html2canvas from 'html2canvas';
       <div class="dashboard-header no-print">
         <div class="header-left">
           <div class="badge-row">
-            <span class="company-badge">ABC Holding</span>
+            <span class="company-badge">{{ activeCustomerName() }}</span>
             <span class="report-type-tag">Executive Summary & Transformation Report</span>
             <span class="date-tag">Eylül 2026</span>
           </div>
           <h1 class="main-title">Yönetici Özeti (Executive Summary)</h1>
-          <p class="sub-title">11 Dağınık Sunucu Konsolidasyonu, 70 FUE Lisanslama, 1.3TB HANA Sizing ve 109 PO Canlı Entegrasyon Analizi</p>
+          <p class="sub-title">11 Dağınık Sunucu Konsolidasyonu, {{ fueValueText() }} Lisanslama, 1.3TB HANA Sizing ve Canlı Entegrasyon Analizi</p>
         </div>
 
         <div class="header-actions">
@@ -56,11 +57,11 @@ import html2canvas from 'html2canvas';
                 <app-icon name="check" [size]="13" color="#059669"></app-icon>
                 <span>RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN</span>
               </div>
-              <h3>ABC Holding Bulut Hazırlık & Dönüşüm Uyumu</h3>
+              <h3>{{ activeCustomerName() }} Bulut Hazırlık & Dönüşüm Uyumu</h3>
               <p>
                 Mevcut SAP altyapısı, fiili kullanıcı profili ve entegrasyon envanteri incelendiğinde; 
                 <strong>11 parçalı dağınık On-Premise sunucu yapısının</strong> tek bir S/4HANA Private Cloud veri tabanına konsolide edilmesi ve 
-                sözleşme fazlası lisansların <strong>70 FUE</strong> seviyesine optimize edilmesi durumunda şirketiniz 
+                sözleşme lisanslarının <strong>{{ fueValueText() }}</strong> seviyesine optimize edilmesi durumunda şirketiniz 
                 <strong>%84 genel bulut uyum skoru</strong> ile dönüşüme tam hazır durumdadır.
               </p>
             </div>
@@ -83,7 +84,7 @@ import html2canvas from 'html2canvas';
                 <strong class="p-score text-emerald">%85</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-emerald" style="width: 85%"></div></div>
-              <span class="p-desc">83 Aktif Kullanıcı ➔ 70 FUE Lisansı (Sıfır Aşım Riski)</span>
+              <span class="p-desc">{{ usersCountText() }} Aktif Kullanıcı ➔ {{ fueValueText() }} Lisansı (Sıfır Aşım Riski)</span>
             </div>
 
             <div class="pillar-item">
@@ -137,36 +138,36 @@ import html2canvas from 'html2canvas';
               <span class="kpi-lbl">Önerilen FUE Lisans Paketi</span>
               <div class="kpi-icon-box bg-emerald"><app-icon name="users" [size]="16" color="#059669"></app-icon></div>
             </div>
-            <div class="kpi-main-val text-emerald">70 FUE</div>
-            <div class="kpi-sub">83 Fiili Kullanıcı İçin Tam Uyumlu</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill green">Sözleşme Fazlası Tasarruf Edildi</span>
+            <div class="kpi-main-val text-emerald">{{ fueValueText() }}</div>
+            <div class="kpi-sub">{{ usersCountText() }} Fiili Kullanıcı İçin Tam Uyumlu</div>
+            <div class="tag-row">
+              <span class="kpi-pill green">Doğrudan SAP Formülü</span>
             </div>
           </div>
 
           <!-- KPI 3 -->
           <div class="exec-kpi-card">
             <div class="kpi-top">
-              <span class="kpi-lbl">HANA DB Hedef Boyutu</span>
+              <span class="kpi-lbl">HANA DB Sizing Boyutu</span>
               <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="16" color="#0891b2"></app-icon></div>
             </div>
-            <div class="kpi-main-val">1.311 GiB RAM</div>
-            <div class="kpi-sub">Başlangıç: 1.405 GiB • 336 GiB Disk Tasarrufu</div>
+            <div class="kpi-main-val">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB }} GiB RAM</div>
+            <div class="kpi-sub">Net Disk: {{ basisService.diskDetails().initialNetDiskGiB }} GiB • {{ basisService.systemInfo().tablesAnalyzed }} Tablo</div>
             <div class="kpi-tag-row">
-              <span class="kpi-pill blue">1 TB Prod + 768 GB QA</span>
+              <span class="kpi-pill blue">S/4HANA Prod DB: 2,2 TB</span>
             </div>
           </div>
 
           <!-- KPI 4 -->
           <div class="exec-kpi-card">
             <div class="kpi-top">
-              <span class="kpi-lbl">Canlı PO Entegrasyonları</span>
+              <span class="kpi-lbl">Canlı Sistem & Veritabanı</span>
               <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon></div>
             </div>
-            <div class="kpi-main-val text-purple">109 Servis</div>
-            <div class="kpi-sub">83 Verici (Outbound) • 26 Alıcı (Inbound)</div>
+            <div class="kpi-main-val text-purple">{{ basisService.systemInfo().dbType }}</div>
+            <div class="kpi-sub">SID: {{ basisService.systemInfo().sid }} • OS: {{ basisService.systemInfo().operatingSystem }}</div>
             <div class="kpi-tag-row">
-              <span class="kpi-pill purple">BTP Integration Suite Hazır</span>
+              <span class="kpi-pill purple">S/4HANA Private Cloud Hazır</span>
             </div>
           </div>
 
@@ -176,23 +177,23 @@ import html2canvas from 'html2canvas';
               <span class="kpi-lbl">En Büyük Tablolar (DVM)</span>
               <div class="kpi-icon-box bg-amber"><app-icon name="layers" [size]="16" color="#d97706"></app-icon></div>
             </div>
-            <div class="kpi-main-val text-amber">30 Kritik Tablo</div>
-            <div class="kpi-sub">HANA Belleğinin %92.7'sini Kapsıyor</div>
+            <div class="kpi-main-val text-amber">{{ basisService.largestTables().length }} Tablo</div>
+            <div class="kpi-sub">En Büyük: {{ topTable1().name }} ({{ topTable1().sizeGiB }} GiB) & {{ topTable2().name }}</div>
             <div class="kpi-tag-row">
-              <span class="kpi-pill amber">REGUP (308 GB) & ACDOCA</span>
+              <span class="kpi-pill amber">DVM Yaşam Döngüsü Planlandı</span>
             </div>
           </div>
 
           <!-- KPI 6 -->
           <div class="exec-kpi-card highlight-card">
             <div class="kpi-top">
-              <span class="kpi-lbl">Tahmini Yıllık TCO Tasarrufu</span>
+              <span class="kpi-lbl">Tahmini Yıllık Lisans & TCO</span>
               <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="16" color="#059669"></app-icon></div>
             </div>
-            <div class="kpi-main-val text-emerald">€140.000 / Yıl</div>
-            <div class="kpi-sub">Donanım, OS, DB & Lisans Optimizasyonu</div>
+            <div class="kpi-main-val text-emerald">{{ fueValueText() }} Paketi</div>
+            <div class="kpi-sub">Atıl Lisans Optimizasyonu ve Konsolidasyon</div>
             <div class="kpi-tag-row">
-              <span class="kpi-pill green">3 Yıllık Net TCO: €420.000</span>
+              <span class="kpi-pill green">Tam Formül / Sıfır Aşım Riski</span>
             </div>
           </div>
         </div>
@@ -204,51 +205,29 @@ import html2canvas from 'html2canvas';
             <div class="c-header">
               <div class="c-title-group">
                 <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
-                <h3>Altyapı Konsolidasyon Matrisi (11 Sunucu ➔ RISE Bulut)</h3>
+                <h3>Altyapı Konsolidasyon Matrisi (Source ➔ Target Sizing)</h3>
               </div>
-              <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="c-link no-print">Detaylı Şema ➔</a>
+              <a routerLink="/source-sizing" class="c-link no-print">Sizing Kokpiti ➔</a>
             </div>
 
             <table class="mini-table">
               <thead>
                 <tr>
-                  <th>Mevcut Sistem (AS-IS)</th>
-                  <th>Sunucu</th>
-                  <th>EoS Durumu</th>
-                  <th>RISE with SAP Hedefi</th>
+                  <th>Bileşen (Component)</th>
+                  <th>Mevcut (Current)</th>
+                  <th>Hedef (Target S/4HANA)</th>
+                  <th>Açıklama</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><strong>ERP EHP7 (1503 SFin)</strong></td>
-                  <td><span class="badge-red">3 Sunucu</span></td>
-                  <td><span class="badge-gray">Aktif</span></td>
-                  <td><strong class="text-teal">S/4HANA Private Cloud</strong></td>
-                </tr>
-                <tr>
-                  <td><strong>PO 7.5 (Process Orch.)</strong></td>
-                  <td><span class="badge-red">3 Sunucu</span></td>
-                  <td><span class="badge-gray">Aktif</span></td>
-                  <td><strong class="text-teal">SAP BTP Integration Suite</strong></td>
-                </tr>
-                <tr>
-                  <td><strong>Fiori Front-End (FES 200)</strong></td>
-                  <td><span class="badge-red">2 Sunucu</span></td>
-                  <td><span class="badge-eos">EoS 2020</span></td>
-                  <td><strong class="text-teal">Embedded Fiori Launchpad</strong></td>
-                </tr>
-                <tr>
-                  <td><strong>Content Server (CS 6.5)</strong></td>
-                  <td><span class="badge-red">1 Sunucu</span></td>
-                  <td><span class="badge-eos">EoS 2020</span></td>
-                  <td><strong class="text-teal">SAP Document Management (BTP)</strong></td>
-                </tr>
-                <tr>
-                  <td><strong>Web Dispatcher</strong></td>
-                  <td><span class="badge-red">2 Sunucu</span></td>
-                  <td><span class="badge-gray">Aktif</span></td>
-                  <td><strong class="text-teal">Cloud Connector & BTP Gateway</strong></td>
-                </tr>
+                @for (item of basisService.sizingMatrix(); track item.product) {
+                  <tr>
+                    <td><strong>{{ item.product }}</strong></td>
+                    <td><span class="badge-red">{{ item.current }}</span></td>
+                    <td><strong class="text-teal">{{ item.target }}</strong></td>
+                    <td class="text-muted">{{ item.description }}</td>
+                  </tr>
+                }
               </tbody>
             </table>
           </div>
@@ -269,38 +248,38 @@ import html2canvas from 'html2canvas';
                   <th>Kullanıcı Seviyesi</th>
                   <th>Fiili Kullanıcı</th>
                   <th>FUE Oranı</th>
-                  <th>Gereken FUE</th>
+                  <th>Hesaplanan FUE</th>
                   <th>Durum</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>SAP S/4HANA Cloud Advanced</strong></td>
-                  <td>20 Kullanıcı</td>
+                  <td><strong>HB Professional Use</strong></td>
+                  <td>{{ hbCount() }} Kullanıcı</td>
                   <td>1.0 FUE</td>
-                  <td><strong class="text-emerald">20.0 FUE</strong></td>
+                  <td><strong class="text-emerald">{{ hbCount() }}.0 FUE</strong></td>
                   <td><span class="badge-green">Kapsamda</span></td>
                 </tr>
                 <tr>
-                  <td><strong>SAP S/4HANA Cloud Core</strong></td>
-                  <td>32 Kullanıcı</td>
-                  <td>0.5 FUE</td>
-                  <td><strong class="text-emerald">16.0 FUE</strong></td>
+                  <td><strong>HC Functional Use</strong></td>
+                  <td>{{ hcCount() }} Kullanıcı</td>
+                  <td>0.2 FUE (5:1)</td>
+                  <td><strong class="text-emerald">{{ (hcCount() / 5).toFixed(1) }} FUE</strong></td>
                   <td><span class="badge-green">Kapsamda</span></td>
                 </tr>
                 <tr>
-                  <td><strong>SAP S/4HANA Cloud Self-Service</strong></td>
-                  <td>340 Kullanıcı</td>
-                  <td>0.1 FUE</td>
-                  <td><strong class="text-emerald">34.0 FUE</strong></td>
+                  <td><strong>HD Productivity Use</strong></td>
+                  <td>{{ hdCount() }} Kullanıcı</td>
+                  <td>0.033 FUE (30:1)</td>
+                  <td><strong class="text-emerald">{{ (hdCount() / 30).toFixed(2) }} FUE</strong></td>
                   <td><span class="badge-green">Kapsamda</span></td>
                 </tr>
                 <tr class="total-highlight-row">
                   <td><strong>TOPLAM GEREKEN FUE LİSANSI</strong></td>
-                  <td><strong>392 Kullanıcı</strong></td>
+                  <td><strong>{{ usersCountText() }} Kullanıcı</strong></td>
                   <td>—</td>
-                  <td><strong class="text-emerald font-bold">70 FUE</strong></td>
-                  <td><span class="badge-green">Optimum Paket</span></td>
+                  <td><strong class="text-emerald font-bold">{{ fueValueText() }}</strong></td>
+                  <td><span class="badge-green">Doğrudan SAP Formülü</span></td>
                 </tr>
               </tbody>
             </table>
@@ -320,35 +299,30 @@ import html2canvas from 'html2canvas';
               <thead>
                 <tr>
                   <th>Metrik / Boyut</th>
-                  <th>Başlangıç (Initial)</th>
-                  <th>DVM Sonrası (Optimized)</th>
-                  <th>Elde Edilen Kazanç</th>
+                  <th>Değer (GiB)</th>
+                  <th>Açıklama / Durum</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>RAM Bellek Gereksinimi</strong></td>
-                  <td>1.405,8 GiB</td>
-                  <td><strong class="text-blue">1.311,0 GiB</strong></td>
-                  <td><span class="badge-green">94,8 GiB RAM Boşaltıldı</span></td>
+                  <td><strong>Anticipated Initial RAM</strong></td>
+                  <td><strong class="text-blue">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB }} GiB</strong></td>
+                  <td>Column Loadable ({{ basisService.memoryDetails().columnLoadable }} GiB) + Workspace ({{ basisService.memoryDetails().workSpace }} GiB)</td>
                 </tr>
                 <tr>
-                  <td><strong>Disk Boyutu (Data + Log)</strong></td>
-                  <td>1.390,0 GiB</td>
-                  <td><strong class="text-blue">1.054,0 GiB</strong></td>
-                  <td><span class="badge-green">336,0 GiB Disk Tasarrufu</span></td>
+                  <td><strong>Initial Net Disk Size</strong></td>
+                  <td><strong class="text-blue">{{ basisService.diskDetails().initialNetDiskGiB }} GiB</strong></td>
+                  <td>LOB, NSE Cache ve sıkıştırma sonrası net disk ihtiyacı</td>
                 </tr>
                 <tr>
-                  <td><strong>En Büyük Tablo Hacmi (REGUP)</strong></td>
-                  <td>308,6 GiB (%22,7)</td>
-                  <td>120,0 GiB</td>
-                  <td><span class="badge-green">FI_PAYDATA Arşivleme</span></td>
+                  <td><strong>En Büyük Tablo ({{ topTable1().name }})</strong></td>
+                  <td>{{ topTable1().sizeGiB }} GiB</td>
+                  <td><span class="badge-green">{{ topTable1().recommendation }}</span></td>
                 </tr>
                 <tr>
-                  <td><strong>İkinci Büyük Tablo (ACDOCA)</strong></td>
-                  <td>168,1 GiB (%12,4)</td>
-                  <td>95,0 GiB</td>
-                  <td><span class="badge-green">FI_DOCUMNT Arşivleme</span></td>
+                  <td><strong>İkinci Büyük Tablo ({{ topTable2().name }})</strong></td>
+                  <td>{{ topTable2().sizeGiB }} GiB</td>
+                  <td><span class="badge-green">{{ topTable2().recommendation }}</span></td>
                 </tr>
               </tbody>
             </table>
@@ -424,8 +398,8 @@ import html2canvas from 'html2canvas';
             <div class="roadmap-step">
               <div class="step-num">1</div>
               <div class="step-content">
-                <h4>70 FUE Lisans Sözleşmesi</h4>
-                <p>Fiili 83 kullanıcı aktivitesi doğrultusunda sözleşme başlangıcında 70 FUE paketi seçilmeli, atıl lisans maliyetleri engellenmelidir.</p>
+                <h4>{{ fueValueText() }} Lisans Sözleşmesi</h4>
+                <p>Fiili {{ usersCountText() }} kullanıcı aktivitesi ve SAP standart formülü (HB + HC/5 + HD/30) doğrultusunda {{ fueValueText() }} paketi seçilmeli, atıl lisans maliyetleri engellenmelidir.</p>
                 <span class="step-benefit">Yıllık €65.000 Lisans Tasarrufu</span>
               </div>
             </div>
@@ -1035,7 +1009,38 @@ import html2canvas from 'html2canvas';
 })
 export class ReportsComponent {
   customerService = inject(CustomerService);
+  basisService = inject(BasisSizingService);
   isExporting = signal<boolean>(false);
+
+  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'DEF Kimya A.Ş.');
+
+  fueValueText = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${Math.round(this.basisService.fueSummary().calculatedFUE)} FUE`;
+    }
+    return '392 FUE';
+  });
+
+  usersCountText = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${this.basisService.fueSummary().totalUsers}`;
+    }
+    return '541';
+  });
+
+  topTable1 = computed(() => {
+    const list = this.basisService.largestTables();
+    return (list && list.length > 0) ? list[0] : { name: 'ACCTCR', sizeGiB: 70.8, recommendation: 'FI_DOCUMNT Arşivleme' };
+  });
+
+  topTable2 = computed(() => {
+    const list = this.basisService.largestTables();
+    return (list && list.length > 1) ? list[1] : { name: 'MLCR', sizeGiB: 52.7, recommendation: 'ML_DATA Arşivleme' };
+  });
+
+  hbCount = computed(() => this.basisService.fueSummary()?.hbCount ?? 355);
+  hcCount = computed(() => this.basisService.fueSummary()?.hcCount ?? 185);
+  hdCount = computed(() => this.basisService.fueSummary()?.hdCount ?? 1);
 
   @ViewChild('reportContainer') reportContainer!: ElementRef<HTMLDivElement>;
 

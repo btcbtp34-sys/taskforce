@@ -73,29 +73,21 @@ export const MOCK_CUSTOMERS: Customer[] = [
     name: 'DEF Kimya A.Ş.',
     code: 'DEF-2026',
     sector: 'Chemicals & Energy',
-    sapUserCount: 840,
-    activeUserCount: 710,
-    lowUsageUserCount: 130,
-    totalLicenseCost: 310000,
-    estimatedOpportunityValue: 95000,
-    activeOpportunityCount: 3,
-    taskForceStatus: 'Analysis',
-    progressPercentage: 40,
-    sapProducts: [
-      { id: 'p1', name: 'SAP S/4HANA Cloud', category: 'ERP Core', status: 'Active', licenseCount: 600, monthlyCost: 16000, icon: 'cloud' },
-      { id: 'p2', name: 'SAP Ariba', category: 'Procurement', status: 'Active', licenseCount: 120, monthlyCost: 3800, icon: 'shopping-cart' },
-      { id: 'p3', name: 'SAP BTP Process Automation', category: 'Automation', status: 'Planned', licenseCount: 20, monthlyCost: 1200, icon: 'cpu' }
-    ],
-    coreProblems: [
-      'Manuel Tedarik Zinciri Süreçleri',
-      'Rapor Alma Süreçlerinde Yavaşlık',
-      'Fazla Lisans Atamaları'
-    ],
+    sapUserCount: 0,
+    activeUserCount: 0,
+    lowUsageUserCount: 0,
+    totalLicenseCost: 0,
+    estimatedOpportunityValue: 0,
+    activeOpportunityCount: 0,
+    taskForceStatus: 'Data Collection',
+    progressPercentage: 10,
+    sapProducts: [],
+    coreProblems: [],
     contactPerson: 'Ayşe Demir (IT Director)',
     email: 'ayse.demir@defkimya.com',
     phone: '+90 216 444 0288',
     logo: 'flask-conical',
-    lastAnalysisDate: '2026-08-25'
+    lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
   },
   {
     id: 'cust-3',

@@ -1,7 +1,8 @@
-import { Component, inject, signal, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { Chart, registerables } from 'chart.js';
 
@@ -60,41 +61,56 @@ Chart.register(...registerables);
         
         <!-- EXECUTIVE RECOMMENDATION SUMMARY -->
         <div class="clean-summary-grid">
-          <!-- 70 FUE Card -->
+          <!-- Exact FUE Card (No arbitrary %15 addition) -->
           <div class="card-summary-highlight">
             <div class="badge-label">TAVSİYE EDİLEN RISE PAKETİ</div>
-            <div class="big-number">70 <span class="unit">FUE</span></div>
-            <div class="sub-desc">60.5 Fiili İhtiyaç + %15 Güvenlik Payı</div>
+            <div class="big-number">{{ activeCalculatedFue() }} <span class="unit">FUE</span></div>
+            <div class="sub-desc">{{ activeFueFormulaShort() }}</div>
+            <div class="pill-exact">✓ Doğrudan SAP Formülü (Tam Değer)</div>
           </div>
 
           <!-- Consultant Note Box -->
           <div class="consultant-callout">
             <div class="callout-header">
-              <app-icon name="sparkles" [size]="15" color="#0284c7"></app-icon>
-              <strong>Kurumsal Danışman Analiz & Doğrulama Notu</strong>
+              <div class="title-with-icon">
+                <app-icon name="sparkles" [size]="15" color="#0284c7"></app-icon>
+                <strong>Kurumsal Danışman Analiz & Doğrulama Notu</strong>
+              </div>
+              <span class="badge-optimum">Ek Güvenlik Payı Eklenmemiştir</span>
             </div>
             <p class="callout-text">
-              "Sistemdeki fiili kullanıcı aktivitesi (83 Kullanıcı), mevcut sözleşme adetlerinin oldukça altındadır. Gerçekleşen kullanım matrisi doğrultusunda RISE with SAP dönüşümünde <strong>70 FUE lisans paketi optimum ve güvenli bir seviye</strong> olarak belirlenmiştir."
+              {{ consultantNoteText() }}
             </p>
             <div class="callout-meta">
-              <span>Referans: USMM Sistem Ölçümü & SAP for ME Finans Matriksi</span>
-              <span class="text-green">✓ %15 Bulut Büyüme Payı Dahildir</span>
+              <span class="ref-item">
+                <app-icon name="file-text" [size]="12" color="#64748b"></app-icon>
+                Referans: FUE Sınıflandırma Matrisi (/SDF & USMM)
+              </span>
+              <span class="text-green">✓ Doğrudan SAP FUE Formülü (HB + HC/5 + HD/30)</span>
             </div>
           </div>
 
           <!-- Fast KPI Pill Cards -->
           <div class="kpi-column">
             <div class="kpi-row-item">
-              <span class="label">Satın Alınan Sözleşme:</span>
-              <strong class="val text-slate">320 Lisans</strong>
+              <span class="label">Toplam Kullanıcı Hacmi:</span>
+              <strong class="val text-slate">{{ activeTotalUsers() }} Kullanıcı</strong>
             </div>
             <div class="kpi-row-item">
-              <span class="label">Sistemde Fiilen Aktif:</span>
-              <strong class="val text-blue">83 Kullanıcı (%25.9)</strong>
+              <span class="label">HB Professional (1:1):</span>
+              <strong class="val text-blue">{{ activeHbCount() }} ({{ activeHbCount() }}.0 FUE)</strong>
             </div>
             <div class="kpi-row-item">
-              <span class="label">Tahmini Net Tasarruf:</span>
-              <strong class="val text-green">€140.000 / Yıl</strong>
+              <span class="label">HC Functional (5:1):</span>
+              <strong class="val text-blue">{{ activeHcCount() }} ({{ (activeHcCount() / 5).toFixed(1) }} FUE)</strong>
+            </div>
+            <div class="kpi-row-item">
+              <span class="label">HD Productivity (30:1):</span>
+              <strong class="val text-blue">{{ activeHdCount() }} ({{ (activeHdCount() / 30).toFixed(2) }} FUE)</strong>
+            </div>
+            <div class="kpi-row-item border-top">
+              <span class="label">Hesaplanan Net FUE:</span>
+              <strong class="val text-green font-lg">{{ activeCalculatedFue() }} FUE</strong>
             </div>
           </div>
         </div>
@@ -116,7 +132,7 @@ Chart.register(...registerables);
                 [class.active]="fueSubView() === 'usmm'"
                 (click)="fueSubView.set('usmm')">
                 <span class="step-num">2</span>
-                <span>Fiili Sistem Kullanımı (USMM: 83)</span>
+                <span>FUE Sınıflandırma Matrisi ({{ activeTotalUsers() }})</span>
               </button>
 
               <button 
@@ -124,16 +140,16 @@ Chart.register(...registerables);
                 [class.active]="fueSubView() === 'purchased'"
                 (click)="fueSubView.set('purchased')">
                 <span class="step-num">3</span>
-                <span>Satın Alınan Lisanslar (320)</span>
+                <span>Satın Alınan Lisanslar ({{ activePurchasedMaterials().length }})</span>
               </button>
             </div>
 
             <span class="view-indicator">
-              {{ fueSubView() === 'calc' ? 'Standart SAP FUE Oran Formülasyonu' : (fueSubView() === 'usmm' ? 'Canlı Yetki & İşlem Ölçümü' : 'SAP for ME Finance & Legal Envanteri') }}
+              {{ fueSubView() === 'calc' ? 'Standart SAP FUE Oran Formülasyonu' : (fueSubView() === 'usmm' ? 'FUE Sınıflandırma ve Kullanıcı Dağılımı' : 'SAP for ME Finance & Legal Envanteri') }}
             </span>
           </div>
 
-          <!-- SUB-VIEW 1: FUE HESAPLAMA & ORANLAR (4. Görsel) -->
+          <!-- SUB-VIEW 1: FUE HESAPLAMA & ORANLAR -->
           <div class="sub-view-body" *ngIf="fueSubView() === 'calc'">
             <div class="table-wrapper">
               <table class="clean-table">
@@ -148,7 +164,7 @@ Chart.register(...registerables);
                   </tr>
                 </thead>
                 <tbody>
-                  @for (item of fueRatios; track item.useType) {
+                  @for (item of activeFueRatios(); track item.useType) {
                     <tr>
                       <td>
                         <span class="badge-type" [ngClass]="item.badgeClass">
@@ -169,16 +185,18 @@ Chart.register(...registerables);
             <!-- Bottom Result Banner -->
             <div class="calc-result-bar">
               <div class="calc-left">
-                <span class="calc-label">HESAPLAMA ÖZETİ:</span>
-                <span class="calc-formula">57.0 (Advanced) + 3.2 (Core) + 0.27 (Self-Service) = <strong>60.47 Net FUE</strong></span>
+                <span class="calc-label">HESAPLAMA FORMÜLÜ:</span>
+                <span class="calc-formula">
+                  <strong>{{ activeFueFormulaFull() }}</strong>
+                </span>
               </div>
               <div class="calc-right">
-                <span class="recom-badge">➔ %15 Güvenli Büyüme Payı ile <strong>70 FUE Paketi</strong> Uygundur</span>
+                <span class="recom-badge">➔ Gereken RISE Sözleşmesi: <strong>{{ activeCalculatedFue() }} FUE Paketi</strong></span>
               </div>
             </div>
           </div>
 
-          <!-- SUB-VIEW 2: FİİLİ SİSTEM ÖLÇÜMÜ (USMM - 2. Görsel) -->
+          <!-- SUB-VIEW 2: FUE SINIFLANDIRMA MATRİSİ -->
           <div class="sub-view-body" *ngIf="fueSubView() === 'usmm'">
             <div class="table-wrapper">
               <table class="clean-table">
@@ -186,31 +204,28 @@ Chart.register(...registerables);
                   <tr>
                     <th>Mevcut Sınıflandırma</th>
                     <th class="text-center">Toplam (Total)</th>
-                    <th class="text-center">GB Advanced</th>
-                    <th class="text-center">GC Core</th>
-                    <th class="text-center">GD Self-Service</th>
-                    <th class="text-center">Sınıflandırılmamış</th>
+                    <th class="text-center">HB Professional Use</th>
+                    <th class="text-center">HC Functional Use</th>
+                    <th class="text-center">HD Productivity Use</th>
                   </tr>
                 </thead>
                 <tbody>
                   <!-- Summary Row -->
                   <tr class="sum-row">
-                    <td><strong>GENEL ÖLÇÜM TOPLAMI</strong></td>
-                    <td class="text-center"><strong class="tag-total">{{ validationSummary.total }}</strong></td>
-                    <td class="text-center"><strong class="tag-adv">{{ validationSummary.advanced }}</strong></td>
-                    <td class="text-center"><strong class="tag-core">{{ validationSummary.core }}</strong></td>
-                    <td class="text-center"><strong class="tag-self">{{ validationSummary.selfService }}</strong></td>
-                    <td class="text-center"><strong class="tag-none">{{ validationSummary.notClassified }}</strong></td>
+                    <td><strong>GENEL TOPLAM</strong></td>
+                    <td class="text-center"><strong class="tag-total">{{ activeTotalUsers() }}</strong></td>
+                    <td class="text-center"><strong class="tag-adv">{{ activeHbCount() }}</strong></td>
+                    <td class="text-center"><strong class="tag-core">{{ activeHcCount() }}</strong></td>
+                    <td class="text-center"><strong class="tag-self">{{ activeHdCount() }}</strong></td>
                   </tr>
 
-                  @for (row of userValidationRows; track row.classification) {
+                  @for (row of activeFueRows(); track row.classification) {
                     <tr>
                       <td class="bold-title">{{ row.classification }}</td>
                       <td class="text-center bold">{{ row.total }}</td>
-                      <td class="text-center">{{ row.advanced }}</td>
-                      <td class="text-center">{{ row.core }}</td>
-                      <td class="text-center">{{ row.selfService }}</td>
-                      <td class="text-center text-muted">{{ row.notClassified }}</td>
+                      <td class="text-center">{{ row.hbProfessional }}</td>
+                      <td class="text-center">{{ row.hcFunctional }}</td>
+                      <td class="text-center">{{ row.hdProductivity }}</td>
                     </tr>
                   }
                 </tbody>
@@ -218,8 +233,8 @@ Chart.register(...registerables);
             </div>
 
             <div class="info-footer-bar">
-              <app-icon name="alert" [size]="14" color="#d97706"></app-icon>
-              <span>Sistemde lisanslı 320 kullanıcıdan yalnızca <strong>83'ü</strong> aktif işlem yapmaktadır. 237 kullanıcı lisansı atıldır.</span>
+              <app-icon name="check" [size]="14" color="#0284c7"></app-icon>
+              <span>FUE Formülü: <strong>{{ activeHbCount() }} + {{ activeHcCount() }}/5 + {{ activeHdCount() }}/30 ≈ {{ activeCalculatedFue() }} FUE</strong></span>
             </div>
           </div>
 
@@ -237,7 +252,7 @@ Chart.register(...registerables);
                   </tr>
                 </thead>
                 <tbody>
-                  @for (m of purchasedMaterials; track m.material) {
+                  @for (m of activePurchasedMaterials(); track m.material) {
                     <tr [class.user-highlight]="m.isUser">
                       <td><strong>{{ m.material }}</strong></td>
                       <td class="text-muted">{{ m.product }}</td>
@@ -254,7 +269,7 @@ Chart.register(...registerables);
 
             <div class="info-footer-bar">
               <app-icon name="check" [size]="14" color="#0284c7"></app-icon>
-              <span>Toplam Satın Alınan Kullanıcı Lisansı: <strong>320</strong> (128 Professional + 188 Employee + 4 Developer).</span>
+              <span>{{ purchasedLicensesSummaryText() }}</span>
             </div>
           </div>
         </div>
@@ -455,6 +470,17 @@ Chart.register(...registerables);
         color: #64748b;
         font-weight: 600;
       }
+
+      .pill-exact {
+        margin-top: 0.45rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: #047857;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 0.15rem 0.5rem;
+        border-radius: 9999px;
+      }
     }
 
     .consultant-callout {
@@ -471,10 +497,26 @@ Chart.register(...registerables);
       .callout-header {
         display: flex;
         align-items: center;
-        gap: 0.4rem;
+        justify-content: space-between;
         font-size: 0.76rem;
         color: #0284c7;
         font-weight: 800;
+
+        .title-with-icon {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .badge-optimum {
+          font-size: 0.63rem;
+          font-weight: 700;
+          color: #0369a1;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          padding: 0.12rem 0.45rem;
+          border-radius: 4px;
+        }
       }
 
       .callout-text {
@@ -495,6 +537,12 @@ Chart.register(...registerables);
         font-size: 0.68rem;
         color: #64748b;
 
+        .ref-item {
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+        }
+
         .text-green {
           color: #059669;
           font-weight: 700;
@@ -510,19 +558,29 @@ Chart.register(...registerables);
       display: flex;
       flex-direction: column;
       justify-content: space-around;
-      gap: 0.4rem;
+      gap: 0.35rem;
 
       .kpi-row-item {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 0.74rem;
+        font-size: 0.72rem;
 
         .label { color: #64748b; font-weight: 500; }
         .val { font-weight: 800; }
         .text-slate { color: #334155; }
         .text-blue { color: #0284c7; }
         .text-green { color: #059669; }
+
+        &.border-top {
+          border-top: 1px dashed #cbd5e1;
+          padding-top: 0.3rem;
+          margin-top: 0.1rem;
+        }
+
+        .font-lg {
+          font-size: 0.88rem;
+        }
       }
     }
 
@@ -758,6 +816,7 @@ Chart.register(...registerables);
 })
 export class AnalyticsComponent implements OnInit, AfterViewInit {
   customerService = inject(CustomerService);
+  basisService = inject(BasisSizingService);
   route = inject(ActivatedRoute);
 
   @ViewChild('deptChart') deptChartRef?: ElementRef<HTMLCanvasElement>;
@@ -766,19 +825,129 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
   activeTab = signal<'fue' | 'dvm' | 'overview'>('fue');
   fueSubView = signal<'calc' | 'usmm' | 'purchased'>('calc');
 
-  // 1. GÖRSEL 1: MEVCUT SATIN ALINAN ON-PREMISE LİSANSLAR
-  purchasedMaterials = [
-    { material: 'SAP Professional User (7003012)', product: 'SAP ERP', orders: 12, quantity: '128 Users', metricId: '9070CB', isUser: true },
-    { material: 'SAP Developer User (7003013)', product: 'SAP NetWeaver Application Server', orders: 4, quantity: '4 Users', metricId: '9070CA', isUser: true },
-    { material: 'SAP Employee User (7003015)', product: 'Personnel Administration (PA)', orders: 4, quantity: '188 Users', metricId: '9070CD', isUser: true },
-    { material: 'ERP Component for ERP Package (7003233)', product: 'ERP Products (other)', orders: 4, quantity: '4 Unit', metricId: '—', isUser: false },
-    { material: 'SAP Treasury and Risk Management (7016968)', product: 'SAP Treasury & Risk Mgmt, private cloud ed.', orders: 4, quantity: '12 Unit', metricId: '9000N171', isUser: false },
-    { material: 'SAP Single Sign-On (7017299)', product: 'SAP Single Sign-On', orders: 3, quantity: '6 Users', metricId: '08200820', isUser: false },
-    { material: 'SAP Process Orchestr, Edge ed, stand opt (7017907)', product: 'SAP Process Integration', orders: 4, quantity: '8 Unit', metricId: '9000N234', isUser: false },
-    { material: 'SAP HANA, RT ed Applic & BW-new/subsq (7018066)', product: 'SAP HANA, enterprise edition', orders: 15, quantity: 'N/A', metricId: '28502850', isUser: false },
-    { material: 'SAP S/4HANA Ent Mgmt f. ERP customers (7018538)', product: 'SAP S/4HANA Enterprise Management', orders: 4, quantity: '4 Unit', metricId: '—', isUser: false },
-    { material: 'SAP ERP Foundation Starter (ERP_PACKAGE)', product: 'SAP ERP', orders: 4, quantity: '4 Piece', metricId: '—', isUser: false }
-  ];
+  activeTotalUsers = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return this.basisService.fueSummary().totalUsers;
+    }
+    return 541;
+  });
+
+  activeHbCount = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return this.basisService.fueSummary().hbCount;
+    }
+    return 355;
+  });
+
+  activeHcCount = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return this.basisService.fueSummary().hcCount;
+    }
+    return 185;
+  });
+
+  activeHdCount = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return this.basisService.fueSummary().hdCount;
+    }
+    return 1;
+  });
+
+  // Exact Excel formula: HB + HC/5 + HD/30, no arbitrary %15 addition!
+  activeCalculatedFue = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return Math.round(this.basisService.fueSummary().calculatedFUE);
+    }
+    return 392;
+  });
+
+  activeFueFormulaShort = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      const s = this.basisService.fueSummary();
+      return `${s.hbCount} + ${s.hcCount}/5 + ${s.hdCount}/30 ≈ ${Math.round(s.calculatedFUE)} FUE`;
+    }
+    return '355 + 185/5 + 1/30 ≈ 392 FUE';
+  });
+
+  activeFueFormulaFull = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      const s = this.basisService.fueSummary();
+      const hcVal = (s.hcCount / 5).toFixed(1);
+      const hdVal = (s.hdCount / 30).toFixed(2);
+      return `${s.hbCount}.0 (Professional) + ${hcVal} (Functional) + ${hdVal} (Productivity) = ${s.calculatedFUE.toFixed(1)} Net FUE (≈ ${Math.round(s.calculatedFUE)} FUE)`;
+    }
+    return '355.0 (Professional) + 37.0 (Functional) + 0.03 (Productivity) = 392.03 Net FUE (≈ 392 FUE)';
+  });
+
+  consultantNoteText = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      const s = this.basisService.fueSummary();
+      const fue = Math.round(s.calculatedFUE);
+      const hcPart = (s.hcCount / 5).toFixed(1);
+      const hdPart = (s.hdCount / 30).toFixed(2);
+      return `"FUE sınıflandırma matrisine göre sistemdeki ${s.totalUsers} kullanıcıdan ${s.hbCount} Professional (HB), ${s.hcCount} Functional (HC) ve ${s.hdCount} Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (${s.hbCount} + ${hcPart} + ${hdPart}) RISE with SAP geçişinde ${fue} FUE paketi tam ve optimum seviye olarak belirlenmiştir. İlave %15 tampon eklenmeden doğrudan net değer önerilmektedir."`;
+    }
+    return '"FUE sınıflandırma matrisine göre sistemdeki 541 kullanıcıdan 355 Professional (HB), 185 Functional (HC) ve 1 Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (355 + 37.0 + 0.03) RISE with SAP geçişinde 392 FUE paketi tam ve optimum seviye olarak belirlenmiştir. Sözleşme maliyetini şişirmemek adına ilave %15 güvenlik payı eklenmeden doğrudan net 392 FUE önerilmektedir."';
+  });
+
+  activeFueRows = computed(() => {
+    const pkg = this.basisService.basisPackage();
+    if (this.basisService.hasUploadedData() && pkg && pkg.fueRows && pkg.fueRows.length > 0) {
+      return pkg.fueRows;
+    }
+    return [
+      { classification: 'Not Classified (Default User Type)', total: 2, hbProfessional: 2, hcFunctional: 0, hdProductivity: 0 },
+      { classification: 'AX mySAP ERP Professional', total: 173, hbProfessional: 173, hcFunctional: 0, hdProductivity: 0 },
+      { classification: 'AY mySAP ERP Limited Profession', total: 364, hbProfessional: 178, hcFunctional: 185, hdProductivity: 1 },
+      { classification: 'BA mySAP ERP Developer', total: 2, hbProfessional: 2, hcFunctional: 0, hdProductivity: 0 }
+    ];
+  });
+
+  activeFueRatios = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      const s = this.basisService.fueSummary();
+      return [
+        { useType: 'HB Professional', prevModel: 'Professional User', ratio: '1 : 1', meaning: '1 Professional User = 1.0 FUE', currentUsers: s.hbCount, calcFue: `${s.hbCount}.00 FUE`, badgeClass: 'badge-advanced' },
+        { useType: 'HC Functional', prevModel: 'Limited / Functional User', ratio: '5 : 1', meaning: '5 Functional Users = 1.0 FUE', currentUsers: s.hcCount, calcFue: `${(s.hcCount / 5).toFixed(2)} FUE`, badgeClass: 'badge-core' },
+        { useType: 'HD Productivity', prevModel: 'Productivity / Self-Service', ratio: '30 : 1', meaning: '30 Productivity Users = 1.0 FUE', currentUsers: s.hdCount, calcFue: `${(s.hdCount / 30).toFixed(2)} FUE`, badgeClass: 'badge-self' }
+      ];
+    }
+    return [
+      { useType: 'HB Professional', prevModel: 'Professional User', ratio: '1 : 1', meaning: '1 Professional User = 1.0 FUE', currentUsers: 355, calcFue: '355.00 FUE', badgeClass: 'badge-advanced' },
+      { useType: 'HC Functional', prevModel: 'Limited / Functional User', ratio: '5 : 1', meaning: '5 Functional Users = 1.0 FUE', currentUsers: 185, calcFue: '37.00 FUE', badgeClass: 'badge-core' },
+      { useType: 'HD Productivity', prevModel: 'Productivity / Self-Service', ratio: '30 : 1', meaning: '30 Productivity Users = 1.0 FUE', currentUsers: 1, calcFue: '0.03 FUE', badgeClass: 'badge-self' }
+    ];
+  });
+
+  activePurchasedMaterials = computed(() => {
+    const lics = this.basisService.licenses();
+    if (lics && lics.length > 0) {
+      return lics.map(l => ({
+        material: l.materials,
+        product: l.product,
+        orders: l.orders,
+        quantity: `${l.quantity} ${l.unit}`,
+        metricId: l.metricId || '—',
+        isUser: l.unit.toLowerCase().includes('user')
+      }));
+    }
+    return [];
+  });
+
+  purchasedLicensesSummaryText = computed(() => {
+    const lics = this.basisService.licenses();
+    if (!lics || lics.length === 0) {
+      return 'Sözleşme lisans envanteri Excel yüklendiğinde görüntülenecektir.';
+    }
+    const userLics = lics.filter(l => l.unit.toLowerCase().includes('user'));
+    const totalUserCount = userLics.reduce((sum, l) => sum + l.quantity, 0);
+    const profCount = userLics.find(l => l.materials.includes('Professional User') && !l.materials.includes('Limited'))?.quantity || 0;
+    const limCount = userLics.find(l => l.materials.includes('Limited'))?.quantity || 0;
+    const devCount = userLics.find(l => l.materials.includes('Developer'))?.quantity || 0;
+    const otherCount = totalUserCount - (profCount + limCount + devCount);
+
+    return `Toplam Satın Alınan Kullanıcı Lisansı: ${totalUserCount.toLocaleString('tr-TR')} Adet (${profCount} Professional + ${limCount} Limited + ${devCount} Developer + ${otherCount} Diğer Roller). Fiili FUE İhtiyacı: ${this.activeCalculatedFue()} FUE (Atıl Lisans Tasarrufu: ${totalUserCount - this.activeCalculatedFue()} Lisans).`;
+  });
 
   // 2. GÖRSEL 2: USER VALIDATION RESULTS (USMM)
   validationSummary = {

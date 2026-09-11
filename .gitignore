@@ -38,6 +38,8 @@ testem.log
 /typings
 __screenshots__/
 
-# System files
+# System & Office files
 .DS_Store
 Thumbs.db
+~$*
+*.tmp
