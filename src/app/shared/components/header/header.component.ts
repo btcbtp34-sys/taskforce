@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../../core/services/customer.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { BasisSizingService } from '../../../core/services/basis-sizing.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -34,6 +35,16 @@ import { IconComponent } from '../icon/icon.component';
 
       <!-- Quick Upload Button, Notifications & Profile -->
       <div class="right-section">
+        <!-- Reset Uploaded Data Button (when uploaded) -->
+        <button 
+          *ngIf="basisService.hasUploadedData()" 
+          class="btn-header-reset" 
+          (click)="basisService.clearUploadedData()" 
+          title="Yüklenen Excel verilerini sıfırla ve sistemi temizle">
+          <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
+          <span>Verileri Sıfırla</span>
+        </button>
+
         <!-- Prominent Quick Data Upload Button -->
         <a routerLink="/data-import" class="upload-quick-btn" title="Yeni Excel/CSV Verisi Yükle">
           <app-icon name="upload" [size]="14" color="#ffffff"></app-icon>
@@ -348,11 +359,32 @@ import { IconComponent } from '../icon/icon.component';
         }
       }
     }
+
+    .btn-header-reset {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+
+      &:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+      }
+    }
   `]
 })
 export class HeaderComponent {
   customerService = inject(CustomerService);
   authService = inject(AuthService);
+  basisService = inject(BasisSizingService);
   showNotifications = false;
 }
 

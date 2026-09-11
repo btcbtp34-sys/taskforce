@@ -18,9 +18,9 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <span class="live-dot"></span>
           <span class="banner-text">
             <strong>Canlı Sizing Raporu Yüklendi:</strong> {{ basisService.basisPackage()?.fileName }} 
-            • SID: <strong>{{ basisService.systemInfo().sid }}</strong> 
-            • Veritabanı: <strong>{{ basisService.systemInfo().dbType }}</strong>
-            • Tahmini RAM: <strong>{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.0-1' }} GiB</strong>
+            • SID: <strong>{{ basisService.systemInfo()?.sid }}</strong> 
+            • Veritabanı: <strong>{{ basisService.systemInfo()?.dbType }}</strong>
+            • Tahmini RAM: <strong>{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.0-1' }} GiB</strong>
           </span>
         </div>
         <div class="banner-right">
@@ -43,20 +43,36 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
         <!-- Cockpit Quick Status Pills -->
         <div class="cockpit-status-bar">
-          <div class="status-pill green">
+          <div class="status-pill" [ngClass]="basisService.hasUploadedData() ? 'green' : 'amber'">
             <span class="pulse-dot"></span>
-            <span>All Services Started</span>
+            <span>{{ basisService.hasUploadedData() ? 'All Services Started' : 'Veri Yüklenmesi Bekleniyor' }}</span>
           </div>
           <div class="status-pill blue">
             <app-icon name="database" [size]="13" color="#0284c7"></app-icon>
-            <span>SID: {{ basisService.systemInfo().sid }} ({{ basisService.hasUploadedData() ? 'Yüklenen Rapor' : 'Production' }})</span>
+            <span>SID: {{ basisService.systemInfo()?.sid || '—' }} ({{ basisService.hasUploadedData() ? 'Yüklenen Rapor' : 'Tanımsız' }})</span>
           </div>
-          <div class="status-pill amber">
-            <app-icon name="alert" [size]="13" color="#d97706"></app-icon>
-            <span>3 Low Alerts</span>
+          <div class="status-pill" [ngClass]="basisService.hasUploadedData() ? 'blue' : 'amber'">
+            <app-icon name="alert" [size]="13" [color]="basisService.hasUploadedData() ? '#0284c7' : '#d97706'"></app-icon>
+            <span>{{ basisService.hasUploadedData() ? 'Boyutlandırma Aktif' : '0 Veri' }}</span>
           </div>
         </div>
       </div>
+
+      <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+        <div class="empty-icon-wrap">
+          <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+        </div>
+        <h3>Sizing ve Donanım Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
+        <p>S/4HANA boyutlandırma matrisi, HANA Cockpit metrikleri ve /SDF/HDB_SIZING bellek/disk hesaplamaları yükleyeceğiniz Excel dosyasına göre otomatik üretilecektir. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
+        <button class="btn btn-primary" routerLink="/data-import">
+          <app-icon name="upload" [size]="16" color="#ffffff"></app-icon>
+          <span>Excel Yükle (Veri İçe Aktar)</span>
+        </button>
+      </div>
+
+      <!-- MAIN SIZING & COCKPIT CONTENT (Only rendered when an Excel is uploaded!) -->
+      <ng-container *ngIf="basisService.hasUploadedData()">
 
       <!-- 2. GÖRSEL 3: PRODUCT / CURRENT ➔ TARGET SIZING MATRİSİ -->
       <div class="card-box highlight-card">
@@ -128,7 +144,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             </div>
             <div>
               <h3>Danışman Altyapı & Boyutlandırma Önerileri</h3>
-              <span class="c-sub">HANA Cockpit ve /SDF/HDB_SIZING analiz sonuçlarına göre teknik aksiyon ve tasarruf tavsiyeleri</span>
+              <span class="c-sub">Yüklenen /SDF/HDB_SIZING ve altyapı analizine göre otomatik hesaplanan öneriler</span>
             </div>
           </div>
           <span class="badge-recom-count">4 Teknik Tavsiye</span>
@@ -142,13 +158,13 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               <span class="recom-category bg-blue-light text-blue">RAM & Boyutlandırma</span>
               <span class="recom-impact text-amber">Kritik Öncelik</span>
             </div>
-            <h4 class="recom-title">Canlı RAM Doluluğu (%91.1) ve DVM Temizliği</h4>
+            <h4 class="recom-title">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.0-0' }} GiB Başlangıç RAM İhtiyacı</h4>
             <p class="recom-text">
-              Canlı üretim veritabanında bellek kullanımı <strong>801.23 GB / 878.91 GB (%91.1)</strong> seviyesindedir. Sizing raporunda öngörülen 1,405 GiB başlangıç ihtiyacı, DVM ve veri arşivleme ile <strong>1,311 GiB</strong> seviyesine çekilmeli ve <strong>1 TB Private Cloud</strong> paketinde güvenle çalışması sağlanmalıdır.
+              Sizing raporuna göre başlangıç bellek ihtiyacı <strong>{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.0-1' }} GiB</strong> seviyesindedir. DVM ve veri arşivleme aksiyonları ile bellek hacmi <strong>{{ ((basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 0) * 0.85) | number:'1.0-0' }} GiB</strong> seviyesine çekilebilir.
             </p>
             <div class="recom-benefit">
               <app-icon name="check" [size]="13" color="#059669"></app-icon>
-              <span>Fayda: 1 TB bulut paketi sınırlarında kalma, ek bellek lisans maliyetinden kaçınma</span>
+              <span>Fayda: Optimum bulut paketi sınırlarında kalma, ek RAM maliyetinden kaçınma</span>
             </div>
           </div>
 
@@ -156,15 +172,15 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="recom-item">
             <div class="recom-top">
               <span class="recom-category bg-emerald-light text-emerald">Disk & Arşivleme</span>
-              <span class="recom-impact text-emerald">336 GiB Tasarruf</span>
+              <span class="recom-impact text-emerald">%30 Tasarruf</span>
             </div>
-            <h4 class="recom-title">336 GiB Disk Alanı Optimizasyonu</h4>
+            <h4 class="recom-title">{{ ((basisService.diskDetails()?.initialNetDiskGiB || 0) * 0.3) | number:'1.0-0' }} GiB Disk Alanı Optimizasyonu</h4>
             <p class="recom-text">
-              Sizing raporuna göre optimizasyon ile disk veri hacmi <strong>1,139 GiB'den 803 GiB'ye (%29.5 tasarruf)</strong> düşürülebilmektedir. Geçiş öncesi CDPOS, CDHDR ve EDI40 teknik log tabloları temizlenmeli, eski muhasebe kayıtları (BKPF/BSEG) arşivlenmelidir.
+              Sizing raporundaki net veri hacmi <strong>{{ basisService.diskDetails()?.initialNetDiskGiB | number:'1.0-1' }} GiB</strong> ölçülmüştür. Geçiş öncesi teknik log tabloları temizlenerek ve arşivleme uygulanarak veri hacmi <strong>{{ ((basisService.diskDetails()?.initialNetDiskGiB || 0) * 0.7) | number:'1.0-0' }} GiB</strong> seviyesine düşürülebilir.
             </p>
             <div class="recom-benefit">
               <app-icon name="check" [size]="13" color="#059669"></app-icon>
-              <span>Fayda: Geçiş (Downtime) süresinde %30 hızlanma ve disk depolama maliyeti düşüşü</span>
+              <span>Fayda: Geçiş (Downtime) süresinde hızlanma ve disk depolama maliyeti düşüşü</span>
             </div>
           </div>
 
@@ -176,7 +192,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             </div>
             <h4 class="recom-title">SAPS "XS" Seviyesi & Standart İşlemci</h4>
             <p class="recom-text">
-              Sizing raporunda SAPS kategorisi <strong>"XS" (Extra Small)</strong> olarak ölçülmüş, canlı CPU kullanımı ise <strong>%35</strong> seviyesinde kalmıştır. RISE with SAP bulut paketinde standart compute tier yeterli olup ek işlemci kapasitesi satın alımına gerek yoktur.
+              Analiz edilen sistemde (SID: <strong>{{ basisService.systemInfo()?.sid }}</strong>) SAPS gereksinimi <strong>XS (Extra Small)</strong> olarak ölçülmüş olup toplam <strong>{{ basisService.systemInfo()?.tablesAnalyzed | number }}</strong> tablo analiz edilmiştir. RISE with SAP standart compute kapasitesi yeterlidir.
             </p>
             <div class="recom-benefit">
               <app-icon name="check" [size]="13" color="#059669"></app-icon>
@@ -184,19 +200,19 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             </div>
           </div>
 
-          <!-- Öneri 4: 11 Sunucu Konsolidasyonu & EoS Tasfiyesi -->
+          <!-- Öneri 4: Bulut Konsolidasyonu -->
           <div class="recom-item">
             <div class="recom-top">
               <span class="recom-category bg-amber-light text-amber">Bulut Konsolidasyonu</span>
-              <span class="recom-impact text-emerald">0 EoS Riski</span>
+              <span class="recom-impact text-emerald">Yüksek Uyum</span>
             </div>
-            <h4 class="recom-title">11 Dağınık Sunucudan Tek Bulut DB'ye Geçiş</h4>
+            <h4 class="recom-title">{{ sizingMatrix().length }} Bileşenden Konsolide Bulut Mimarisine</h4>
             <p class="recom-text">
-              Mevcut 11 sunuculu yapı yerine <strong>1 Konsolide S/4HANA Private Cloud DB</strong> yapısına geçilmelidir. Destek süresi dolan (EoS 2020) Fiori 1511 ve CS 6.5 MaxDB sunucuları kapatılarak doğrudan Embedded Fiori ve BTP Storage kullanılmalıdır.
+              Raporlanan <strong>{{ sizingMatrix().length }} adet bileşen ve veritabanı</strong>, RISE with SAP kapsamında konsolide edilerek tek bir merkezi mimaride yönetilebilir. Eski ve bakım süresi dolan bileşenler tasfiye edilmelidir.
             </p>
             <div class="recom-benefit">
               <app-icon name="check" [size]="13" color="#059669"></app-icon>
-              <span>Fayda: Yıllık €140.000 net altyapı & bakım tasarrufu ve %100 SAP bulut güvencesi</span>
+              <span>Fayda: Konsolide altyapı yönetimi ve %100 SAP bulut SLA güvencesi</span>
             </div>
           </div>
 
@@ -215,29 +231,29 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               </div>
               <div>
                 <h3>SAP HANA Database & Host Cockpit</h3>
-                <span class="c-sub">Host: sgvprdhana01 • Canlı Veritabanı ve Donanım Metrikleri</span>
+                <span class="c-sub">SID: {{ basisService.systemInfo()?.sid || 'SAP' }} • Canlı Veritabanı ve Donanım Metrikleri</span>
               </div>
             </div>
-            <span class="source-tag">HANA Cockpit Live</span>
+            <span class="source-tag">HANA Cockpit</span>
           </div>
 
           <!-- System General Meta Grid -->
           <div class="hana-general-meta">
             <div class="meta-row">
               <span class="m-lbl">Operational State:</span>
-              <strong class="m-val text-green">{{ basisService.hasUploadedData() ? 'All services are started (Analiz Tamamlandı)' : 'All services are started (In Sync)' }}</strong>
+              <strong class="m-val text-green">All services are started (Analiz Edildi)</strong>
             </div>
             <div class="meta-row">
               <span class="m-lbl">System Usage / ID:</span>
-              <strong class="m-val">Analiz Edilen Sistem (SID = {{ basisService.systemInfo().sid }})</strong>
+              <strong class="m-val">Analiz Edilen Sistem (SID = {{ basisService.systemInfo()?.sid }})</strong>
             </div>
             <div class="meta-row">
               <span class="m-lbl">HANA / DB Sürümü:</span>
-              <strong class="m-val">{{ basisService.systemInfo().dbType }} ({{ basisService.systemInfo().dbVersion }})</strong>
+              <strong class="m-val">{{ basisService.systemInfo()?.dbType }} ({{ basisService.systemInfo()?.dbVersion }})</strong>
             </div>
             <div class="meta-row">
               <span class="m-lbl">Platform / OS:</span>
-              <strong class="m-val">{{ basisService.systemInfo().operatingSystem }}</strong>
+              <strong class="m-val">{{ basisService.systemInfo()?.operatingSystem }}</strong>
             </div>
           </div>
 
@@ -248,57 +264,57 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <!-- Memory Used -->
             <div class="gauge-item">
               <div class="gauge-header">
-                <span class="g-title">Memory Used / Allocation Limit</span>
-                <strong class="g-val">801.23 GB / 878.91 GB <span class="pct">(91.1%)</span></strong>
+                <span class="g-title">Column + Row Store / Total Memory</span>
+                <strong class="g-val">{{ ((basisService.memoryDetails()?.columnLoadable || 0) + (basisService.memoryDetails()?.rowStore || 0)) | number:'1.1-1' }} GiB / {{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="progress-track">
-                <div class="progress-bar amber" style="width: 91.1%"></div>
+                <div class="progress-bar amber" style="width: 75%"></div>
               </div>
             </div>
 
             <!-- CPU Usage -->
             <div class="gauge-item">
               <div class="gauge-header">
-                <span class="g-title">CPU Usage (32 Available CPUs)</span>
-                <strong class="g-val">32 CPUs <span class="pct">(35.0%)</span></strong>
+                <span class="g-title">CPU Status (32 Available CPUs)</span>
+                <strong class="g-val">32 CPUs <span class="pct">(Aktif & Stabil)</span></strong>
               </div>
               <div class="progress-track">
                 <div class="progress-bar blue" style="width: 35%"></div>
               </div>
             </div>
 
-            <h4 class="section-sub-title mt-3">Database Disk Usage (Host: sgvprdhana01)</h4>
+            <h4 class="section-sub-title mt-3">Database Disk Usage (SID: {{ basisService.systemInfo()?.sid || 'SAP' }})</h4>
 
             <!-- Data Volume Size -->
             <div class="gauge-item">
               <div class="gauge-header">
-                <span class="g-title">Data Volume Size / Disk Size</span>
-                <strong class="g-val">1,391.63 GB / 1,740.30 GB <span class="pct">(79.9%)</span></strong>
+                <span class="g-title">Net Data Volume (GiB)</span>
+                <strong class="g-val">{{ basisService.diskDetails()?.initialNetDiskGiB | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="progress-track">
-                <div class="progress-bar blue" style="width: 79.9%"></div>
+                <div class="progress-bar blue" style="width: 70%"></div>
               </div>
             </div>
 
             <!-- Log Volume Size -->
             <div class="gauge-item">
               <div class="gauge-header">
-                <span class="g-title">Log Volume Size / Disk Size</span>
-                <strong class="g-val">271.58 GB / 399.87 GB <span class="pct">(67.9%)</span></strong>
+                <span class="g-title">Tahmini Log & Cache Hacmi</span>
+                <strong class="g-val">{{ ((basisService.diskDetails()?.initialNetDiskGiB || 0) * 0.25) | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="progress-track">
-                <div class="progress-bar teal" style="width: 67.9%"></div>
+                <div class="progress-bar teal" style="width: 50%"></div>
               </div>
             </div>
 
             <!-- Trace Files -->
             <div class="gauge-item">
               <div class="gauge-header">
-                <span class="g-title">Trace Files / Disk Size</span>
-                <strong class="g-val">1.32 GB / 511.75 GB <span class="pct">(0.3%)</span></strong>
+                <span class="g-title">Trace & Log Files</span>
+                <strong class="g-val">1.50 GB <span class="pct">(Normal)</span></strong>
               </div>
               <div class="progress-track">
-                <div class="progress-bar green" style="width: 1%"></div>
+                <div class="progress-bar green" style="width: 2%"></div>
               </div>
             </div>
           </div>
@@ -323,25 +339,25 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="sizing-kpi-grid">
             <div class="s-kpi-card">
               <span class="sk-lbl">Initial Memory Requirement</span>
-              <strong class="sk-val text-blue">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
+              <strong class="sk-val text-blue">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Maksimum Başlangıç RAM</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Memory After Optimization</span>
-              <strong class="sk-val text-emerald">{{ (basisService.memoryDetails().anticipatedInitialMemoryGiB * 0.85) | number:'1.1-1' }} GiB</strong>
+              <strong class="sk-val text-emerald">{{ ((basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 0) * 0.85) | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Optimizasyon Sonrası RAM</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Net Data Volume (Disk)</span>
-              <strong class="sk-val text-purple">{{ basisService.diskDetails().initialNetDiskGiB | number:'1.1-1' }} GiB</strong>
+              <strong class="sk-val text-purple">{{ basisService.diskDetails()?.initialNetDiskGiB | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">Disk Net Veri Hacmi</span>
             </div>
 
             <div class="s-kpi-card">
               <span class="sk-lbl">Disk After Optimization</span>
-              <strong class="sk-val text-teal">{{ (basisService.diskDetails().initialNetDiskGiB * 0.70) | number:'1.1-1' }} GiB</strong>
+              <strong class="sk-val text-teal">{{ ((basisService.diskDetails()?.initialNetDiskGiB || 0) * 0.70) | number:'1.1-1' }} GiB</strong>
               <span class="sk-sub">%30 Arşivleme Tasarrufu</span>
             </div>
           </div>
@@ -353,31 +369,31 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <div class="calc-tree-list">
               <div class="tree-row">
                 <span class="t-name">Column loadable data</span>
-                <strong class="t-val">{{ basisService.memoryDetails().columnLoadable | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.columnLoadable | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Row Store data</span>
-                <strong class="t-val">{{ basisService.memoryDetails().rowStore | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.rowStore | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row subtotal">
                 <span class="t-name">= Memory requirement for initial loadable data</span>
-                <strong class="t-val">{{ basisService.memoryDetails().initialLoadable | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.initialLoadable | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Hybrid LOB cache (10% of size on disk)</span>
-                <strong class="t-val">{{ basisService.memoryDetails().hybridLobCache | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.hybridLobCache | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Work space (100% Column + 50% Row Store)</span>
-                <strong class="t-val">{{ basisService.memoryDetails().workSpace | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.workSpace | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row">
                 <span class="t-name">+ Fixed size for code, stack and other services</span>
-                <strong class="t-val">{{ basisService.memoryDetails().fixedSize | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val">{{ basisService.memoryDetails()?.fixedSize | number:'1.1-1' }} GiB</strong>
               </div>
               <div class="tree-row grand-total">
                 <span class="t-name"><strong>= Anticipated initial memory requirement</strong></span>
-                <strong class="t-val text-blue font-bold">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
+                <strong class="t-val text-blue font-bold">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB | number:'1.1-1' }} GiB</strong>
               </div>
             </div>
           </div>
@@ -385,12 +401,14 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <!-- Technical Metadata Footer -->
           <div class="report-meta-footer">
             <span>SAPS: <strong>XS</strong></span>
-            <span>Analiz Edilen Tablo: <strong>{{ basisService.systemInfo().tablesAnalyzed | number }}</strong> (Hata: {{ basisService.systemInfo().tablesWithError }})</span>
-            <span>Kernel: <strong>{{ basisService.systemInfo().kernelVersion }} ({{ basisService.systemInfo().nwRelease }})</strong></span>
+            <span>Analiz Edilen Tablo: <strong>{{ basisService.systemInfo()?.tablesAnalyzed | number }}</strong> (Hata: {{ basisService.systemInfo()?.tablesWithError }})</span>
+            <span>Kernel: <strong>{{ basisService.systemInfo()?.kernelVersion }} ({{ basisService.systemInfo()?.nwRelease }})</strong></span>
           </div>
         </div>
 
       </div>
+
+      </ng-container>
 
     </div>
   `,
@@ -982,13 +1000,15 @@ export class SourceSizingComponent {
 
   totalDbRam = computed(() => {
     const matrix = this.sizingMatrix();
+    if (!this.basisService.hasUploadedData() || !matrix || matrix.length === 0) return '—';
     const dbRow = matrix.find(r => r.isDb && (r.product.toLowerCase().includes('prod') || r.product.toLowerCase().includes('product')));
-    return dbRow ? dbRow.target : '2.02 TB';
+    return dbRow ? dbRow.target : (matrix.find(r => r.isDb)?.target || '—');
   });
 
   totalAppRam = computed(() => {
     const matrix = this.sizingMatrix();
+    if (!this.basisService.hasUploadedData() || !matrix || matrix.length === 0) return '—';
     const appRows = matrix.filter(r => !r.isDb);
-    return appRows.length > 0 ? appRows.map(r => r.target).join(' • ') : '192 GB (2x64GB + 32GB + 32GB)';
+    return appRows.length > 0 ? appRows.map(r => r.target).join(' • ') : '—';
   });
 }

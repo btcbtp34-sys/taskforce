@@ -59,61 +59,94 @@ Chart.register(...registerables);
       <!-- ========================================================================= -->
       <div class="tab-content" *ngIf="activeTab() === 'fue'">
         
-        <!-- EXECUTIVE RECOMMENDATION SUMMARY -->
-        <div class="clean-summary-grid">
-          <!-- Exact FUE Card (No arbitrary %15 addition) -->
-          <div class="card-summary-highlight">
-            <div class="badge-label">TAVSİYE EDİLEN RISE PAKETİ</div>
-            <div class="big-number">{{ activeCalculatedFue() }} <span class="unit">FUE</span></div>
-            <div class="sub-desc">{{ activeFueFormulaShort() }}</div>
-            <div class="pill-exact">✓ Doğrudan SAP Formülü (Tam Değer)</div>
+        <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+        <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+          <div class="empty-icon-wrap">
+            <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
           </div>
-
-          <!-- Consultant Note Box -->
-          <div class="consultant-callout">
-            <div class="callout-header">
-              <div class="title-with-icon">
-                <app-icon name="sparkles" [size]="15" color="#0284c7"></app-icon>
-                <strong>Kurumsal Danışman Analiz & Doğrulama Notu</strong>
-              </div>
-              <span class="badge-optimum">Ek Güvenlik Payı Eklenmemiştir</span>
-            </div>
-            <p class="callout-text">
-              {{ consultantNoteText() }}
-            </p>
-            <div class="callout-meta">
-              <span class="ref-item">
-                <app-icon name="file-text" [size]="12" color="#64748b"></app-icon>
-                Referans: FUE Sınıflandırma Matrisi (/SDF & USMM)
-              </span>
-              <span class="text-green">✓ Doğrudan SAP FUE Formülü (HB + HC/5 + HD/30)</span>
-            </div>
-          </div>
-
-          <!-- Fast KPI Pill Cards -->
-          <div class="kpi-column">
-            <div class="kpi-row-item">
-              <span class="label">Toplam Kullanıcı Hacmi:</span>
-              <strong class="val text-slate">{{ activeTotalUsers() }} Kullanıcı</strong>
-            </div>
-            <div class="kpi-row-item">
-              <span class="label">HB Professional (1:1):</span>
-              <strong class="val text-blue">{{ activeHbCount() }} ({{ activeHbCount() }}.0 FUE)</strong>
-            </div>
-            <div class="kpi-row-item">
-              <span class="label">HC Functional (5:1):</span>
-              <strong class="val text-blue">{{ activeHcCount() }} ({{ (activeHcCount() / 5).toFixed(1) }} FUE)</strong>
-            </div>
-            <div class="kpi-row-item">
-              <span class="label">HD Productivity (30:1):</span>
-              <strong class="val text-blue">{{ activeHdCount() }} ({{ (activeHdCount() / 30).toFixed(2) }} FUE)</strong>
-            </div>
-            <div class="kpi-row-item border-top">
-              <span class="label">Hesaplanan Net FUE:</span>
-              <strong class="val text-green font-lg">{{ activeCalculatedFue() }} FUE</strong>
-            </div>
-          </div>
+          <h3>FUE & Lisans Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
+          <p>Sistemdeki FUE hesaplamaları, USMM kullanıcı sınıflandırmaları ve sözleşme lisansları yüklediğiniz Excel dosyasına göre otomatik hesaplanacaktır. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
+          <button class="btn btn-primary" routerLink="/data-import">
+            <app-icon name="upload" [size]="16"></app-icon>
+            <span>Excel Yükle (Veri İçe Aktar)</span>
+          </button>
         </div>
+
+        <!-- UPLOADED LIVE CONTENT (Only rendered when an Excel is uploaded!) -->
+        <ng-container *ngIf="basisService.hasUploadedData()">
+          <!-- Live Upload Indicator & Reset Button -->
+          <div class="uploaded-live-banner">
+            <div class="banner-left">
+              <span class="live-dot"></span>
+              <span class="banner-text">
+                <strong>Yüklenen Excel:</strong> {{ basisService.basisPackage()?.fileName }} 
+                • Toplam Kullanıcı: <strong>{{ activeTotalUsers() }}</strong> 
+                • Hesaplanan FUE: <strong>{{ activeCalculatedFue() }} FUE</strong>
+              </span>
+            </div>
+            <div class="banner-right">
+              <button class="btn-banner-reset" (click)="basisService.clearUploadedData()">
+                <app-icon name="trash" [size]="12"></app-icon>
+                <span>Verileri Sıfırla (Temizle)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- EXECUTIVE RECOMMENDATION SUMMARY -->
+          <div class="clean-summary-grid">
+            <!-- Exact FUE Card (No arbitrary %15 addition) -->
+            <div class="card-summary-highlight">
+              <div class="badge-label">TAVSİYE EDİLEN RISE PAKETİ</div>
+              <div class="big-number">{{ activeCalculatedFue() }} <span class="unit">FUE</span></div>
+              <div class="sub-desc">{{ activeFueFormulaShort() }}</div>
+              <div class="pill-exact">✓ Doğrudan SAP Formülü (Tam Değer)</div>
+            </div>
+
+            <!-- Consultant Note Box -->
+            <div class="consultant-callout">
+              <div class="callout-header">
+                <div class="title-with-icon">
+                  <app-icon name="sparkles" [size]="15" color="#0284c7"></app-icon>
+                  <strong>Kurumsal Danışman Analiz & Doğrulama Notu</strong>
+                </div>
+                <span class="badge-optimum">Ek Güvenlik Payı Eklenmemiştir</span>
+              </div>
+              <p class="callout-text">
+                {{ consultantNoteText() }}
+              </p>
+              <div class="callout-meta">
+                <span class="ref-item">
+                  <app-icon name="file-text" [size]="12" color="#64748b"></app-icon>
+                  Referans: FUE Sınıflandırma Matrisi (/SDF & USMM)
+                </span>
+                <span class="text-green">✓ Doğrudan SAP FUE Formülü (HB + HC/5 + HD/30)</span>
+              </div>
+            </div>
+
+            <!-- Fast KPI Pill Cards -->
+            <div class="kpi-column">
+              <div class="kpi-row-item">
+                <span class="label">Toplam Kullanıcı Hacmi:</span>
+                <strong class="val text-slate">{{ activeTotalUsers() }} Kullanıcı</strong>
+              </div>
+              <div class="kpi-row-item">
+                <span class="label">HB Professional (1:1):</span>
+                <strong class="val text-blue">{{ activeHbCount() }} ({{ activeHbCount() }}.0 FUE)</strong>
+              </div>
+              <div class="kpi-row-item">
+                <span class="label">HC Functional (5:1):</span>
+                <strong class="val text-blue">{{ activeHcCount() }} ({{ (activeHcCount() / 5).toFixed(1) }} FUE)</strong>
+              </div>
+              <div class="kpi-row-item">
+                <span class="label">HD Productivity (30:1):</span>
+                <strong class="val text-blue">{{ activeHdCount() }} ({{ (activeHdCount() / 30).toFixed(2) }} FUE)</strong>
+              </div>
+              <div class="kpi-row-item border-top">
+                <span class="label">Hesaplanan Net FUE:</span>
+                <strong class="val text-green font-lg">{{ activeCalculatedFue() }} FUE</strong>
+              </div>
+            </div>
+          </div>
 
         <!-- SUB-SECTION SEGMENTED VIEW (Göz yormayan sekme yapısı) -->
         <div class="section-container">
@@ -273,6 +306,7 @@ Chart.register(...registerables);
             </div>
           </div>
         </div>
+        </ng-container>
 
       </div>
 
@@ -280,7 +314,20 @@ Chart.register(...registerables);
       <!-- TAB 2: LARGEST TABLE (DVM)                                               -->
       <!-- ========================================================================= -->
       <div class="tab-content" *ngIf="activeTab() === 'dvm'">
-        <div class="section-container">
+        <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+        <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+          <div class="empty-icon-wrap">
+            <app-icon name="layers" [size]="32" color="#0284c7"></app-icon>
+          </div>
+          <h3>En Büyük Tablolar & DVM Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
+          <p>S/4HANA geçişi öncesi en çok bellek tüketen tablolar ve DVM danışman aksiyon planı yükleyeceğiniz Sizing Excel dosyasına göre hesaplanacaktır.</p>
+          <button class="btn btn-primary" routerLink="/data-import">
+            <app-icon name="upload" [size]="16"></app-icon>
+            <span>Excel Yükle (Veri İçe Aktar)</span>
+          </button>
+        </div>
+
+        <div class="section-container" *ngIf="basisService.hasUploadedData()">
           <div class="table-wrapper">
             <table class="clean-table">
               <thead>
@@ -294,7 +341,7 @@ Chart.register(...registerables);
                 </tr>
               </thead>
               <tbody>
-                @for (tbl of dvmTables; track tbl.name) {
+                @for (tbl of activeDvmTables(); track tbl.name) {
                   <tr>
                     <td><strong class="text-blue">{{ tbl.name }}</strong></td>
                     <td>{{ tbl.desc }}</td>
@@ -314,7 +361,20 @@ Chart.register(...registerables);
       <!-- TAB 3: GRAFİKLER                                                         -->
       <!-- ========================================================================= -->
       <div class="tab-content" *ngIf="activeTab() === 'overview'">
-        <div class="charts-row">
+        <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+        <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+          <div class="empty-icon-wrap">
+            <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+          </div>
+          <h3>Grafikler İçin Excel Yüklenmesi Bekleniyor</h3>
+          <p>Departman ve modül dağılım grafikleri yükleyeceğiniz SAP Excel dosyasına göre otomatik üretilecektir. Lütfen veri dosyasını yükleyiniz.</p>
+          <button class="btn btn-primary" routerLink="/data-import">
+            <app-icon name="upload" [size]="16"></app-icon>
+            <span>Excel Yükle (Veri İçe Aktar)</span>
+          </button>
+        </div>
+
+        <div class="charts-row" *ngIf="basisService.hasUploadedData()">
           <div class="chart-box">
             <h3 class="chart-title">Departmanlara Göre Kullanıcı Sayısı</h3>
             <div class="chart-canvas-container">
@@ -827,67 +887,67 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
 
   activeTotalUsers = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return this.basisService.fueSummary().totalUsers;
+      return this.basisService.fueSummary()!.totalUsers;
     }
-    return 541;
+    return 0;
   });
 
   activeHbCount = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return this.basisService.fueSummary().hbCount;
+      return this.basisService.fueSummary()!.hbCount;
     }
-    return 355;
+    return 0;
   });
 
   activeHcCount = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return this.basisService.fueSummary().hcCount;
+      return this.basisService.fueSummary()!.hcCount;
     }
-    return 185;
+    return 0;
   });
 
   activeHdCount = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return this.basisService.fueSummary().hdCount;
+      return this.basisService.fueSummary()!.hdCount;
     }
-    return 1;
+    return 0;
   });
 
-  // Exact Excel formula: HB + HC/5 + HD/30, no arbitrary %15 addition!
+  // Exact Excel formula: HB + HC/5 + HD/30, only computed when file is uploaded
   activeCalculatedFue = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return Math.round(this.basisService.fueSummary().calculatedFUE);
+      return Math.round(this.basisService.fueSummary()!.calculatedFUE);
     }
-    return 392;
+    return 0;
   });
 
   activeFueFormulaShort = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      const s = this.basisService.fueSummary();
+      const s = this.basisService.fueSummary()!;
       return `${s.hbCount} + ${s.hcCount}/5 + ${s.hdCount}/30 ≈ ${Math.round(s.calculatedFUE)} FUE`;
     }
-    return '355 + 185/5 + 1/30 ≈ 392 FUE';
+    return 'Excel yüklendiğinde hesaplanacaktır';
   });
 
   activeFueFormulaFull = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      const s = this.basisService.fueSummary();
+      const s = this.basisService.fueSummary()!;
       const hcVal = (s.hcCount / 5).toFixed(1);
       const hdVal = (s.hdCount / 30).toFixed(2);
       return `${s.hbCount}.0 (Professional) + ${hcVal} (Functional) + ${hdVal} (Productivity) = ${s.calculatedFUE.toFixed(1)} Net FUE (≈ ${Math.round(s.calculatedFUE)} FUE)`;
     }
-    return '355.0 (Professional) + 37.0 (Functional) + 0.03 (Productivity) = 392.03 Net FUE (≈ 392 FUE)';
+    return 'Excel yüklendiğinde detaylı formül açılacaktır';
   });
 
   consultantNoteText = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      const s = this.basisService.fueSummary();
+      const s = this.basisService.fueSummary()!;
       const fue = Math.round(s.calculatedFUE);
       const hcPart = (s.hcCount / 5).toFixed(1);
       const hdPart = (s.hdCount / 30).toFixed(2);
       return `"FUE sınıflandırma matrisine göre sistemdeki ${s.totalUsers} kullanıcıdan ${s.hbCount} Professional (HB), ${s.hcCount} Functional (HC) ve ${s.hdCount} Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (${s.hbCount} + ${hcPart} + ${hdPart}) RISE with SAP geçişinde ${fue} FUE paketi tam ve optimum seviye olarak belirlenmiştir. İlave %15 tampon eklenmeden doğrudan net değer önerilmektedir."`;
     }
-    return '"FUE sınıflandırma matrisine göre sistemdeki 541 kullanıcıdan 355 Professional (HB), 185 Functional (HC) ve 1 Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (355 + 37.0 + 0.03) RISE with SAP geçişinde 392 FUE paketi tam ve optimum seviye olarak belirlenmiştir. Sözleşme maliyetini şişirmemek adına ilave %15 güvenlik payı eklenmeden doğrudan net 392 FUE önerilmektedir."';
+    return 'SAP Basis & Sizing Excel dosyası yüklendiğinde otomatik danışman analizi ve optimizasyon notu üretilecektir.';
   });
 
   activeFueRows = computed(() => {
@@ -895,28 +955,19 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
     if (this.basisService.hasUploadedData() && pkg && pkg.fueRows && pkg.fueRows.length > 0) {
       return pkg.fueRows;
     }
-    return [
-      { classification: 'Not Classified (Default User Type)', total: 2, hbProfessional: 2, hcFunctional: 0, hdProductivity: 0 },
-      { classification: 'AX mySAP ERP Professional', total: 173, hbProfessional: 173, hcFunctional: 0, hdProductivity: 0 },
-      { classification: 'AY mySAP ERP Limited Profession', total: 364, hbProfessional: 178, hcFunctional: 185, hdProductivity: 1 },
-      { classification: 'BA mySAP ERP Developer', total: 2, hbProfessional: 2, hcFunctional: 0, hdProductivity: 0 }
-    ];
+    return [];
   });
 
   activeFueRatios = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      const s = this.basisService.fueSummary();
+      const s = this.basisService.fueSummary()!;
       return [
         { useType: 'HB Professional', prevModel: 'Professional User', ratio: '1 : 1', meaning: '1 Professional User = 1.0 FUE', currentUsers: s.hbCount, calcFue: `${s.hbCount}.00 FUE`, badgeClass: 'badge-advanced' },
         { useType: 'HC Functional', prevModel: 'Limited / Functional User', ratio: '5 : 1', meaning: '5 Functional Users = 1.0 FUE', currentUsers: s.hcCount, calcFue: `${(s.hcCount / 5).toFixed(2)} FUE`, badgeClass: 'badge-core' },
         { useType: 'HD Productivity', prevModel: 'Productivity / Self-Service', ratio: '30 : 1', meaning: '30 Productivity Users = 1.0 FUE', currentUsers: s.hdCount, calcFue: `${(s.hdCount / 30).toFixed(2)} FUE`, badgeClass: 'badge-self' }
       ];
     }
-    return [
-      { useType: 'HB Professional', prevModel: 'Professional User', ratio: '1 : 1', meaning: '1 Professional User = 1.0 FUE', currentUsers: 355, calcFue: '355.00 FUE', badgeClass: 'badge-advanced' },
-      { useType: 'HC Functional', prevModel: 'Limited / Functional User', ratio: '5 : 1', meaning: '5 Functional Users = 1.0 FUE', currentUsers: 185, calcFue: '37.00 FUE', badgeClass: 'badge-core' },
-      { useType: 'HD Productivity', prevModel: 'Productivity / Self-Service', ratio: '30 : 1', meaning: '30 Productivity Users = 1.0 FUE', currentUsers: 1, calcFue: '0.03 FUE', badgeClass: 'badge-self' }
-    ];
+    return [];
   });
 
   activePurchasedMaterials = computed(() => {
@@ -949,40 +1000,18 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
     return `Toplam Satın Alınan Kullanıcı Lisansı: ${totalUserCount.toLocaleString('tr-TR')} Adet (${profCount} Professional + ${limCount} Limited + ${devCount} Developer + ${otherCount} Diğer Roller). Fiili FUE İhtiyacı: ${this.activeCalculatedFue()} FUE (Atıl Lisans Tasarrufu: ${totalUserCount - this.activeCalculatedFue()} Lisans).`;
   });
 
-  // 2. GÖRSEL 2: USER VALIDATION RESULTS (USMM)
-  validationSummary = {
-    total: 83,
-    advanced: 57,
-    core: 16,
-    selfService: 8,
-    notClassified: 2
-  };
-
-  userValidationRows = [
-    { classification: 'CB SAP Application Professional', total: 37, advanced: 34, core: 1, selfService: 2, notClassified: 0 },
-    { classification: 'CD SAP Application Employee', total: 40, advanced: 17, core: 15, selfService: 6, notClassified: 2 },
-    { classification: 'CD SAP Application Employee', total: 40, advanced: 17, core: 15, selfService: 6, notClassified: 2 },
-    { classification: 'Not Classified (Default User Type)', total: 4, advanced: 4, core: 0, selfService: 0, notClassified: 0 },
-    { classification: '91 Test', total: 2, advanced: 2, core: 0, selfService: 0, notClassified: 0 }
-  ];
-
-  // 3. GÖRSEL 4: SAP FUE RATIOS
-  fueRatios = [
-    { useType: 'Advanced', prevModel: 'Professional', ratio: '1 : 1', meaning: '1 Professional User consumes 1 FUE', currentUsers: 57, calcFue: '57.00 FUE', badgeClass: 'badge-advanced' },
-    { useType: 'Core', prevModel: 'Functional', ratio: '5 : 1', meaning: '5 Functional Users consumes 1 FUE', currentUsers: 16, calcFue: '3.20 FUE', badgeClass: 'badge-core' },
-    { useType: 'Self-serve', prevModel: 'Productivity', ratio: '30 : 1', meaning: '30 Productivity Users consumes 1 FUE', currentUsers: 8, calcFue: '0.27 FUE', badgeClass: 'badge-self' },
-    { useType: 'Developer', prevModel: 'Developer', ratio: '0.5 : 1', meaning: '1 Developer User consumes 2 FUEs', currentUsers: 0, calcFue: 'Buffer / Dahil', badgeClass: 'badge-dev' }
-  ];
-
-  // 4. DVM TABLOSU
-  dvmTables = [
-    { name: 'BKPF', desc: 'Muhasebe Belge Başlıkları (FI)', sizeGB: 184, rowCount: '48.2M', potentialReduction: '%45 Arşivleme', targetHanaGB: '101 GB' },
-    { name: 'BSEG', desc: 'Muhasebe Belge Kalemleri (FI)', sizeGB: 342, rowCount: '124.8M', potentialReduction: '%50 Arşivleme', targetHanaGB: '171 GB' },
-    { name: 'CDHDR', desc: 'Değişiklik Belgeleri Başlık', sizeGB: 96, rowCount: '28.4M', potentialReduction: '%60 Temizleme', targetHanaGB: '38 GB' },
-    { name: 'CDPOS', desc: 'Değişiklik Belgeleri Kalem', sizeGB: 215, rowCount: '74.1M', potentialReduction: '%60 Temizleme', targetHanaGB: '86 GB' },
-    { name: 'EDI40', desc: 'IDoc Kontrol Kayıtları', sizeGB: 68, rowCount: '18.9M', potentialReduction: '%70 Temizleme', targetHanaGB: '20 GB' },
-    { name: 'MARA', desc: 'Genel Malzeme Verileri (MM)', sizeGB: 42, rowCount: '11.3M', potentialReduction: '%20 İndeks Sıkıştırma', targetHanaGB: '33 GB' }
-  ];
+  activeDvmTables = computed(() => {
+    if (!this.basisService.hasUploadedData()) return [];
+    const list = this.basisService.largestTables();
+    return list.map(t => ({
+      name: t.name,
+      desc: t.desc,
+      sizeGB: t.sizeGiB,
+      rowCount: Number(t.records).toLocaleString('tr-TR'),
+      potentialReduction: t.archivingPotential || '%40 Arşivleme',
+      targetHanaGB: `${(t.sizeGiB * 0.55).toFixed(1)} GB`
+    }));
+  });
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {

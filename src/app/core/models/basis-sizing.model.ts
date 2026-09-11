@@ -91,6 +91,7 @@ export interface BasisSizingPackage {
   fileName: string;
   fileSize: string;
   uploadTimestamp: string;
+  isUploaded?: boolean;
   systemInfo: SizingSystemInfo;
   memoryDetails: SizingMemoryDetails;
   diskDetails: SizingDiskDetails;

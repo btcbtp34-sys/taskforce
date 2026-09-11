@@ -36,6 +36,21 @@ Chart.register(...registerables);
         </div>
       </div>
 
+      <!-- EMPTY DATA NOTICE BANNER (Only shown when no Excel is uploaded) -->
+      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()" style="padding: 2rem 1.5rem; margin-bottom: 1.5rem;">
+        <div class="empty-icon-wrap" style="width: 48px; height: 48px;">
+          <app-icon name="upload" [size]="24" color="#0284c7"></app-icon>
+        </div>
+        <h3 style="font-size: 1.05rem;">Sistemde Henüz SAP Basis & Sizing Verisi Bulunmuyor</h3>
+        <p style="font-size: 0.82rem; max-width: 600px;">
+          Dashboard üzerindeki FUE lisanslama, HANA bellek/disk boyutlandırmaları ve en büyük tablo (DVM) analizleri yükleyeceğiniz Excel dosyasına göre dinamik olarak hesaplanacaktır. Lütfen analiz dosyasını yükleyiniz.
+        </p>
+        <button class="btn btn-primary" routerLink="/data-import">
+          <app-icon name="upload" [size]="15" color="#ffffff"></app-icon>
+          <span>Excel Yükle & Hesapla</span>
+        </button>
+      </div>
+
       <!-- Live Architecture KPIs (4 Cards) -->
       <div class="kpi-grid">
         <div class="kpi-card" routerLink="/architecture-map">
@@ -69,10 +84,10 @@ Chart.register(...registerables);
             <span class="kpi-title">HANA DB Sizing</span>
             <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="18" color="#0891b2"></app-icon></div>
           </div>
-          <div class="kpi-val">1.311 GiB</div>
-          <div class="kpi-sub">336 GiB Disk Alanı Kazanımı</div>
+          <div class="kpi-val">{{ sizingDisplayValue() }}</div>
+          <div class="kpi-sub">{{ sizingSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill blue">1 TB Prod + 768 GB QA</span>
+            <span class="tag-pill blue">Sizing Raporu</span>
           </div>
         </div>
 
@@ -94,11 +109,11 @@ Chart.register(...registerables);
             <span class="kpi-title">En Büyük Tablolar (DVM)</span>
             <div class="kpi-icon-box bg-amber"><app-icon name="layers" [size]="18" color="#d97706"></app-icon></div>
           </div>
-          <div class="kpi-val text-amber">30 Tablo</div>
-          <div class="kpi-sub">HANA RAM'in %92.7 Hacmi</div>
+          <div class="kpi-val text-amber">{{ tablesDisplayValue() }}</div>
+          <div class="kpi-sub">{{ tablesSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill amber">REGUP (308 GB)</span>
-            <span class="tag-pill gray">4 Adımlı DVM</span>
+            <span class="tag-pill amber">DVM Analizi</span>
+            <span class="tag-pill gray">Housekeeping</span>
           </div>
         </div>
 
@@ -627,24 +642,48 @@ export class DashboardComponent implements AfterViewInit {
 
   fueDisplayValue = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${Math.round(this.basisService.fueSummary().calculatedFUE)} FUE`;
+      return `${Math.round(this.basisService.fueSummary()!.calculatedFUE)} FUE`;
     }
-    const c = this.customerService.activeCustomer();
-    if (c && c.id === 'cust-2') {
-      return '392 FUE';
-    }
-    return '392 FUE';
+    return '—';
   });
 
   fueUserSubtitle = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${this.basisService.fueSummary().totalUsers} Fiili Kullanıcı Kapsamda`;
+      return `${this.basisService.fueSummary()!.totalUsers} Fiili Kullanıcı Kapsamda`;
     }
-    const c = this.customerService.activeCustomer();
-    if (c && c.id === 'cust-2') {
-      return '541 Fiili Kullanıcı Kapsamda';
+    return 'Veri Yüklenmesi Bekleniyor';
+  });
+
+  sizingDisplayValue = computed(() => {
+    const mem = this.basisService.memoryDetails();
+    if (this.basisService.hasUploadedData() && mem) {
+      return `${Math.round(mem.anticipatedInitialMemoryGiB)} GiB`;
     }
-    return '541 Fiili Kullanıcı Kapsamda';
+    return '—';
+  });
+
+  sizingSubtitle = computed(() => {
+    const disk = this.basisService.diskDetails();
+    if (this.basisService.hasUploadedData() && disk) {
+      return `${Math.round(disk.initialNetDiskGiB * 0.3)} GiB Disk Alanı Kazanımı`;
+    }
+    return 'Veri Yüklenmesi Bekleniyor';
+  });
+
+  tablesDisplayValue = computed(() => {
+    const tables = this.basisService.largestTables();
+    if (this.basisService.hasUploadedData() && tables.length > 0) {
+      return `${tables.length} Tablo`;
+    }
+    return '—';
+  });
+
+  tablesSubtitle = computed(() => {
+    const tables = this.basisService.largestTables();
+    if (this.basisService.hasUploadedData() && tables.length > 0) {
+      return `${tables[0].name} (${tables[0].sizeGiB.toFixed(1)} GiB)`;
+    }
+    return 'Veri Yüklenmesi Bekleniyor';
   });
 
   @ViewChild('infraChart') infraChartRef!: ElementRef<HTMLCanvasElement>;
@@ -685,12 +724,17 @@ export class DashboardComponent implements AfterViewInit {
 
     // 2. FUE License Chart (Doughnut)
     if (this.licenseChartRef?.nativeElement) {
+      const fue = this.basisService.fueSummary();
+      const hb = fue ? fue.hbCount : 0;
+      const hc = fue ? Math.round(fue.hcCount / 5) : 0;
+      const hd = fue ? Math.round(fue.hdCount / 30) : 0;
+
       new Chart(this.licenseChartRef.nativeElement, {
         type: 'doughnut',
         data: {
-          labels: ['Advanced (20 FUE)', 'Core (16 FUE)', 'Self-Service (34 FUE)'],
+          labels: [`Advanced (${hb} FUE)`, `Core (${hc} FUE)`, `Self-Service (${hd} FUE)`],
           datasets: [{
-            data: [20, 16, 34],
+            data: [hb, hc, hd],
             backgroundColor: ['#0284c7', '#059669', '#7e22ce'],
             borderWidth: 2,
             borderColor: '#ffffff'
@@ -708,13 +752,21 @@ export class DashboardComponent implements AfterViewInit {
 
     // 3. HANA Sizing Chart (Bar Chart)
     if (this.sizingChartRef?.nativeElement) {
+      const mem = this.basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 0;
+      const disk = this.basisService.diskDetails()?.initialNetDiskGiB || 0;
+
       new Chart(this.sizingChartRef.nativeElement, {
         type: 'bar',
         data: {
           labels: ['Başlangıç RAM', 'Hedef RAM', 'Başlangıç Disk', 'Hedef Disk (DVM)'],
           datasets: [{
             label: 'GiB',
-            data: [1405.8, 1311.0, 1390.0, 1054.0],
+            data: [
+              Math.round(mem),
+              Math.round(mem * 0.85),
+              Math.round(disk),
+              Math.round(disk * 0.70)
+            ],
             backgroundColor: ['#94a3b8', '#0284c7', '#cbd5e1', '#059669'],
             borderRadius: 6
           }]
@@ -724,7 +776,7 @@ export class DashboardComponent implements AfterViewInit {
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, max: 1600 }
+            y: { beginAtZero: true }
           }
         }
       });

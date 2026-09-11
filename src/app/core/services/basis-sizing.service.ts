@@ -57,13 +57,17 @@ const SAP_TABLE_DICTIONARY: Record<string, { desc: string; module: string; rec: 
   providedIn: 'root'
 })
 export class BasisSizingService {
-  private readonly STORAGE_KEY = 'taskforce_basis_sizing_package';
+  private readonly STORAGE_KEY = 'taskforce_dynamic_sizing_v2';
 
-  // Upload State
+  // Upload State - Default FALSE, no pre-filled data!
   hasUploadedData = signal<boolean>(false);
   basisPackage = signal<BasisSizingPackage | null>(null);
 
   constructor() {
+    try {
+      // Purge any legacy demo/dummy package from browser storage
+      localStorage.removeItem('taskforce_basis_sizing_package');
+    } catch (e) {}
     this.loadFromStorage();
   }
 
@@ -72,7 +76,7 @@ export class BasisSizingService {
       const saved = localStorage.getItem(this.STORAGE_KEY);
       if (saved) {
         const pkg = JSON.parse(saved) as BasisSizingPackage;
-        if (pkg && pkg.fileName) {
+        if (pkg && pkg.fileName && pkg.isUploaded) {
           this.basisPackage.set(pkg);
           this.hasUploadedData.set(true);
         }
@@ -90,145 +94,49 @@ export class BasisSizingService {
     }
   }
 
-  // Baseline Data directly derived from Temsa_TaskForce_Basis.xlsx
-  readonly defaultSizingMatrix: SourceTargetMatrixItem[] = [
-    { product: 'Oracle DB Product', current: '96 GB', target: '2,2 TB', description: 'Canlı In-Memory HANA Veritabanı (S4 HANA DB Prod)', isDb: true },
-    { product: 'Oracle Db QA', current: '32 GB', target: '2,2 TB', description: 'Kalite & Test Ortamı HANA Veritabanı (S4 HANA DB QA)', isDb: true },
-    { product: 'Oracle DB Dev', current: '32 GB', target: '256 GB', description: 'Geliştirme & Sandbox Ortamı (S4 HANA DB Dev)', isDb: true },
-    { product: 'S4 App Prod', current: '—', target: '2x96 GB', description: 'Yük Dengelemeli Uygulama Sunucuları (Cluster)', isDb: false },
-    { product: 'S4 App Qa', current: '—', target: '32 GB', description: 'QA Uygulama Sunucusu', isDb: false },
-    { product: 'S4 App Dev', current: '—', target: '32 GB', description: 'Dev Uygulama Sunucusu', isDb: false }
-  ];
-
-  readonly defaultSystemInfo: SizingSystemInfo = {
-    reportName: '/SDF/HDB_SIZING',
-    version: 99,
-    analysisDate: '2026-06-09',
-    sid: 'TEP',
-    nwRelease: '731 SP 4',
-    kernelVersion: '722_EX2_REL',
-    operatingSystem: 'Windows NT 10.0.203',
-    dbType: 'ORACLE',
-    dbVersion: '19.20.0.0.0',
-    isUnicode: false,
-    diskSizeGiB: 3265,
-    tablesAnalyzed: 92699,
-    tablesWithError: 0
-  };
-
-  readonly defaultMemoryDetails: SizingMemoryDetails = {
-    columnLoadable: 978.6,
-    rowStore: 0.9,
-    changesFI: 35.5,
-    changesMMSD: 19.3,
-    changesML: 1.5,
-    initialLoadable: 1035.9,
-    hybridLobCache: 22.1,
-    nseCache: 10.9,
-    workSpace: 1035.4,
-    fixedSize: 50.0,
-    anticipatedInitialMemoryGiB: 2154.3
-  };
-
-  readonly defaultDiskDetails: SizingDiskDetails = {
-    columnLoadable: 978.6,
-    rowStore: 0.9,
-    changesFI: 35.5,
-    changesMMSD: 19.3,
-    changesML: 1.5,
-    hybridLobs: 221.5,
-    nsePageLoadable: 43.6,
-    spaceForMerges: 56.3,
-    metadataStats: 25.0,
-    initialNetDiskGiB: 1382.2
-  };
-
-  readonly defaultLargestTables: LargestTableRecord[] = [
-    { name: 'ACCTCR', sizeGiB: 70.8, records: 1887009448, desc: 'Muhasebe Belge Defter-i Kebir Verileri', module: 'FI', isCustom: false, recommendation: 'FI_DOCUMNT arşivleme nesnesiyle geçmiş mali yıllar arşivlenmeli', archivingPotential: '%50 Arşivleme' },
-    { name: 'MLCR', sizeGiB: 52.7, records: 1471133768, desc: 'Malzeme Defteri / Material Ledger Değerleri', module: 'CO/ML', isCustom: false, recommendation: 'ML_DATA arşivleme job çalıştırılarak HANA bellek yükü azaltılmalı', archivingPotential: '%45 Arşivleme' },
-    { name: 'CKIS', sizeGiB: 47.1, records: 759127983, desc: 'Maliyetlendirme Kalem Kalemleri', module: 'CO-PC', isCustom: false, recommendation: 'CO_ORDER ve maliyet geçmişi periyodik olarak temizlenmeli', archivingPotential: '%40 Arşivleme' },
-    { name: 'MDSM', sizeGiB: 36.6, records: 757352318, desc: 'Malzeme İhtiyaç Planlaması (MRP) Gereksinimleri', module: 'PP/MM', isCustom: false, recommendation: 'Eski MRP planlama çalıştırmaları için Housekeeping Job kurulmalı', archivingPotential: '%60 Temizleme' },
-    { name: 'MLCRF', sizeGiB: 35.1, records: 956625064, desc: 'Malzeme Defteri Döviz Değerleri', module: 'CO/ML', isCustom: false, recommendation: 'ML_DATA arşivlemesi kapsamına alınmalı', archivingPotential: '%45 Arşivleme' },
-    { name: 'ACCTIT', sizeGiB: 34.2, records: 471759644, desc: 'Muhasebe Belge Sıkıştırılmış Kalem Bilgileri', module: 'FI', isCustom: false, recommendation: 'ACCTCR ile senkronize olarak FI_DOCUMNT ile arşivlenmeli', archivingPotential: '%50 Arşivleme' },
-    { name: 'COEP', sizeGiB: 33.2, records: 549855869, desc: 'Maliyet Muhasebesi Fiili Kalemleri', module: 'CO', isCustom: false, recommendation: 'CO_ITEM arşivlemesi planlanmalı', archivingPotential: '%40 Arşivleme' },
-    { name: 'CKIT', sizeGiB: 31.5, records: 759127983, desc: 'Maliyetlendirme Kalem Açıklamaları', module: 'CO-PC', isCustom: false, recommendation: 'CKIS ile ilişkili olarak temizlenmeli', archivingPotential: '%40 Arşivleme' },
-    { name: 'ACDOCA', sizeGiB: 29.8, records: 734047811, desc: 'Universal Journal (Evrensel Muhasebe Defteri)', module: 'FI/CO', isCustom: false, recommendation: 'S/4HANA geçişi sonrası FI_DOCUMNT ile korunmalı', archivingPotential: '%35 Arşivleme' },
-    { name: 'CKMLPRKEPH', sizeGiB: 25.8, records: 668507748, desc: 'Malzeme Fiyatlandırma Bileşenleri', module: 'CO/ML', isCustom: false, recommendation: 'Eski standart maliyet hesapları periyodik temizlenmeli', archivingPotential: '%40 Arşivleme' }
-  ];
-
-  readonly defaultLicenses: SapLicenseItem[] = [
-    { materials: 'SAP ERP Professional User (7002628)', product: 'SAP ERP', orders: 6, quantity: 505, unit: 'Users', metricId: '9070AX' },
-    { materials: 'SAP ERP Limited Professional User (7002629)', product: 'SAP ERP', orders: 6, quantity: 310, unit: 'Users', metricId: '9070AY' },
-    { materials: 'SAP CRM Sales express solution package (7003215)', product: 'SAP CRM Sales', orders: 1, quantity: 100, unit: 'Users', metricId: '—' },
-    { materials: 'SAP Platform User (7018053)', product: 'SAP NetWeaver Application Server', orders: 1, quantity: 80, unit: 'Users', metricId: '9070DM' },
-    { materials: 'SAP PLM interface to CATIA (V5) (7009590)', product: 'SAP Engineering Control Center', orders: 2, quantity: 61, unit: 'Users', metricId: '75007508' },
-    { materials: 'CATIA (V5) Integration (7002647)', product: 'SAP Engineering Control Center', orders: 2, quantity: 50, unit: 'Users', metricId: '75007508' },
-    { materials: 'SAP Netweaver User for SAP R/3 (7002737)', product: 'SAP NetWeaver Application Server', orders: 1, quantity: 50, unit: 'Users', metricId: '907065' },
-    { materials: 'SAP PLM Professional User (7001691)', product: 'Supply Chain Products (other)', orders: 1, quantity: 22, unit: 'Users', metricId: '9070AH' },
-    { materials: 'Oracle DB (7001156)', product: 'Oracle Database', orders: 12, quantity: 12, unit: 'Piece', metricId: '—' },
-    { materials: 'SAP BusObj Enterprise Premium (User) (7007378)', product: 'SAP BusinessObjects BI suite', orders: 1, quantity: 10, unit: 'Unit', metricId: '86948694' },
-    { materials: 'SAP PLM Limited Professional User (7001692)', product: 'Supply Chain Products (other)', orders: 1, quantity: 3, unit: 'Users', metricId: '9070AI' },
-    { materials: 'SAP ERP Developer User (7002627)', product: 'SAP NetWeaver Application Server', orders: 2, quantity: 2, unit: 'Users', metricId: '9070BA' },
-    { materials: 'SAP Payroll Processing (7010520)', product: 'SAP Payroll and Time Change Mgmt', orders: 1, quantity: 2, unit: 'Unit', metricId: '1000157' },
-    { materials: 'SAP PLM Developer User (7002393)', product: 'SAP NetWeaver Application Server', orders: 1, quantity: 1, unit: 'Users', metricId: '9070BE' },
-    { materials: 'Reinstatement Administrative Fee (7002658)', product: 'ERP Products (other)', orders: 1, quantity: 1, unit: 'Unit', metricId: '—' },
-    { materials: 'SAP BusObj Web Intelligence (USR) (7007435)', product: 'SAP BusinessObjects BI suite', orders: 1, quantity: 1, unit: 'Unit', metricId: '86948685' },
-    { materials: 'SAP BusObj Web Intell. Int. View (USR) (7007437)', product: 'SAP BusinessObjects BI suite', orders: 1, quantity: 9, unit: 'Unit', metricId: '86948698' },
-    { materials: 'SAP BusObj Xcelsius Enterprise (7007439)', product: 'SAP BusinessObjects BI suite', orders: 1, quantity: 1, unit: 'Unit', metricId: '—' },
-    { materials: 'Crystal Reports (7007442)', product: 'SAP BusinessObjects BI suite', orders: 1, quantity: 1, unit: 'Unit', metricId: '—' },
-    { materials: 'SAP Netweaver Full Use - per CPU (7002705)', product: 'SAP NetWeaver Application Server', orders: 2, quantity: 4, unit: 'Unit', metricId: '—' },
-    { materials: 'SAP Sequenced Manufacturing f.Automotive (7003100)', product: 'SAP Extended Manufacturing', orders: 1, quantity: 1, unit: 'Unit', metricId: '110011XX_I' },
-    { materials: 'SAP Payroll Processing (7001132)', product: 'SAP Payroll and Time Change Mgmt', orders: 1, quantity: 1000, unit: 'Masters', metricId: '1000157' },
-    { materials: 'Sales/Service Order Processing (7001600)', product: 'SAP Order Management', orders: 1, quantity: 25000, unit: 'Unit', metricId: '5250525X' }
-  ];
-
-  readonly defaultFueSummary: FueSummary = {
-    totalUsers: 541,
-    hbCount: 355,
-    hcCount: 185,
-    hdCount: 1,
-    calculatedFUE: 392,
-    formulaText: '355 + 185/5 + 1/30 ≈ 392 FUE'
-  };
-
-  // Dynamic Reactive Computeds
+  // Dynamic Reactive Computeds - Empty by default until an Excel file is uploaded!
   readonly sizingMatrix = computed(() => {
     const pkg = this.basisPackage();
     return (pkg && pkg.sourceTargetMatrix && pkg.sourceTargetMatrix.length > 0)
       ? pkg.sourceTargetMatrix
-      : this.defaultSizingMatrix;
+      : [];
   });
 
   readonly systemInfo = computed(() => {
     const pkg = this.basisPackage();
-    return pkg ? pkg.systemInfo : this.defaultSystemInfo;
+    return pkg ? pkg.systemInfo : null;
   });
 
   readonly memoryDetails = computed(() => {
     const pkg = this.basisPackage();
-    return pkg ? pkg.memoryDetails : this.defaultMemoryDetails;
+    return pkg ? pkg.memoryDetails : null;
   });
 
   readonly diskDetails = computed(() => {
     const pkg = this.basisPackage();
-    return pkg ? pkg.diskDetails : this.defaultDiskDetails;
+    return pkg ? pkg.diskDetails : null;
   });
 
   readonly largestTables = computed(() => {
     const pkg = this.basisPackage();
     return (pkg && pkg.largestTables && pkg.largestTables.length > 0)
       ? pkg.largestTables
-      : this.defaultLargestTables;
+      : [];
   });
 
   readonly fueSummary = computed(() => {
     const pkg = this.basisPackage();
-    return (pkg && pkg.fueSummary) ? pkg.fueSummary : this.defaultFueSummary;
+    return (pkg && pkg.fueSummary) ? pkg.fueSummary : null;
+  });
+
+  readonly fueRows = computed(() => {
+    const pkg = this.basisPackage();
+    return (pkg && pkg.fueRows && pkg.fueRows.length > 0) ? pkg.fueRows : [];
   });
 
   readonly licenses = computed(() => {
     const pkg = this.basisPackage();
-    return (pkg && pkg.licenses && pkg.licenses.length > 0) ? pkg.licenses : this.defaultLicenses;
+    return (pkg && pkg.licenses && pkg.licenses.length > 0) ? pkg.licenses : [];
   });
 
   // PARSER ENGINE: Parses any SAP Basis & Sizing Workbook dynamically
@@ -237,9 +145,46 @@ export class BasisSizingService {
 
     // 1. Sizing Report Sheet Parser
     const sizingSheetName = sheetNames.find(n => n.toLowerCase().includes('sizing') || n.toLowerCase().includes('hdb'));
-    let systemInfo = { ...this.defaultSystemInfo };
-    let memoryDetails = { ...this.defaultMemoryDetails };
-    let diskDetails = { ...this.defaultDiskDetails };
+    let systemInfo: SizingSystemInfo = {
+      reportName: '/SDF/HDB_SIZING',
+      version: 0,
+      analysisDate: '',
+      sid: '—',
+      nwRelease: '—',
+      kernelVersion: '—',
+      operatingSystem: '—',
+      dbType: '—',
+      dbVersion: '—',
+      isUnicode: false,
+      diskSizeGiB: 0,
+      tablesAnalyzed: 0,
+      tablesWithError: 0
+    };
+    let memoryDetails: SizingMemoryDetails = {
+      columnLoadable: 0,
+      rowStore: 0,
+      changesFI: 0,
+      changesMMSD: 0,
+      changesML: 0,
+      initialLoadable: 0,
+      hybridLobCache: 0,
+      nseCache: 0,
+      workSpace: 0,
+      fixedSize: 0,
+      anticipatedInitialMemoryGiB: 0
+    };
+    let diskDetails: SizingDiskDetails = {
+      columnLoadable: 0,
+      rowStore: 0,
+      changesFI: 0,
+      changesMMSD: 0,
+      changesML: 0,
+      hybridLobs: 0,
+      nsePageLoadable: 0,
+      spaceForMerges: 0,
+      metadataStats: 0,
+      initialNetDiskGiB: 0
+    };
 
     if (sizingSheetName && workbook.Sheets[sizingSheetName]) {
       const parsedSizing = this.parseSizingReportSheet(workbook.Sheets[sizingSheetName]);
@@ -250,27 +195,28 @@ export class BasisSizingService {
 
     // 2. Source_Target Sheet Parser
     const sourceTargetSheetName = sheetNames.find(n => n.toLowerCase().includes('source') || n.toLowerCase().includes('target'));
-    let sourceTargetMatrix = [...this.defaultSizingMatrix];
+    let sourceTargetMatrix: SourceTargetMatrixItem[] = [];
     if (sourceTargetSheetName && workbook.Sheets[sourceTargetSheetName]) {
-      const parsedMatrix = this.parseSourceTargetSheet(workbook.Sheets[sourceTargetSheetName]);
-      if (parsedMatrix.length > 0) {
-        sourceTargetMatrix = parsedMatrix;
-      }
+      sourceTargetMatrix = this.parseSourceTargetSheet(workbook.Sheets[sourceTargetSheetName]);
     }
 
     // 3. Largest Tables Sheet Parser
     const largestTablesSheetName = sheetNames.find(n => n.toLowerCase().includes('largest') || n.toLowerCase().includes('tablo'));
-    let largestTables = [...this.defaultLargestTables];
+    let largestTables: LargestTableRecord[] = [];
     if (largestTablesSheetName && workbook.Sheets[largestTablesSheetName]) {
-      const parsedTables = this.parseLargestTablesSheet(workbook.Sheets[largestTablesSheetName]);
-      if (parsedTables.length > 0) {
-        largestTables = parsedTables;
-      }
+      largestTables = this.parseLargestTablesSheet(workbook.Sheets[largestTablesSheetName]);
     }
 
     // 4. FUE Sheet Parser
     const fueSheetName = sheetNames.find(n => n.toLowerCase().includes('fue'));
-    let fueSummary = { ...this.defaultFueSummary };
+    let fueSummary: FueSummary = {
+      totalUsers: 0,
+      hbCount: 0,
+      hcCount: 0,
+      hdCount: 0,
+      calculatedFUE: 0,
+      formulaText: '0 FUE'
+    };
     let fueRows: FueClassificationItem[] = [];
     if (fueSheetName && workbook.Sheets[fueSheetName]) {
       const parsedFue = this.parseFueSheet(workbook.Sheets[fueSheetName]);
@@ -289,6 +235,7 @@ export class BasisSizingService {
       fileName,
       fileSize: `${(fileSize / (1024 * 1024)).toFixed(2)} MB`,
       uploadTimestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      isUploaded: true,
       systemInfo,
       memoryDetails,
       diskDetails,

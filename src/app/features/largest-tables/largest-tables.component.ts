@@ -54,9 +54,25 @@ export interface LargestTableItem {
 
         <div class="header-action-badge">
           <app-icon name="database" [size]="14" color="#0284c7"></app-icon>
-          <span>Toplam En Büyük Tablo Hacmi: <strong>{{ totalTableVolume() | number:'1.1-1' }} GiB</strong> ({{ formatRecordCount(totalRecords()) }} Kayıt)</span>
+          <span>Toplam En Büyük Tablo Hacmi: <strong>{{ basisService.hasUploadedData() ? (totalTableVolume() | number:'1.1-1') + ' GiB' : '—' }}</strong> ({{ basisService.hasUploadedData() ? formatRecordCount(totalRecords()) + ' Kayıt' : 'Veri Bekleniyor' }})</span>
         </div>
       </div>
+
+      <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+        <div class="empty-icon-wrap">
+          <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+        </div>
+        <h3>En Büyük Tablolar & DVM Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
+        <p>S/4HANA Sizing raporundaki en büyük 30 tablo, bellek tüketimi (GiB), kayıt hacmi ve DVM danışman aksiyon planı yükleyeceğiniz Excel dosyasına göre otomatik üretilecektir. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
+        <button class="btn btn-primary" routerLink="/data-import">
+          <app-icon name="upload" [size]="16" color="#ffffff"></app-icon>
+          <span>Excel Yükle (Veri İçe Aktar)</span>
+        </button>
+      </div>
+
+      <!-- MAIN CONTENT (Only rendered when an Excel is uploaded!) -->
+      <ng-container *ngIf="basisService.hasUploadedData()">
 
       <!-- 2. EXECUTIVE KPI CARDS (DVM & SIZING POTENTIAL) -->
       <div class="kpi-summary-grid">
@@ -272,6 +288,8 @@ export interface LargestTableItem {
           }
         </div>
       </div>
+
+      </ng-container>
 
     </div>
   `,

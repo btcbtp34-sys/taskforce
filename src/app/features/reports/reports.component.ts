@@ -22,7 +22,7 @@ import html2canvas from 'html2canvas';
             <span class="date-tag">Eylül 2026</span>
           </div>
           <h1 class="main-title">Yönetici Özeti (Executive Summary)</h1>
-          <p class="sub-title">11 Dağınık Sunucu Konsolidasyonu, {{ fueValueText() }} Lisanslama, 1.3TB HANA Sizing ve Canlı Entegrasyon Analizi</p>
+          <p class="sub-title">{{ basisService.hasUploadedData() ? ('Boyutlandırma: ' + ramText() + ' RAM, ' + fueValueText() + ' Lisanslama ve Canlı Entegrasyon Analizi') : 'S/4HANA Dönüşüm Yönetici Özeti ve Boyutlandırma Raporu' }}</p>
         </div>
 
         <div class="header-actions">
@@ -35,15 +35,28 @@ import html2canvas from 'html2canvas';
             type="button" 
             class="btn btn-primary btn-pdf-export" 
             (click)="exportToPDF()"
-            [disabled]="isExporting()">
+            [disabled]="isExporting() || !basisService.hasUploadedData()">
             <app-icon [name]="isExporting() ? 'refresh' : 'download'" [size]="16" color="#ffffff"></app-icon>
             <span>{{ isExporting() ? 'PDF Üretiliyor...' : 'Yönetici Raporunu İndir (PDF)' }}</span>
           </button>
         </div>
       </div>
 
-      <!-- MAIN PRINTABLE / EXPORTABLE REPORT CONTAINER -->
-      <div class="report-content-container" #reportContainer id="reportContainer">
+      <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
+      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
+        <div class="empty-icon-wrap">
+          <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+        </div>
+        <h3>Yönetici Özeti Raporu İçin Excel Yüklenmesi Bekleniyor</h3>
+        <p>S/4HANA mimari dönüşüm, FUE lisanslama optimizasyonu, HANA bellek/disk boyutlandırma ve DVM tasarruf analizleri yükleyeceğiniz Excel dosyasına göre dinamik olarak üretilecektir. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
+        <button class="btn btn-primary" routerLink="/data-import">
+          <app-icon name="upload" [size]="16" color="#ffffff"></app-icon>
+          <span>Excel Yükle (Veri İçe Aktar)</span>
+        </button>
+      </div>
+
+      <!-- MAIN PRINTABLE / EXPORTABLE REPORT CONTAINER (Only rendered when an Excel is uploaded!) -->
+      <div class="report-content-container" #reportContainer id="reportContainer" *ngIf="basisService.hasUploadedData()">
         <!-- 1. LIGHT & MODERN HERO SCORE CARD (%84 MATCH SKORU) -->
         <div class="hero-score-card">
           <div class="score-ring-section">
@@ -102,7 +115,7 @@ import html2canvas from 'html2canvas';
                 <strong class="p-score text-amber">%78</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-amber" style="width: 78%"></div></div>
-              <span class="p-desc">1.311 GiB RAM Hedefi & 336 GiB Disk Azaltımı</span>
+              <span class="p-desc">{{ ramText() }} RAM Hedefi & {{ diskText() }} Disk Hacmi</span>
             </div>
 
             <div class="pillar-item">
@@ -151,8 +164,8 @@ import html2canvas from 'html2canvas';
               <span class="kpi-lbl">HANA DB Sizing Boyutu</span>
               <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="16" color="#0891b2"></app-icon></div>
             </div>
-            <div class="kpi-main-val">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB }} GiB RAM</div>
-            <div class="kpi-sub">Net Disk: {{ basisService.diskDetails().initialNetDiskGiB }} GiB • {{ basisService.systemInfo().tablesAnalyzed }} Tablo</div>
+            <div class="kpi-main-val">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB }} GiB RAM</div>
+            <div class="kpi-sub">Net Disk: {{ basisService.diskDetails()?.initialNetDiskGiB }} GiB • {{ basisService.systemInfo()?.tablesAnalyzed }} Tablo</div>
             <div class="kpi-tag-row">
               <span class="kpi-pill blue">S/4HANA Prod DB: 2,2 TB</span>
             </div>
@@ -164,8 +177,8 @@ import html2canvas from 'html2canvas';
               <span class="kpi-lbl">Canlı Sistem & Veritabanı</span>
               <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon></div>
             </div>
-            <div class="kpi-main-val text-purple">{{ basisService.systemInfo().dbType }}</div>
-            <div class="kpi-sub">SID: {{ basisService.systemInfo().sid }} • OS: {{ basisService.systemInfo().operatingSystem }}</div>
+            <div class="kpi-main-val text-purple">{{ basisService.systemInfo()?.dbType }}</div>
+            <div class="kpi-sub">SID: {{ basisService.systemInfo()?.sid }} • OS: {{ basisService.systemInfo()?.operatingSystem }}</div>
             <div class="kpi-tag-row">
               <span class="kpi-pill purple">S/4HANA Private Cloud Hazır</span>
             </div>
@@ -306,12 +319,12 @@ import html2canvas from 'html2canvas';
               <tbody>
                 <tr>
                   <td><strong>Anticipated Initial RAM</strong></td>
-                  <td><strong class="text-blue">{{ basisService.memoryDetails().anticipatedInitialMemoryGiB }} GiB</strong></td>
-                  <td>Column Loadable ({{ basisService.memoryDetails().columnLoadable }} GiB) + Workspace ({{ basisService.memoryDetails().workSpace }} GiB)</td>
+                  <td><strong class="text-blue">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB }} GiB</strong></td>
+                  <td>Column Loadable ({{ basisService.memoryDetails()?.columnLoadable }} GiB) + Workspace ({{ basisService.memoryDetails()?.workSpace }} GiB)</td>
                 </tr>
                 <tr>
                   <td><strong>Initial Net Disk Size</strong></td>
-                  <td><strong class="text-blue">{{ basisService.diskDetails().initialNetDiskGiB }} GiB</strong></td>
+                  <td><strong class="text-blue">{{ basisService.diskDetails()?.initialNetDiskGiB }} GiB</strong></td>
                   <td>LOB, NSE Cache ve sıkıştırma sonrası net disk ihtiyacı</td>
                 </tr>
                 <tr>
@@ -1016,31 +1029,41 @@ export class ReportsComponent {
 
   fueValueText = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${Math.round(this.basisService.fueSummary().calculatedFUE)} FUE`;
+      return `${Math.round(this.basisService.fueSummary()!.calculatedFUE)} FUE`;
     }
-    return '392 FUE';
+    return '—';
   });
 
   usersCountText = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${this.basisService.fueSummary().totalUsers}`;
+      return `${this.basisService.fueSummary()!.totalUsers}`;
     }
-    return '541';
+    return '0';
+  });
+
+  ramText = computed(() => {
+    const mem = this.basisService.memoryDetails();
+    return mem ? `${Math.round(mem.anticipatedInitialMemoryGiB)} GiB` : '—';
+  });
+
+  diskText = computed(() => {
+    const d = this.basisService.diskDetails();
+    return d ? `${Math.round(d.initialNetDiskGiB)} GiB` : '—';
   });
 
   topTable1 = computed(() => {
     const list = this.basisService.largestTables();
-    return (list && list.length > 0) ? list[0] : { name: 'ACCTCR', sizeGiB: 70.8, recommendation: 'FI_DOCUMNT Arşivleme' };
+    return (list && list.length > 0) ? list[0] : { name: '—', sizeGiB: 0, recommendation: '—' };
   });
 
   topTable2 = computed(() => {
     const list = this.basisService.largestTables();
-    return (list && list.length > 1) ? list[1] : { name: 'MLCR', sizeGiB: 52.7, recommendation: 'ML_DATA Arşivleme' };
+    return (list && list.length > 1) ? list[1] : { name: '—', sizeGiB: 0, recommendation: '—' };
   });
 
-  hbCount = computed(() => this.basisService.fueSummary()?.hbCount ?? 355);
-  hcCount = computed(() => this.basisService.fueSummary()?.hcCount ?? 185);
-  hdCount = computed(() => this.basisService.fueSummary()?.hdCount ?? 1);
+  hbCount = computed(() => this.basisService.fueSummary()?.hbCount ?? 0);
+  hcCount = computed(() => this.basisService.fueSummary()?.hcCount ?? 0);
+  hdCount = computed(() => this.basisService.fueSummary()?.hdCount ?? 0);
 
   @ViewChild('reportContainer') reportContainer!: ElementRef<HTMLDivElement>;
 
