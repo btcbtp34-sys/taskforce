@@ -8,7 +8,7 @@ export type IconName =
   | 'chart' | 'layers' | 'sparkles' | 'bolt' | 'check' | 'alert' 
   | 'info' | 'dollar' | 'sliders' | 'file-text' | 'file-spreadsheet' 
   | 'arrow-right' | 'plus' | 'trash' | 'edit' | 'download' | 'play' 
-  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'message';
+  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'message' | 'link';
 
 @Component({
   selector: 'app-icon',
@@ -61,6 +61,7 @@ export type IconName =
         <g *ngSwitchCase="'map'"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></g>
         <g *ngSwitchCase="'shield'"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></g>
         <g *ngSwitchCase="'message'"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></g>
+        <g *ngSwitchCase="'link'"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></g>
         <g *ngSwitchDefault><circle cx="12" cy="12" r="10"></circle></g>
       </ng-container>
     </svg>

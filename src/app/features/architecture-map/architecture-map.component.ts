@@ -70,15 +70,44 @@ export interface ArchitectureEdge {
           </button>
         </div>
 
-        <div class="toolbar-right-actions">
-          <button class="btn btn-secondary" (click)="resetDiagram()" title="Tüm Düğümleri Sıfırla">
-            <app-icon name="refresh" [size]="15"></app-icon>
-            <span>Haritayı Yeniden Çiz</span>
+        <div class="toolbar-right-actions studio-actions">
+          <button class="btn btn-studio-add" (click)="openCreateNodeModal()" title="Yeni Sunucu / Bileşen Ekle">
+            <app-icon name="plus" [size]="14" color="#ffffff"></app-icon>
+            <span>+ Bileşen Ekle</span>
+          </button>
+
+          <button 
+            class="btn" 
+            [ngClass]="isConnectingMode() ? 'btn-studio-connect-active' : 'btn-secondary'" 
+            (click)="toggleConnectingMode()" 
+            title="İki sunucu arasında bağlantı oku çek">
+            <app-icon name="link" [size]="14" [color]="isConnectingMode() ? '#ffffff' : '#0284c7'"></app-icon>
+            <span>{{ isConnectingMode() ? (connectSourceNode() ? '2. Hedefe Tıkla' : '1. Kaynağa Tıkla') : 'Bağlantı Kur' }}</span>
+          </button>
+
+          <button class="btn btn-secondary" (click)="openManageEdgesModal()" title="Mevcut kabloları listele ve sil">
+            <app-icon name="link" [size]="14" color="#dc2626"></app-icon>
+            <span>Kabloları Sil ({{ currentEdges().length }})</span>
+          </button>
+
+          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="Mimari çizimi tarayıcıya kaydet">
+            <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+            <span>Çizimi Kaydet</span>
+          </button>
+
+          <button class="btn btn-secondary" (click)="clearCanvas()" title="Tüm bileşenleri temizle ve sıfırdan çiz">
+            <app-icon name="trash" [size]="14" color="#dc2626"></app-icon>
+            <span>Haritayı Temizle</span>
+          </button>
+
+          <button class="btn btn-secondary" (click)="resetDiagram()" title="Orijinal şablona geri dön">
+            <app-icon name="refresh" [size]="14"></app-icon>
+            <span>Şablona Sıfırla</span>
           </button>
 
           <button class="btn btn-primary" (click)="exportDiagram()" title="Çizimi PNG Görseli Olarak İndir">
-            <app-icon name="download" [size]="15"></app-icon>
-            <span>Mimari Görsel İndir (PNG)</span>
+            <app-icon name="download" [size]="14"></app-icon>
+            <span>PNG İndir</span>
           </button>
         </div>
       </div>
@@ -149,7 +178,20 @@ export interface ArchitectureEdge {
             <span class="sub-text">{{ architectureMode() === 'po' ? '109 Canlı Servis' : (totalServerCount() + ' Sunucu / Instance') }}</span>
           </div>
 
-          <div class="node-config-list">
+          <!-- Sidebar Tabs: Sunucular vs Bağlantı Kabloları -->
+          <div class="sidebar-tab-pills">
+            <button class="s-tab-pill" [class.active]="activeSidebarTab() === 'nodes'" (click)="activeSidebarTab.set('nodes')">
+              <app-icon name="layers" [size]="13"></app-icon>
+              <span>Sunucular ({{ nodes().length }})</span>
+            </button>
+            <button class="s-tab-pill" [class.active]="activeSidebarTab() === 'edges'" (click)="activeSidebarTab.set('edges')">
+              <app-icon name="link" [size]="13"></app-icon>
+              <span>Kablolar ({{ currentEdges().length }})</span>
+            </button>
+          </div>
+
+          <!-- Tab 1: System Nodes List -->
+          <div class="node-config-list" *ngIf="activeSidebarTab() === 'nodes'">
             @for (node of nodes(); track node.id) {
               <div 
                 class="node-item" 
@@ -168,6 +210,35 @@ export interface ArchitectureEdge {
                   <button class="btn-detail-sm" (click)="$event.stopPropagation(); openDetailModal(node)">Detay ➔</button>
                 </div>
               </div>
+            }
+          </div>
+
+          <!-- Tab 2: Active Connection Cables List with Direct Delete Buttons -->
+          <div class="edges-config-list" *ngIf="activeSidebarTab() === 'edges'">
+            @if (currentEdges().length === 0) {
+              <div class="empty-edges-msg">
+                <p>Henüz çekilmiş bir bağlantı kablosu bulunmuyor.</p>
+                <button class="btn btn-sm btn-studio-connect" (click)="toggleConnectingMode()">
+                  <app-icon name="link" [size]="13"></app-icon>
+                  <span>Bağlantı Kur</span>
+                </button>
+              </div>
+            } @else {
+              @for (edge of currentEdges(); track edge.id) {
+                <div class="edge-list-card">
+                  <div class="edge-info-top">
+                    <span class="edge-route">{{ getNodeName(edge.fromId) }} ➔ {{ getNodeName(edge.toId) }}</span>
+                    <button class="btn-delete-edge" (click)="deleteEdge(edge, $event)" title="Bu kabloyu sil">
+                      <app-icon name="trash" [size]="12" color="#dc2626"></app-icon>
+                      <span>Sil</span>
+                    </button>
+                  </div>
+                  <div class="edge-meta-row">
+                    <span class="edge-label-tag">{{ edge.label || 'Akış Oku' }}</span>
+                    <span class="edge-risk-tag" *ngIf="edge.isEosRisk">⚠️ Riskli</span>
+                  </div>
+                </div>
+              }
             }
           </div>
 
@@ -232,6 +303,27 @@ export interface ArchitectureEdge {
           <div 
             class="visual-canvas" 
             #canvasRef>
+
+            <!-- Floating Connecting Mode Banner -->
+            <div class="canvas-floating-banner connecting-banner" *ngIf="isConnectingMode()">
+              <div class="banner-inner">
+                <app-icon name="link" [size]="16" color="#ffffff"></app-icon>
+                <span class="banner-prompt">
+                  @if (connectSourceNode()) {
+                    <span><strong>1. Kaynak:</strong> {{ connectSourceNode()?.name }} ➔ Şimdi lütfen <strong>2. Hedef Bileşene</strong> tıklayın.</span>
+                  } @else {
+                    <span><strong>Bağlantı Kurma Modu:</strong> Lütfen akışın başlayacağı <strong>1. Kaynak Düğümü</strong> seçin.</span>
+                  }
+                </span>
+                <button class="btn-banner-cancel" (click)="cancelConnectingMode()">✕ İptal Et</button>
+              </div>
+            </div>
+
+            <!-- Floating Studio Toast Notification -->
+            <div class="canvas-floating-toast" *ngIf="studioToastMessage()">
+              <app-icon name="check" [size]="15" color="#ffffff"></app-icon>
+              <span>{{ studioToastMessage() }}</span>
+            </div>
             
             <!-- SVG Connection Lines with Directional Arrow Markers & Animated Data Flow -->
             <svg class="connections-svg" width="100%" height="100%">
@@ -254,15 +346,29 @@ export interface ArchitectureEdge {
 
               @for (edge of currentEdges(); track edge.id) {
                 @if (getNodePosition(edge.fromId) && getNodePosition(edge.toId)) {
-                  <g class="connection-group">
+                  <g class="connection-group" (click)="deleteEdge(edge, $event)" title="Kabloyu silmek için tıklayın">
+                    <!-- Invisible Fat Hit Area for Easy Clicking on Cable -->
                     <line 
+                      class="connection-hitarea"
+                      [attr.x1]="getNodePosition(edge.fromId)!.x" 
+                      [attr.y1]="getNodePosition(edge.fromId)!.y" 
+                      [attr.x2]="getNodePosition(edge.toId)!.x" 
+                      [attr.y2]="getNodePosition(edge.toId)!.y" 
+                      stroke="transparent" 
+                      stroke-width="24"
+                      (click)="deleteEdge(edge, $event)" />
+
+                    <!-- Visible Main Line -->
+                    <line 
+                      class="connection-line"
                       [attr.x1]="getNodePosition(edge.fromId)!.x" 
                       [attr.y1]="getNodePosition(edge.fromId)!.y" 
                       [attr.x2]="getNodePosition(edge.toId)!.x" 
                       [attr.y2]="getNodePosition(edge.toId)!.y" 
                       [attr.stroke]="edge.isEosRisk ? '#ef4444' : (architectureMode() === 'asis' ? '#0284c7' : '#059669')" 
                       stroke-width="2.5" 
-                      [attr.marker-end]="edge.isEosRisk ? 'url(#arrow-red)' : (architectureMode() === 'asis' ? 'url(#arrow-blue)' : 'url(#arrow-teal)')" />
+                      [attr.marker-end]="edge.isEosRisk ? 'url(#arrow-red)' : (architectureMode() === 'asis' ? 'url(#arrow-blue)' : 'url(#arrow-teal)')"
+                      (click)="deleteEdge(edge, $event)" />
                     
                     <!-- Animated Pulsing Dot along line -->
                     <circle 
@@ -271,10 +377,10 @@ export interface ArchitectureEdge {
                       r="4" 
                       [attr.fill]="edge.isEosRisk ? '#ef4444' : (architectureMode() === 'asis' ? '#0284c7' : '#059669')"
                       class="pulse-dot">
-                      <animate attributeName="r" values="3;6;3" dur="2s" repeatCount="indefinite" />
+                      <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
                     </circle>
 
-                    <!-- Text Outline Halo (White Background Behind Text for High Contrast Above Line) -->
+                    <!-- Text Outline Halo -->
                     <text 
                       [attr.x]="(getNodePosition(edge.fromId)!.x + getNodePosition(edge.toId)!.x) / 2" 
                       [attr.y]="(getNodePosition(edge.fromId)!.y + getNodePosition(edge.toId)!.y) / 2 - 14"
@@ -283,18 +389,21 @@ export interface ArchitectureEdge {
                       stroke="#ffffff"
                       stroke-width="4"
                       stroke-linejoin="round"
-                      text-anchor="middle">
+                      text-anchor="middle"
+                      style="pointer-events: none;">
                       {{ edge.label }}
                     </text>
 
-                    <!-- Text Label Main Fill Positioned Cleanly Above Connection Line -->
+                    <!-- Text Label Main Fill -->
                     <text 
                       [attr.x]="(getNodePosition(edge.fromId)!.x + getNodePosition(edge.toId)!.x) / 2" 
                       [attr.y]="(getNodePosition(edge.fromId)!.y + getNodePosition(edge.toId)!.y) / 2 - 14"
                       font-size="11"
                       font-weight="800"
                       [attr.fill]="edge.isEosRisk ? '#dc2626' : '#0369a1'"
-                      text-anchor="middle">
+                      text-anchor="middle"
+                      style="pointer-events: all; cursor: pointer;"
+                      (click)="deleteEdge(edge, $event)">
                       {{ edge.label }}
                     </text>
                   </g>
@@ -311,7 +420,17 @@ export interface ArchitectureEdge {
                   [style.left.px]="node.x - 110" 
                   [style.top.px]="node.y - 75"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)">
+                  [class.connecting-selectable]="isConnectingMode()"
+                  [class.connecting-source]="connectSourceNode()?.id === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="onNodeClicked(node, $event)">
+
+                  <!-- Quick Hover Tools -->
+                  <div class="node-quick-actions" (mousedown)="$event.stopPropagation()">
+                    <button class="qa-btn edit" (click)="openEditNodeModal(node, $event)" title="Değerleri Düzenle">✏️</button>
+                    <button class="qa-btn link" (click)="startConnectingFromNode(node, $event)" title="Buradan Bağlantı Kur">🔗</button>
+                    <button class="qa-btn delete" (click)="confirmRemoveNode(node, $event)" title="Bileşeni Sil">✕</button>
+                  </div>
 
                   <!-- Flagship Card Header -->
                   <div class="s4p-top-header">
@@ -319,7 +438,7 @@ export interface ArchitectureEdge {
                       <app-icon name="database" [size]="15" color="#0284c7"></app-icon>
                     </div>
                     <div class="s4p-title-wrap">
-                      <strong class="s4p-main-title">S4P</strong>
+                      <strong class="s4p-main-title">{{ node.name }}</strong>
                       <span class="s4p-edition-tag">S/4HANA Private Cloud</span>
                     </div>
                     <button class="node-info-trigger-btn" (click)="openDetailModal(node); $event.stopPropagation()" title="Detaylı Sistem Raporu">ℹ</button>
@@ -342,8 +461,8 @@ export interface ArchitectureEdge {
 
                   <!-- SLES OS & DB Specs Pill -->
                   <div class="s4p-os-box">
-                    <span class="os-text">SLES for SAP Applications</span>
-                    <span class="db-spec">HANA 2.0 In-Memory</span>
+                    <span class="os-text">{{ node.osInfo || 'SLES for SAP Applications' }}</span>
+                    <span class="db-spec">{{ node.dbInfo || 'HANA 2.0 In-Memory' }}</span>
                   </div>
                 </div>
               } @else if (architectureMode() === 'rise') {
@@ -353,7 +472,17 @@ export interface ArchitectureEdge {
                   [style.left.px]="node.x - 70" 
                   [style.top.px]="node.y - 50"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)">
+                  [class.connecting-selectable]="isConnectingMode()"
+                  [class.connecting-source]="connectSourceNode()?.id === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="onNodeClicked(node, $event)">
+
+                  <!-- Quick Hover Tools -->
+                  <div class="node-quick-actions" (mousedown)="$event.stopPropagation()">
+                    <button class="qa-btn edit" (click)="openEditNodeModal(node, $event)" title="Değerleri Düzenle">✏️</button>
+                    <button class="qa-btn link" (click)="startConnectingFromNode(node, $event)" title="Buradan Bağlantı Kur">🔗</button>
+                    <button class="qa-btn delete" (click)="confirmRemoveNode(node, $event)" title="Bileşeni Sil">✕</button>
+                  </div>
                   
                   <div class="service-top-row">
                     <div class="svc-icon-box">
@@ -364,12 +493,12 @@ export interface ArchitectureEdge {
                   </div>
 
                   <div class="service-role-text">
-                    {{ node.name === 'CS' ? 'Document Mgmt' : (node.name === 'WebDisp' ? 'Reverse Proxy' : 'Integration Suite') }}
+                    {{ node.dbInfo || (node.name === 'CS' ? 'Document Mgmt' : (node.name === 'WebDisp' ? 'Reverse Proxy' : 'Integration Suite')) }}
                   </div>
 
                   <div class="service-btp-badge">
                     <span class="btp-dot"></span>
-                    <span>SAP BTP</span>
+                    <span>{{ node.protocol || 'SAP BTP' }}</span>
                   </div>
                 </div>
               } @else if (architectureMode() === 'po') {
@@ -383,7 +512,17 @@ export interface ArchitectureEdge {
                   [style.left.px]="node.x - (node.id === 'node-core' ? 125 : 110)" 
                   [style.top.px]="node.y - 48"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)">
+                  [class.connecting-selectable]="isConnectingMode()"
+                  [class.connecting-source]="connectSourceNode()?.id === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="onNodeClicked(node, $event)">
+
+                  <!-- Quick Hover Tools -->
+                  <div class="node-quick-actions" (mousedown)="$event.stopPropagation()">
+                    <button class="qa-btn edit" (click)="openEditNodeModal(node, $event)" title="Değerleri Düzenle">✏️</button>
+                    <button class="qa-btn link" (click)="startConnectingFromNode(node, $event)" title="Buradan Bağlantı Kur">🔗</button>
+                    <button class="qa-btn delete" (click)="confirmRemoveNode(node, $event)" title="Bileşeni Sil">✕</button>
+                  </div>
                   
                   <!-- Top Role & Server Count Badge Row -->
                   <div class="po-badge-top-row">
@@ -426,7 +565,17 @@ export interface ArchitectureEdge {
                   [class.eos-node]="node.isEosRisk"
                   [class.active-selected]="selectedNode()?.id === node.id"
                   [class.is-dragging]="draggingNodeId === node.id"
-                  (mousedown)="startDrag(node, $event)">
+                  [class.connecting-selectable]="isConnectingMode()"
+                  [class.connecting-source]="connectSourceNode()?.id === node.id"
+                  (mousedown)="startDrag(node, $event)"
+                  (click)="onNodeClicked(node, $event)">
+
+                  <!-- Quick Hover Tools -->
+                  <div class="node-quick-actions" (mousedown)="$event.stopPropagation()">
+                    <button class="qa-btn edit" (click)="openEditNodeModal(node, $event)" title="Değerleri Düzenle">✏️</button>
+                    <button class="qa-btn link" (click)="startConnectingFromNode(node, $event)" title="Buradan Bağlantı Kur">🔗</button>
+                    <button class="qa-btn delete" (click)="confirmRemoveNode(node, $event)" title="Bileşeni Sil">✕</button>
+                  </div>
 
                   <!-- Red Square Instance Badge -->
                   <div class="red-instance-badge" *ngIf="architectureMode() !== 'po'" title="Instance / Sunucu Adedi: {{ node.instanceCount || 1 }}">
@@ -553,7 +702,10 @@ export interface ArchitectureEdge {
               <span *ngIf="sn.isEosRisk" class="eos-warning-text">UYARI: Bu bileşenin üretici desteği (End of Support: {{ sn.eosDate }}) dolmıştır. RISE with SAP dönüşümünde bulut servislerine taşınacaktır.</span>
             </div>
             <div class="d-actions">
-              <button class="btn btn-sm btn-primary" (click)="openDetailModal(sn)">Tam Rapor Modalı ➔</button>
+              <button class="btn btn-sm btn-studio-edit" (click)="openEditNodeModal(sn, $event)">✏️ Değerleri Düzenle</button>
+              <button class="btn btn-sm btn-studio-connect" (click)="startConnectingFromNode(sn, $event)">🔗 Buradan Bağla</button>
+              <button class="btn btn-sm btn-danger" (click)="confirmRemoveNode(sn, $event)">🗑️ Sil</button>
+              <button class="btn btn-sm btn-primary" (click)="openDetailModal(sn)">Tam Rapor ➔</button>
               <button class="btn btn-sm btn-secondary" (click)="selectedNode.set(null)">Kapat</button>
             </div>
           </div>
@@ -831,6 +983,191 @@ export interface ArchitectureEdge {
           </div>
         </div>
       </div>
+
+      <!-- Studio Node Modal (Create & Edit Component Properties) -->
+      <div class="studio-modal-backdrop" *ngIf="showStudioNodeModal()" (click)="closeStudioNodeModal()">
+        <div class="studio-modal-card" (click)="$event.stopPropagation()">
+          <div class="studio-modal-header">
+            <div class="header-titles">
+              <span class="badge-studio-mode" [class.edit-mode]="editingNodeId">{{ editingNodeId ? 'DÜZENLEME MODU' : 'YENİ SUNUCU / BİLEŞEN' }}</span>
+              <h3>{{ editingNodeId ? 'Sistem Bileşenini / Değerlerini Düzenle' : 'Yeni Mimari Sunucu / Bileşen Ekle' }}</h3>
+              <p class="modal-sub">Sunucu adı, instance sayısı, veri tabanı, OS ve EoS risk bilgilerini giriniz.</p>
+            </div>
+            <button class="modal-close-btn" (click)="closeStudioNodeModal()">✕</button>
+          </div>
+
+          <!-- Quick SAP Landscape Presets (Only displayed when adding new node) -->
+          <div class="presets-section" *ngIf="!editingNodeId">
+            <span class="presets-label">⚡ Hızlı SAP Şablonu Seçin:</span>
+            <div class="preset-chips">
+              <button type="button" class="preset-chip" (click)="applyPreset('erp')">🏢 SAP ERP / S4HANA</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('hana')">💾 HANA 2.0 DB</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('po')">⚡ SAP PO 7.5</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('fiori')">📱 Fiori Gateway</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('btp')">☁️ SAP BTP Suite</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('webdisp')">🌐 Web Dispatcher</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('cs')">📁 Content Server</button>
+            </div>
+          </div>
+
+          <form class="studio-form" (ngSubmit)="saveNodeForm()">
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>Bileşen / Sunucu Adı <span class="req">*</span></label>
+                <input type="text" [(ngModel)]="nodeForm.name" name="name" required placeholder="Örn: SAP ERP EHP7, S4HANA Private Cloud, PO 7.5" class="form-control" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Sunucu / Instance Adedi</label>
+                <input type="number" [(ngModel)]="nodeForm.instanceCount" name="instanceCount" min="1" max="50" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Kategori</label>
+                <select [(ngModel)]="nodeForm.category" name="category" class="form-control">
+                  <option value="Core">Core (ERP / S4)</option>
+                  <option value="Integration">Integration (PO / BTP / Gateway)</option>
+                  <option value="Cloud App">Cloud App (SaaS / Private Cloud)</option>
+                  <option value="Analytics">Analytics (BW / SAC)</option>
+                  <option value="Automation">Automation</option>
+                  <option value="Legacy">Legacy (Destek Sonu / Eski)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Aktif Kullanıcı Sayısı</label>
+                <input type="number" [(ngModel)]="nodeForm.userCount" name="userCount" min="0" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Veritabanı / Altyapı Motoru</label>
+                <input type="text" [(ngModel)]="nodeForm.dbInfo" name="dbInfo" placeholder="Örn: HANA 2.0 In-Memory / Sybase ASE 16 / Oracle 19c" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label>İşletim Sistemi / Platform</label>
+                <input type="text" [(ngModel)]="nodeForm.osInfo" name="osInfo" placeholder="Örn: SLES 15 SP7 for SAP / Windows Server 2022" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Protokol / Entegrasyon Türü</label>
+                <input type="text" [(ngModel)]="nodeForm.protocol" name="protocol" placeholder="Örn: SAP BTP OData / RFC / HTTPS / JDBC" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label>Sistem Durumu</label>
+                <select [(ngModel)]="nodeForm.status" name="status" class="form-control">
+                  <option value="Active">Active (Aktif Canlı)</option>
+                  <option value="Optimization Candidate">Optimization Candidate</option>
+                  <option value="Planned">Planned (Planlandı)</option>
+                  <option value="Under Review">Under Review</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="eos-check-group">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="nodeForm.isEosRisk" name="isEosRisk" />
+                <span class="cb-text">⚠️ Destek Sonu (End of Support / EoS) Riski Var mı?</span>
+              </label>
+              <div class="eos-date-input" *ngIf="nodeForm.isEosRisk">
+                <label>EoS Tarihi:</label>
+                <input type="text" [(ngModel)]="nodeForm.eosDate" name="eosDate" placeholder="Örn: 31.12.2025" class="form-control" />
+              </div>
+            </div>
+
+            <div class="studio-modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeStudioNodeModal()">Vazgeç</button>
+              <button type="submit" class="btn btn-primary" [disabled]="!nodeForm.name">
+                {{ editingNodeId ? 'Değişiklikleri Kaydet' : 'Bileşeni Haritaya Ekle' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Studio Edge Modal (Create Connection) -->
+      <div class="studio-modal-backdrop" *ngIf="showEdgeModal()" (click)="cancelEdgeModal()">
+        <div class="studio-modal-card sm" (click)="$event.stopPropagation()">
+          <div class="studio-modal-header">
+            <div class="header-titles">
+              <span class="badge-studio-mode">BAĞLANTI OLUŞTUR</span>
+              <h3>İki Sunucu Arasında Akış / Bağlantı Kur</h3>
+              <p class="modal-sub">Akış etiketini belirleyerek yönlendirme okunu haritaya ekleyin.</p>
+            </div>
+            <button class="modal-close-btn" (click)="cancelEdgeModal()">✕</button>
+          </div>
+
+          <div class="edge-nodes-preview" *ngIf="connectSourceNode() && pendingTargetNode()">
+            <div class="edge-node-badge source">{{ connectSourceNode()?.name }}</div>
+            <div class="edge-arrow">➔</div>
+            <div class="edge-node-badge target">{{ pendingTargetNode()?.name }}</div>
+          </div>
+
+          <form class="studio-form" (ngSubmit)="confirmCreateEdge()">
+            <div class="form-group">
+              <label>Bağlantı / Akış Etiketi</label>
+              <input type="text" [(ngModel)]="edgeForm.label" name="edgeLabel" placeholder="Örn: RFC Akışı ➔, BTP Entegrasyonu ➔, OData ➔" class="form-control" />
+            </div>
+
+            <div class="eos-check-group">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="edgeForm.isEosRisk" name="edgeIsEosRisk" />
+                <span class="cb-text">Kritik / Riskli Bağlantı (Kırmızı Uyarı Oku)</span>
+              </label>
+            </div>
+
+            <div class="studio-modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="cancelEdgeModal()">Vazgeç</button>
+              <button type="submit" class="btn btn-primary">Bağlantıyı Oluştur</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Studio Manage Edges Modal (List & Delete All Connections) -->
+      <div class="studio-modal-backdrop" *ngIf="showManageEdgesModal()" (click)="closeManageEdgesModal()">
+        <div class="studio-modal-card sm" (click)="$event.stopPropagation()">
+          <div class="studio-modal-header">
+            <div class="header-titles">
+              <span class="badge-studio-mode">KABLOLARI YÖNET & SİL</span>
+              <h3>Bağlantı Kabloları ({{ currentEdges().length }})</h3>
+              <p class="modal-sub">İstediğiniz kabloyu silmek için yanındaki kırmızı 'Sil' butonuna tıklayınız.</p>
+            </div>
+            <button class="modal-close-btn" (click)="closeManageEdgesModal()">✕</button>
+          </div>
+
+          <div class="modal-edges-container">
+            @if (currentEdges().length === 0) {
+              <div class="empty-edges-msg">
+                <p>Haritada çizili bağlantı kablosu kalmadı.</p>
+              </div>
+            } @else {
+              <div class="modal-edges-list">
+                @for (edge of currentEdges(); track edge.id) {
+                  <div class="modal-edge-item">
+                    <div class="edge-item-text">
+                      <strong class="edge-path">{{ getNodeName(edge.fromId) }} ➔ {{ getNodeName(edge.toId) }}</strong>
+                      <span class="edge-sub-tag">{{ edge.label || 'Akış Oku' }}</span>
+                      <span class="edge-risk-tag" *ngIf="edge.isEosRisk">⚠️ Riskli</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger" (click)="deleteEdge(edge, $event)">
+                      <app-icon name="trash" [size]="12" color="#dc2626"></app-icon>
+                      <span>Sil</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="studio-modal-footer">
+            <button type="button" class="btn btn-primary" (click)="closeManageEdgesModal()">Kapat</button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -955,6 +1292,40 @@ export interface ArchitectureEdge {
       &.btn-primary { background: #0284c7; color: #fff; }
       &.btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
       &.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.72rem; }
+      &.btn-studio-add {
+        background: #0284c7;
+        color: #ffffff;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+        &:hover { background: #0369a1; }
+      }
+      &.btn-studio-save {
+        background: #059669;
+        color: #ffffff;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+        &:hover { background: #047857; }
+      }
+      &.btn-studio-connect-active {
+        background: #d97706;
+        color: #ffffff;
+        font-weight: 700;
+        animation: pulseOrange 1.5s infinite;
+      }
+      &.btn-studio-edit {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+        font-weight: 700;
+        &:hover { background: #bae6fd; }
+      }
+      &.btn-studio-connect {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+        font-weight: 700;
+        &:hover { background: #fde68a; }
+      }
     }
 
     .map-grid {
@@ -979,6 +1350,139 @@ export interface ArchitectureEdge {
         justify-content: space-between;
         h3 { margin: 0; font-size: 0.9rem; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 0.35rem; }
         .sub-text { font-size: 0.7rem; color: #6b7280; }
+      }
+    }
+
+    .sidebar-tab-pills {
+      display: flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 4px;
+      margin-bottom: 0.75rem;
+
+      .s-tab-pill {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+
+        &.active {
+          background: #ffffff;
+          color: #0284c7;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+      }
+    }
+
+    .edges-config-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 0.2rem;
+      margin-bottom: 0.75rem;
+
+      .empty-edges-msg {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+
+        p {
+          font-size: 0.76rem;
+          color: #64748b;
+          margin: 0 0 0.65rem 0;
+        }
+      }
+
+      .edge-list-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #f0f9ff;
+          border-color: #bae6fd;
+        }
+
+        .edge-info-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+
+          .edge-route {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .btn-delete-edge {
+            background: #fee2e2;
+            border: 1px solid #fecdd3;
+            color: #dc2626;
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.15s;
+
+            &:hover {
+              background: #ef4444;
+              border-color: #ef4444;
+              color: #ffffff;
+            }
+          }
+        }
+
+        .edge-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+
+          .edge-label-tag {
+            font-size: 0.7rem;
+            color: #0369a1;
+            background: #e0f2fe;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 600;
+          }
+
+          .edge-risk-tag {
+            font-size: 0.68rem;
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 700;
+          }
+        }
       }
     }
 
@@ -1172,6 +1676,28 @@ export interface ArchitectureEdge {
       pointer-events: none;
       width: 100%;
       height: 100%;
+      z-index: 1;
+    }
+
+    .connection-group {
+      cursor: pointer;
+      pointer-events: all;
+
+      &:hover {
+        .connection-line {
+          stroke: #dc2626 !important;
+        }
+      }
+    }
+
+    .connection-hitarea {
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+
+    .connection-line {
+      pointer-events: stroke;
+      cursor: pointer;
     }
 
     /* Info Trigger Button for Modal */
@@ -1214,6 +1740,7 @@ export interface ArchitectureEdge {
     /* CLEAN CORPORATE SAP NODE CARD (NO ICON BOX CLUTTER) */
     .canvas-node {
       position: absolute;
+      z-index: 10;
       width: 220px;
       background: #ffffff;
       border: 2px solid #cbd5e1;
@@ -2360,6 +2887,459 @@ export interface ArchitectureEdge {
       }
     }
 
+    /* Studio Floating Banners & Notifications */
+    .canvas-floating-banner {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      padding: 0.6rem 1.25rem;
+      border-radius: 30px;
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      animation: bannerSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+      .banner-inner {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.84rem;
+
+        .banner-prompt {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          strong { color: #fef08a; font-weight: 800; }
+        }
+
+        .btn-banner-cancel {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          color: #ffffff;
+          border-radius: 20px;
+          padding: 0.25rem 0.65rem;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s;
+
+          &:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+          }
+        }
+      }
+    }
+
+    .canvas-floating-toast {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 0.55rem 1.15rem;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid #334155;
+      animation: bannerSlideDown 0.25s ease-out;
+    }
+
+    /* Node Quick Actions Toolbar on Hover */
+    .node-quick-actions {
+      position: absolute;
+      top: -14px;
+      right: 6px;
+      display: none;
+      align-items: center;
+      gap: 3px;
+      background: #ffffff;
+      padding: 2px 4px;
+      border-radius: 14px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+      border: 1px solid #cbd5e1;
+      z-index: 30;
+
+      .qa-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 5px;
+        font-size: 0.72rem;
+        border-radius: 10px;
+        transition: all 0.15s;
+
+        &.edit:hover { background: #e0f2fe; }
+        &.link:hover { background: #fef3c7; }
+        &.delete:hover { background: #fee2e2; color: #dc2626; }
+      }
+    }
+
+    .canvas-node:hover .node-quick-actions,
+    .rise-s4p-card:hover .node-quick-actions,
+    .rise-service-card:hover .node-quick-actions,
+    .po-node-card:hover .node-quick-actions {
+      display: flex;
+    }
+
+    /* Connecting Mode Highlight Styles */
+    .connecting-selectable {
+      cursor: crosshair !important;
+      outline: 2px dashed #0284c7 !important;
+      outline-offset: 3px;
+      animation: pulseConnecting 2s infinite;
+
+      &:hover {
+        transform: scale(1.03);
+        outline-color: #059669 !important;
+      }
+    }
+
+    .connecting-source {
+      outline: 3px solid #d97706 !important;
+      box-shadow: 0 0 16px rgba(217, 119, 6, 0.45) !important;
+    }
+
+    .modal-edges-container {
+      padding: 1.25rem 1.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+
+      .modal-edges-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .modal-edge-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.65rem 0.85rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #f0f9ff;
+          border-color: #bae6fd;
+        }
+
+        .edge-item-text {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .edge-path {
+            font-size: 0.82rem;
+            color: #0f172a;
+          }
+
+          .edge-sub-tag {
+            font-size: 0.72rem;
+            color: #0369a1;
+            background: #e0f2fe;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+          }
+
+          .edge-risk-tag {
+            font-size: 0.7rem;
+            color: #dc2626;
+            background: #fee2e2;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 700;
+          }
+        }
+      }
+    }
+
+    /* Studio Modals (Node & Edge) */
+    .studio-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .studio-modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      border: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      animation: modalFadeIn 0.2s ease-out;
+
+      &.sm { max-width: 480px; }
+
+      .studio-modal-header {
+        padding: 1.25rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+
+        .badge-studio-mode {
+          display: inline-block;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: #e0f2fe;
+          color: #0284c7;
+          padding: 0.2rem 0.55rem;
+          border-radius: 4px;
+          margin-bottom: 0.3rem;
+
+          &.edit-mode {
+            background: #fef3c7;
+            color: #b45309;
+          }
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .modal-sub {
+          margin: 0.2rem 0 0 0;
+          font-size: 0.78rem;
+          color: #64748b;
+        }
+
+        .modal-close-btn {
+          background: #f1f5f9;
+          border: none;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          &:hover { background: #e2e8f0; color: #0f172a; }
+        }
+      }
+
+      .presets-section {
+        padding: 0.85rem 1.5rem;
+        background: #f0fdf4;
+        border-bottom: 1px solid #bbf7d0;
+
+        .presets-label {
+          display: block;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #15803d;
+          margin-bottom: 0.45rem;
+        }
+
+        .preset-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+
+          .preset-chip {
+            background: #ffffff;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+
+            &:hover {
+              background: #16a34a;
+              color: #ffffff;
+              border-color: #16a34a;
+              transform: translateY(-1px);
+            }
+          }
+        }
+      }
+
+      .studio-form {
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        .form-row {
+          display: flex;
+          gap: 0.85rem;
+        }
+
+        .form-group {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+
+          &.flex-2 { flex: 2; }
+          &.flex-1 { flex: 1; }
+
+          label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #334155;
+
+            .req { color: #dc2626; }
+          }
+
+          .form-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            color: #0f172a;
+            outline: none;
+            box-sizing: border-box;
+
+            &:focus {
+              border-color: #0284c7;
+              box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+            }
+          }
+        }
+
+        .eos-check-group {
+          background: #fff1f2;
+          border: 1px solid #fecdd3;
+          border-radius: 8px;
+          padding: 0.75rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+
+          .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+
+            .cb-text {
+              font-size: 0.8rem;
+              font-weight: 700;
+              color: #9f1239;
+            }
+          }
+
+          .eos-date-input {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-top: 0.25rem;
+
+            label {
+              font-size: 0.75rem;
+              font-weight: 700;
+              color: #be123c;
+              white-space: nowrap;
+            }
+
+            .form-control {
+              padding: 0.35rem 0.6rem;
+              border: 1px solid #fda4af;
+              border-radius: 6px;
+              font-size: 0.78rem;
+            }
+          }
+        }
+
+        .studio-modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.65rem;
+          padding-top: 0.85rem;
+          border-top: 1px solid #f1f5f9;
+          margin-top: 0.5rem;
+        }
+      }
+
+      /* Edge Nodes Flow Preview in Modal */
+      .edge-nodes-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.85rem;
+        padding: 0.85rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+
+        .edge-node-badge {
+          padding: 0.4rem 0.85rem;
+          border-radius: 6px;
+          font-size: 0.82rem;
+          font-weight: 800;
+
+          &.source {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+          }
+
+          &.target {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+          }
+        }
+
+        .edge-arrow {
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: #64748b;
+        }
+      }
+    }
+
+    @keyframes bannerSlideDown {
+      from { opacity: 0; transform: translate(-50%, -10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    @keyframes pulseConnecting {
+      0%, 100% { outline-color: #0284c7; }
+      50% { outline-color: #38bdf8; }
+    }
+
+    @keyframes pulseOrange {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+    }
+
     @keyframes modalFadeIn {
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
@@ -2727,6 +3707,47 @@ export class ArchitectureMapComponent {
   draggingNodeId: string | null = null;
   currentEdges = signal<ArchitectureEdge[]>(this.asisEdges);
   detailModalNode = signal<ArchitectureNode | null>(null);
+  activeSidebarTab = signal<'nodes' | 'edges'>('nodes');
+
+  // Studio Interactive Canvas State
+  showStudioNodeModal = signal<boolean>(false);
+  editingNodeId: string | null = null;
+  nodeForm: {
+    name: string;
+    instanceCount: number;
+    category: ArchitectureNode['category'];
+    userCount: number;
+    dbInfo: string;
+    osInfo: string;
+    status: ArchitectureNode['status'];
+    protocol: string;
+    isEosRisk: boolean;
+    eosDate: string;
+  } = {
+    name: '',
+    instanceCount: 1,
+    category: 'Core',
+    userCount: 50,
+    dbInfo: 'HANA 2.0 In-Memory',
+    osInfo: 'SLES 15 SP7 for SAP',
+    status: 'Active',
+    protocol: 'SAP BTP OData / RFC',
+    isEosRisk: false,
+    eosDate: ''
+  };
+
+  isConnectingMode = signal<boolean>(false);
+  connectSourceNode = signal<ArchitectureNode | null>(null);
+  pendingTargetNode = signal<ArchitectureNode | null>(null);
+  showEdgeModal = signal<boolean>(false);
+  edgeForm = {
+    label: '',
+    isEosRisk: false
+  };
+
+  studioToastMessage = signal<string | null>(null);
+  showManageEdgesModal = signal<boolean>(false);
+  private toastTimeout: any = null;
 
   constructor() {
     this.route.queryParams.subscribe(params => {
@@ -2845,6 +3866,24 @@ export class ArchitectureMapComponent {
   setArchitectureMode(mode: 'asis' | 'po' | 'rise'): void {
     this.architectureMode.set(mode);
     this.excelImportSuccess.set(false);
+    this.cancelConnectingMode();
+
+    // Check if custom user diagram is saved in localStorage for this mode
+    const savedCustom = localStorage.getItem('taskforce_custom_arch_' + mode);
+    if (savedCustom) {
+      try {
+        const parsed = JSON.parse(savedCustom);
+        if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+          this.nodes.set(parsed.nodes);
+          this.currentEdges.set(parsed.edges || []);
+          this.selectedNode.set(null);
+          this.showToast(`Kaydedilmiş özel ${mode.toUpperCase()} mimarisi yüklendi.`);
+          return;
+        }
+      } catch (e) {
+        console.error('Error loading saved diagram', e);
+      }
+    }
 
     if (mode === 'asis') {
       this.nodes.set(JSON.parse(JSON.stringify(this.asisNodes)));
@@ -2861,6 +3900,325 @@ export class ArchitectureMapComponent {
       this.coreNode = { x: 520, y: 300 };
     }
     this.selectedNode.set(null);
+  }
+
+  /* --- Interactive Studio: Node Modal & Presets --- */
+  openCreateNodeModal(): void {
+    this.editingNodeId = null;
+    this.nodeForm = {
+      name: '',
+      instanceCount: 1,
+      category: 'Core' as const,
+      userCount: 50,
+      dbInfo: 'HANA 2.0 In-Memory',
+      osInfo: 'SLES 15 SP7 for SAP',
+      status: 'Active' as const,
+      protocol: 'SAP BTP OData / RFC',
+      isEosRisk: false,
+      eosDate: ''
+    };
+    this.showStudioNodeModal.set(true);
+  }
+
+  openEditNodeModal(node: ArchitectureNode, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.editingNodeId = node.id;
+    this.nodeForm = {
+      name: node.name,
+      instanceCount: node.instanceCount || 1,
+      category: node.category,
+      userCount: node.userCount,
+      dbInfo: node.dbInfo || '',
+      osInfo: node.osInfo || '',
+      status: node.status,
+      protocol: node.protocol || '',
+      isEosRisk: !!node.isEosRisk,
+      eosDate: node.eosDate || ''
+    };
+    this.showStudioNodeModal.set(true);
+  }
+
+  closeStudioNodeModal(): void {
+    this.showStudioNodeModal.set(false);
+    this.editingNodeId = null;
+  }
+
+  applyPreset(presetKey: string): void {
+    switch (presetKey) {
+      case 'erp':
+        this.nodeForm.name = 'SAP S/4HANA Private Cloud';
+        this.nodeForm.instanceCount = 3;
+        this.nodeForm.category = 'Core';
+        this.nodeForm.dbInfo = 'HANA 2.0 In-Memory';
+        this.nodeForm.osInfo = 'SLES 15 SP7 for SAP';
+        this.nodeForm.userCount = 380;
+        this.nodeForm.protocol = 'SAP BTP OData / RFC';
+        this.nodeForm.isEosRisk = false;
+        break;
+      case 'hana':
+        this.nodeForm.name = 'HANA 2.0 In-Memory DB';
+        this.nodeForm.instanceCount = 1;
+        this.nodeForm.category = 'Core';
+        this.nodeForm.dbInfo = '1 TB HANA Cloud DB';
+        this.nodeForm.osInfo = 'SLES 15 SP7 for SAP';
+        this.nodeForm.userCount = 100;
+        this.nodeForm.protocol = 'HDB SQL / TLS 1.3';
+        this.nodeForm.isEosRisk = false;
+        break;
+      case 'po':
+        this.nodeForm.name = 'SAP PO 7.5 On-Premise';
+        this.nodeForm.instanceCount = 3;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.dbInfo = 'Sybase ASE 16';
+        this.nodeForm.osInfo = 'Windows Server 2019';
+        this.nodeForm.userCount = 15;
+        this.nodeForm.protocol = 'SOAP / JDBC / RFC / REST';
+        this.nodeForm.isEosRisk = false;
+        break;
+      case 'fiori':
+        this.nodeForm.name = 'SAP Fiori Gateway (FES)';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Legacy';
+        this.nodeForm.dbInfo = 'Sybase ASE 16';
+        this.nodeForm.osInfo = 'Windows Server 2019';
+        this.nodeForm.userCount = 200;
+        this.nodeForm.protocol = 'HTTPS / OData Gateway';
+        this.nodeForm.isEosRisk = true;
+        this.nodeForm.eosDate = '31.12.2020';
+        break;
+      case 'btp':
+        this.nodeForm.name = 'SAP BTP Integration Suite';
+        this.nodeForm.instanceCount = 1;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.dbInfo = 'SAP Cloud Platform';
+        this.nodeForm.osInfo = 'SAP Managed Cloud';
+        this.nodeForm.userCount = 50;
+        this.nodeForm.protocol = 'Cloud iFlows / REST / OData';
+        this.nodeForm.isEosRisk = false;
+        break;
+      case 'webdisp':
+        this.nodeForm.name = 'SAP Web Dispatcher';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.dbInfo = 'Reverse Proxy & Load Balancer';
+        this.nodeForm.osInfo = 'Windows Server 2019';
+        this.nodeForm.userCount = 5;
+        this.nodeForm.protocol = 'HTTPS / TLS 1.3';
+        this.nodeForm.isEosRisk = false;
+        break;
+      case 'cs':
+        this.nodeForm.name = 'SAP Content Server 6.5';
+        this.nodeForm.instanceCount = 1;
+        this.nodeForm.category = 'Legacy';
+        this.nodeForm.dbInfo = 'MaxDB 7.9';
+        this.nodeForm.osInfo = 'Windows Server 2016';
+        this.nodeForm.userCount = 20;
+        this.nodeForm.protocol = 'HTTP Archive Gateway';
+        this.nodeForm.isEosRisk = true;
+        this.nodeForm.eosDate = '31.12.2020';
+        break;
+    }
+  }
+
+  saveNodeForm(): void {
+    if (!this.nodeForm.name.trim()) return;
+
+    if (this.editingNodeId) {
+      // Update existing node
+      this.nodes.update(list => list.map(n => {
+        if (n.id === this.editingNodeId) {
+          return {
+            ...n,
+            name: this.nodeForm.name.trim(),
+            instanceCount: this.nodeForm.instanceCount || 1,
+            category: this.nodeForm.category,
+            userCount: this.nodeForm.userCount || 0,
+            dbInfo: this.nodeForm.dbInfo,
+            osInfo: this.nodeForm.osInfo,
+            status: this.nodeForm.status,
+            protocol: this.nodeForm.protocol,
+            isEosRisk: this.nodeForm.isEosRisk,
+            eosDate: this.nodeForm.isEosRisk ? this.nodeForm.eosDate : undefined
+          };
+        }
+        return n;
+      }));
+      this.showToast(`"${this.nodeForm.name}" bileşeni güncellendi.`);
+    } else {
+      // Add new node with staggered position
+      const count = this.nodes().length;
+      const posX = 200 + ((count * 150) % 650);
+      const posY = 150 + ((count * 95) % 400);
+
+      const newNode: ArchitectureNode = {
+        id: 'node-custom-' + Date.now(),
+        name: this.nodeForm.name.trim(),
+        instanceCount: this.nodeForm.instanceCount || 1,
+        category: this.nodeForm.category,
+        userCount: this.nodeForm.userCount || 0,
+        dbInfo: this.nodeForm.dbInfo,
+        osInfo: this.nodeForm.osInfo,
+        status: this.nodeForm.status,
+        x: posX,
+        y: posY,
+        iconName: this.nodeForm.category === 'Core' ? 'database' : (this.nodeForm.category === 'Integration' ? 'layers' : (this.nodeForm.category === 'Cloud App' ? 'cloud' : 'server')),
+        color: this.nodeForm.isEosRisk ? '#ef4444' : '#0284c7',
+        protocol: this.nodeForm.protocol,
+        isEosRisk: this.nodeForm.isEosRisk,
+        eosDate: this.nodeForm.isEosRisk ? this.nodeForm.eosDate : undefined
+      };
+
+      this.nodes.update(list => [...list, newNode]);
+      this.showToast(`"${newNode.name}" eklendi! İstediğiniz konuma sürükleyebilirsiniz.`);
+    }
+
+    this.closeStudioNodeModal();
+  }
+
+  confirmRemoveNode(node: ArchitectureNode, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (confirm(`"${node.name}" sunucusunu ve tüm bağlantılarını silmek istediğinize emin misiniz?`)) {
+      this.removeNode(node.id);
+      this.showToast(`"${node.name}" silindi.`);
+    }
+  }
+
+  /* --- Interactive Studio: Drawing Connections ("Bağlantı Kur") --- */
+  toggleConnectingMode(): void {
+    if (this.isConnectingMode()) {
+      this.cancelConnectingMode();
+    } else {
+      this.isConnectingMode.set(true);
+      this.connectSourceNode.set(null);
+      this.showToast('Bağlantı modu aktif. Başlayacak 1. kaynak düğüme tıklayın.');
+    }
+  }
+
+  startConnectingFromNode(node: ArchitectureNode, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isConnectingMode.set(true);
+    this.connectSourceNode.set(node);
+    this.showToast(`1. Kaynak seçildi: ${node.name}. Şimdi hedef bileşene tıklayın.`);
+  }
+
+  cancelConnectingMode(): void {
+    this.isConnectingMode.set(false);
+    this.connectSourceNode.set(null);
+    this.pendingTargetNode.set(null);
+  }
+
+  onNodeClicked(node: ArchitectureNode, event: MouseEvent): void {
+    if (!this.isConnectingMode()) {
+      this.selectNode(node);
+      return;
+    }
+
+    event.stopPropagation();
+    const source = this.connectSourceNode();
+
+    if (!source) {
+      this.connectSourceNode.set(node);
+      this.showToast(`1. Kaynak seçildi: ${node.name}. Şimdi hedef bileşene tıklayın.`);
+    } else {
+      if (source.id === node.id) {
+        this.showToast('Bir bileşeni kendisine bağlayamazsınız. Lütfen farklı bir hedef seçin.');
+        return;
+      }
+
+      this.pendingTargetNode.set(node);
+      this.edgeForm = {
+        label: `${source.name} ➔ ${node.name}`,
+        isEosRisk: false
+      };
+      this.showEdgeModal.set(true);
+    }
+  }
+
+  confirmCreateEdge(): void {
+    const source = this.connectSourceNode();
+    const target = this.pendingTargetNode();
+    if (!source || !target) return;
+
+    const newEdge: ArchitectureEdge = {
+      id: 'edge-custom-' + Date.now(),
+      fromId: source.id,
+      toId: target.id,
+      label: this.edgeForm.label.trim() || `${source.name} ➔`,
+      isEosRisk: this.edgeForm.isEosRisk
+    };
+
+    this.currentEdges.update(list => [...list, newEdge]);
+    this.showEdgeModal.set(false);
+    this.cancelConnectingMode();
+    this.showToast(`Bağlantı kuruldu: ${source.name} ➔ ${target.name}`);
+  }
+
+  cancelEdgeModal(): void {
+    this.showEdgeModal.set(false);
+    this.pendingTargetNode.set(null);
+  }
+
+  getNodeName(nodeId: string): string {
+    const node = this.nodes().find(n => n.id === nodeId);
+    return node ? node.name : nodeId;
+  }
+
+  openManageEdgesModal(): void {
+    this.showManageEdgesModal.set(true);
+  }
+
+  closeManageEdgesModal(): void {
+    this.showManageEdgesModal.set(false);
+  }
+
+  deleteEdge(edge: ArchitectureEdge, event?: MouseEvent): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const fromName = this.getNodeName(edge.fromId);
+    const toName = this.getNodeName(edge.toId);
+    this.currentEdges.update(list => list.filter(e => e.id !== edge.id));
+    this.showToast(`Bağlantı kablosu silindi: ${fromName} ➔ ${toName}`);
+  }
+
+  promptDeleteEdge(edge: ArchitectureEdge, event?: MouseEvent): void {
+    this.deleteEdge(edge, event);
+  }
+
+  /* --- Interactive Studio: Persistence & Storage --- */
+  saveCustomLayout(): void {
+    const mode = this.architectureMode();
+    const data = {
+      nodes: this.nodes(),
+      edges: this.currentEdges()
+    };
+    localStorage.setItem('taskforce_custom_arch_' + mode, JSON.stringify(data));
+    this.showToast(`Mimari çiziminiz (${mode.toUpperCase()}) tarayıcınıza başarıyla kaydedildi!`);
+  }
+
+  clearCanvas(): void {
+    if (confirm('Tüm bileşenleri ve bağlantıları silip sıfırdan çizim yapmak istiyor musunuz?')) {
+      this.nodes.set([]);
+      this.currentEdges.set([]);
+      this.selectedNode.set(null);
+      this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
+    }
+  }
+
+  resetDiagram(): void {
+    const mode = this.architectureMode();
+    localStorage.removeItem('taskforce_custom_arch_' + mode);
+    this.setArchitectureMode(mode);
+    this.showToast('Harita orijinal şablon durumuna sıfırlandı.');
+  }
+
+  showToast(message: string): void {
+    this.studioToastMessage.set(message);
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    this.toastTimeout = setTimeout(() => {
+      this.studioToastMessage.set(null);
+    }, 4000);
   }
 
   selectNode(node: ArchitectureNode): void {
@@ -2906,10 +4264,6 @@ export class ArchitectureMapComponent {
     if (this.selectedNode()?.id === id) {
       this.selectedNode.set(null);
     }
-  }
-
-  resetDiagram(): void {
-    this.setArchitectureMode(this.architectureMode());
   }
 
   exportDiagram(): void {
