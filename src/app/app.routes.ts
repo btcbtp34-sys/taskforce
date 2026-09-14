@@ -14,11 +14,13 @@ import { SourceSizingComponent } from './features/source-sizing/source-sizing.co
 import { LargestTablesComponent } from './features/largest-tables/largest-tables.component';
 import { ModulesComponent } from './features/modules/modules.component';
 import { DevelopmentComponent } from './features/development/development.component';
+import { SolutionProposalComponent } from './features/solution-proposal/solution-proposal.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'dashboard', component: DashboardComponent },
+  { path: 'customer-summary', redirectTo: 'dashboard' },
   { path: 'customers', component: CustomerListComponent },
   { path: 'customers/:id', component: CustomerDetailComponent },
   { path: 'architecture-map', component: ArchitectureMapComponent },
@@ -28,7 +30,12 @@ export const routes: Routes = [
   { path: 'dvm', redirectTo: 'largest-tables' },
   { path: 'modules', component: ModulesComponent },
   { path: 'moduller', redirectTo: 'modules', pathMatch: 'full' },
+  { path: 'sap-uygulamalari', redirectTo: 'modules' },
   { path: 'development', component: DevelopmentComponent },
+  { path: 'sap-customization', redirectTo: 'development' },
+  { path: 'solution-proposal', component: SolutionProposalComponent },
+  { path: 'cozum-onerisi', redirectTo: 'solution-proposal' },
+  { path: 'yol-haritasi', redirectTo: 'solution-proposal' },
   { path: 'data-import', component: DataImportComponent },
   { path: 'analytics', component: AnalyticsComponent },
   { path: 'opportunities', component: OpportunitiesComponent },

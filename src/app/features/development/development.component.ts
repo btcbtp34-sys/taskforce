@@ -13,9 +13,9 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         <div>
           <h1 class="page-title">
             <app-icon name="cpu" [size]="24" color="#0284c7"></app-icon>
-            Development
+            SAP Customization
           </h1>
-          <p class="page-subtitle">SAP Geliştirme & Uyarlama Analizi</p>
+          <p class="page-subtitle">SAP Özel Uyarlamalar & Z Program Geliştirme Analizi</p>
         </div>
       </div>
 

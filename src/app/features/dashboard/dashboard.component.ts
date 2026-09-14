@@ -19,9 +19,9 @@ Chart.register(...registerables);
         <div class="header-left">
           <div class="badge-row">
             <span class="company-badge">{{ customerService.activeCustomer().name }}</span>
-            <span class="status-tag">Canlı Mimari Analiz</span>
+            <span class="status-tag">Customer Summary Kokpiti</span>
           </div>
-          <h2>Enterprise Mimari Dönüşüm Gösterge Paneli</h2>
+          <h2>Müşteri Özeti (Customer Summary) & Mimari Dönüşüm</h2>
           <p class="sub-title">S/4HANA Sizing, {{ fueDisplayValue() }} Lisanslama ve Canlı Entegrasyon Genel Görünümü</p>
         </div>
         <div class="header-actions">

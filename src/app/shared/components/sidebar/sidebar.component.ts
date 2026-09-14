@@ -32,26 +32,26 @@ import { ModullerService } from '../../../core/services/moduller.service';
       <nav class="sidebar-nav">
         <div class="nav-section-title" *ngIf="!collapsed">MENÜ</div>
 
-        <!-- 0. Overview Dashboard -->
+        <!-- 1. Executive Summary (Şimdilik en üstte, karar verilecek) -->
         <a 
-          routerLink="/dashboard" 
+          routerLink="/reports" 
           routerLinkActive="active" 
-          [routerLinkActiveOptions]="{ exact: true }" 
-          class="nav-item"
-          [title]="collapsed ? 'Dashboard' : ''">
-          <div class="nav-icon"><app-icon name="dashboard" [size]="17" color="#0284c7"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Dashboard</span>
+          class="nav-item" 
+          [title]="collapsed ? 'Executive Summary' : ''">
+          <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#059669"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Executive Summary</span>
+          <span class="nav-badge" *ngIf="!collapsed">PDF</span>
         </a>
 
-        <!-- 1. Basis/Infra (Expandable Group) -->
+        <!-- 4. Alt Yapı (Eski Basis/Infra - Expandable Group) -->
         <div class="nav-group" [class.open]="basisExpanded">
           <div 
             class="nav-item group-header" 
             [class.active]="isBasisActive()"
             (click)="toggleBasis()"
-            [title]="collapsed ? 'Basis/Infra' : ''">
+            [title]="collapsed ? 'Alt Yapı' : ''">
             <div class="nav-icon"><app-icon name="database" [size]="17"></app-icon></div>
-            <span class="nav-label" *ngIf="!collapsed">Basis/Infra</span>
+            <span class="nav-label" *ngIf="!collapsed">Alt Yapı</span>
             <div class="chevron-icon" *ngIf="!collapsed">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="basisExpanded ? 'rotate(90deg)' : 'none'">
                 <polyline points="9 18 15 12 9 6"></polyline>
@@ -61,7 +61,6 @@ import { ModullerService } from '../../../core/services/moduller.service';
 
           <!-- Alt Kırılımlar (Sub Items) -->
           <div class="nav-sub-list" *ngIf="basisExpanded && !collapsed">
-            <!-- 1. Lanscape/Versiyon / EoS (Mevcut Durum) -->
             <a 
               routerLink="/architecture-map" 
               [queryParams]="{ mode: 'asis' }" 
@@ -71,7 +70,6 @@ import { ModullerService } from '../../../core/services/moduller.service';
               <span class="sub-text">Lanscape/Versiyon / EoS</span>
             </a>
 
-            <!-- 2. FUE / License -->
             <a 
               routerLink="/analytics" 
               routerLinkActive="sub-active" 
@@ -81,7 +79,6 @@ import { ModullerService } from '../../../core/services/moduller.service';
               <span class="sub-text">FUE / License</span>
             </a>
 
-            <!-- 3. Source (Current/Target) -->
             <a 
               routerLink="/source-sizing" 
               routerLinkActive="sub-active" 
@@ -90,7 +87,6 @@ import { ModullerService } from '../../../core/services/moduller.service';
               <span class="sub-text">Source (Current/Target)</span>
             </a>
 
-            <!-- 4. Largest Table (DVM) -->
             <a 
               routerLink="/largest-tables" 
               routerLinkActive="sub-active" 
@@ -99,7 +95,7 @@ import { ModullerService } from '../../../core/services/moduller.service';
               <span class="sub-text">Largest Table (DVM)</span>
             </a>
 
-            <!-- 5. Integration (PO Entegrasyon Listesi) -->
+            <!-- Integration (Karara kadar Alt Yapı altında kalıyor) -->
             <a 
               routerLink="/architecture-map" 
               [queryParams]="{ mode: 'po' }" 
@@ -111,15 +107,15 @@ import { ModullerService } from '../../../core/services/moduller.service';
           </div>
         </div>
 
-        <!-- 2. Modules (Expandable Group) -->
+        <!-- 5. SAP Uygulamaları (Eski Modules - Expandable Group) -->
         <div class="nav-group" [class.open]="modulesExpanded">
           <div 
             class="nav-item group-header" 
             [class.active]="isModulesActive()"
             routerLink="/modules"
-            [title]="collapsed ? 'Modules' : ''">
+            [title]="collapsed ? 'SAP Uygulamaları' : ''">
             <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
-            <span class="nav-label" *ngIf="!collapsed">Modules</span>
+            <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
             <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleModules()">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="modulesExpanded ? 'rotate(90deg)' : 'none'">
                 <polyline points="9 18 15 12 9 6"></polyline>
@@ -127,7 +123,7 @@ import { ModullerService } from '../../../core/services/moduller.service';
             </div>
           </div>
 
-          <!-- Alt Kırılımlar (Sub Items) -->
+          <!-- Alt Kırılımlar (Sub Items - Geçiş Modülleri kaldırıldı) -->
           <div class="nav-sub-list" *ngIf="modulesExpanded && !collapsed">
             <a 
               (click)="onSelectModule('genel-bulgular')"
@@ -164,50 +160,73 @@ import { ModullerService } from '../../../core/services/moduller.service';
               <span class="sub-dot">•</span>
               <span class="sub-text">CO Modülü</span>
             </a>
+          </div>
+        </div>
 
+        <!-- 6. SAP Customization (Eski Development) -->
+        <a routerLink="/development" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'SAP Customization' : ''">
+          <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">SAP Customization</span>
+        </a>
+
+        <!-- 7. Çözüm Önerisi (Ayrı Menü Başlığı) -->
+        <div class="nav-group" [class.open]="solutionExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isSolutionActive()"
+            routerLink="/solution-proposal"
+            [title]="collapsed ? 'Çözüm Önerisi' : ''">
+            <div class="nav-icon"><app-icon name="map" [size]="17" color="#7c3aed"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">Çözüm Önerisi</span>
+            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleSolution()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="solutionExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="nav-sub-list" *ngIf="solutionExpanded && !collapsed">
             <a 
-              (click)="onSelectModule('gecis-modulleri')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'gecis-modulleri'"
-              style="cursor: pointer;"
+              routerLink="/solution-proposal" 
+              [queryParams]="{ tab: 'methods' }" 
+              [class.sub-active]="isSolutionTabActive('methods')"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Geçiş Modülleri</span>
+              <span class="sub-text">SAP Geçiş Yöntemleri</span>
             </a>
 
             <a 
-              (click)="onSelectModule('yol-haritasi')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'yol-haritasi'"
-              style="cursor: pointer;"
+              routerLink="/solution-proposal" 
+              [queryParams]="{ tab: 'target-architecture' }" 
+              [class.sub-active]="isSolutionTabActive('target-architecture')"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Önerilen Yol Haritası</span>
+              <span class="sub-text">Hedef Mimari</span>
             </a>
           </div>
         </div>
 
-        <!-- 3. Development -->
-        <a routerLink="/development" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Development' : ''">
-          <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Development</span>
+        <!-- 8. Customer Summary (Çözüm Önerisi Altında, TCO Üstünde) -->
+        <a 
+          routerLink="/dashboard" 
+          routerLinkActive="active" 
+          [routerLinkActiveOptions]="{ exact: true }" 
+          class="nav-item"
+          [title]="collapsed ? 'Customer Summary' : ''">
+          <div class="nav-icon"><app-icon name="dashboard" [size]="17" color="#0284c7"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Customer Summary</span>
         </a>
 
-        <!-- 4. TCO -->
-        <a routerLink="/business-case" routerLinkActive="active" class="nav-item">
+        <!-- 9. TCO -->
+        <a routerLink="/business-case" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'TCO' : ''">
           <div class="nav-icon"><app-icon name="dollar" [size]="17"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">TCO</span>
-        </a>
-
-        <!-- 5. Executive Summary (Comprehensive Report & PDF) -->
-        <a routerLink="/reports" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Executive Summary' : ''">
-          <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#059669"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Executive Summary</span>
-          <span class="nav-badge" *ngIf="!collapsed">PDF</span>
         </a>
 
         <!-- Section: Hızlı İşlemler -->
         <div class="nav-section-title mt-section" *ngIf="!collapsed">HIZLI ARAÇLAR</div>
 
-        <!-- Veri Yükleme (Sadece Bu Kalıyor) -->
+        <!-- Veri Yükleme -->
         <a routerLink="/data-import" routerLinkActive="active" class="nav-item nav-highlight">
           <div class="nav-icon"><app-icon name="upload" [size]="17" color="#0284c7"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Veri Yükleme</span>
@@ -455,6 +474,7 @@ export class SidebarComponent {
   modullerService = inject(ModullerService);
   basisExpanded = true;
   modulesExpanded = true;
+  solutionExpanded = true;
 
   toggleBasis(): void {
     this.basisExpanded = !this.basisExpanded;
@@ -464,6 +484,10 @@ export class SidebarComponent {
     this.modulesExpanded = !this.modulesExpanded;
   }
 
+  toggleSolution(): void {
+    this.solutionExpanded = !this.solutionExpanded;
+  }
+
   onSelectModule(key: string): void {
     this.modullerService.selectModule(key);
     this.router.navigate(['/modules'], { queryParams: { tab: key } });
@@ -471,10 +495,23 @@ export class SidebarComponent {
 
   isBasisActive(): boolean {
     const url = this.router.url;
-    return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category'));
+    return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category')) || url.includes('source-sizing') || url.includes('largest-tables');
   }
 
   isModulesActive(): boolean {
     return this.router.url.includes('module');
+  }
+
+  isSolutionActive(): boolean {
+    const url = this.router.url;
+    return url.includes('solution-proposal') || url.includes('cozum-onerisi') || url.includes('yol-haritasi');
+  }
+
+  isSolutionTabActive(tab: string): boolean {
+    if (!this.isSolutionActive()) return false;
+    if (tab === 'methods') {
+      return this.router.url.includes('tab=methods') || !this.router.url.includes('tab=');
+    }
+    return this.router.url.includes('tab=' + tab);
   }
 }

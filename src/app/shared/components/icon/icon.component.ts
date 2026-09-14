@@ -8,7 +8,8 @@ export type IconName =
   | 'chart' | 'layers' | 'sparkles' | 'bolt' | 'check' | 'alert' 
   | 'info' | 'dollar' | 'sliders' | 'file-text' | 'file-spreadsheet' 
   | 'arrow-right' | 'plus' | 'trash' | 'edit' | 'download' | 'play' 
-  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'message' | 'link';
+  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'message' | 'link'
+  | 'shuffle' | 'server';
 
 @Component({
   selector: 'app-icon',
@@ -62,6 +63,8 @@ export type IconName =
         <g *ngSwitchCase="'shield'"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></g>
         <g *ngSwitchCase="'message'"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></g>
         <g *ngSwitchCase="'link'"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></g>
+        <g *ngSwitchCase="'shuffle'"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></g>
+        <g *ngSwitchCase="'server'"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></g>
         <g *ngSwitchDefault><circle cx="12" cy="12" r="10"></circle></g>
       </ng-container>
     </svg>
@@ -79,7 +82,7 @@ export type IconName =
   `]
 })
 export class IconComponent {
-  @Input() name: IconName = 'dashboard';
+  @Input() name: IconName | string = 'dashboard';
   @Input() size = 18;
   @Input() color = '';
 }
