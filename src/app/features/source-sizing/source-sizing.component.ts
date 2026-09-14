@@ -60,15 +60,11 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
       <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
       <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
-        <div class="empty-icon-wrap">
-          <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+        <div class="empty-icon-wrap" style="background: #f1f5f9;">
+          <app-icon name="database" [size]="32" color="#64748b"></app-icon>
         </div>
-        <h3>Sizing ve Donanım Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
-        <p>S/4HANA boyutlandırma matrisi, HANA Cockpit metrikleri ve /SDF/HDB_SIZING bellek/disk hesaplamaları yükleyeceğiniz Excel dosyasına göre otomatik üretilecektir. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
-        <button class="btn btn-primary" routerLink="/data-import">
-          <app-icon name="upload" [size]="16" color="#ffffff"></app-icon>
-          <span>Excel Yükle (Veri İçe Aktar)</span>
-        </button>
+        <h3 style="color: #334155;">Veri Yok</h3>
+        <p style="color: #64748b;">S/4HANA boyutlandırma matrisi ve donanım analizi için henüz veri bulunmamaktadır.</p>
       </div>
 
       <!-- MAIN SIZING & COCKPIT CONTENT (Only rendered when an Excel is uploaded!) -->

@@ -37,10 +37,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
           <!-- Quick Action Buttons -->
           <div class="quick-nav-bar">
-            <a routerLink="/data-import" class="nav-btn">
-              <app-icon name="upload" [size]="15"></app-icon>
-              <span>Veri Yükle</span>
-            </a>
             <a routerLink="/architecture-map" class="nav-btn">
               <app-icon name="map" [size]="15"></app-icon>
               <span>Şirket Haritası</span>

@@ -45,11 +45,6 @@ import { IconComponent } from '../icon/icon.component';
           <span>Verileri Sıfırla</span>
         </button>
 
-        <!-- Prominent Quick Data Upload Button -->
-        <a routerLink="/data-import" class="upload-quick-btn" title="Yeni Excel/CSV Verisi Yükle">
-          <app-icon name="upload" [size]="14" color="#ffffff"></app-icon>
-          <span>Excel / CSV Yükle</span>
-        </a>
 
         <!-- Notifications Bell -->
         <div class="notification-box">

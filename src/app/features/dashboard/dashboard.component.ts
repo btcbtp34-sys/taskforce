@@ -37,18 +37,14 @@ Chart.register(...registerables);
       </div>
 
       <!-- EMPTY DATA NOTICE BANNER (Only shown when no Excel is uploaded) -->
-      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()" style="padding: 2rem 1.5rem; margin-bottom: 1.5rem;">
-        <div class="empty-icon-wrap" style="width: 48px; height: 48px;">
-          <app-icon name="upload" [size]="24" color="#0284c7"></app-icon>
+      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div class="empty-icon-wrap" style="width: 44px; height: 44px; background: #f1f5f9;">
+          <app-icon name="database" [size]="22" color="#64748b"></app-icon>
         </div>
-        <h3 style="font-size: 1.05rem;">Sistemde Henüz SAP Basis & Sizing Verisi Bulunmuyor</h3>
-        <p style="font-size: 0.82rem; max-width: 600px;">
-          Dashboard üzerindeki FUE lisanslama, HANA bellek/disk boyutlandırmaları ve en büyük tablo (DVM) analizleri yükleyeceğiniz Excel dosyasına göre dinamik olarak hesaplanacaktır. Lütfen analiz dosyasını yükleyiniz.
+        <h3 style="font-size: 1rem; color: #334155;">Veri Yok</h3>
+        <p style="font-size: 0.82rem; max-width: 550px; color: #64748b; margin: 0;">
+          Dashboard üzerindeki FUE lisanslama, HANA boyutlandırma ve DVM analizleri için henüz veri yüklenmemiştir.
         </p>
-        <button class="btn btn-primary" routerLink="/data-import">
-          <app-icon name="upload" [size]="15" color="#ffffff"></app-icon>
-          <span>Excel Yükle & Hesapla</span>
-        </button>
       </div>
 
       <!-- Live Architecture KPIs (4 Cards) -->

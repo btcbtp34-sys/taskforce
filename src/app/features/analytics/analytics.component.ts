@@ -61,15 +61,11 @@ Chart.register(...registerables);
         
         <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
         <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
-          <div class="empty-icon-wrap">
-            <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+          <div class="empty-icon-wrap" style="background: #f1f5f9;">
+            <app-icon name="database" [size]="32" color="#64748b"></app-icon>
           </div>
-          <h3>FUE & Lisans Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
-          <p>Sistemdeki FUE hesaplamaları, USMM kullanıcı sınıflandırmaları ve sözleşme lisansları yüklediğiniz Excel dosyasına göre otomatik hesaplanacaktır. Lütfen müşteriye ait SAP Basis & Sizing Excel dosyasını yükleyiniz.</p>
-          <button class="btn btn-primary" routerLink="/data-import">
-            <app-icon name="upload" [size]="16"></app-icon>
-            <span>Excel Yükle (Veri İçe Aktar)</span>
-          </button>
+          <h3 style="color: #334155;">Veri Yok</h3>
+          <p style="color: #64748b;">FUE & Lisans analizi için henüz veri bulunmamaktadır.</p>
         </div>
 
         <!-- UPLOADED LIVE CONTENT (Only rendered when an Excel is uploaded!) -->
@@ -316,15 +312,11 @@ Chart.register(...registerables);
       <div class="tab-content" *ngIf="activeTab() === 'dvm'">
         <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
         <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
-          <div class="empty-icon-wrap">
-            <app-icon name="layers" [size]="32" color="#0284c7"></app-icon>
+          <div class="empty-icon-wrap" style="background: #f1f5f9;">
+            <app-icon name="layers" [size]="32" color="#64748b"></app-icon>
           </div>
-          <h3>En Büyük Tablolar & DVM Analizi İçin Excel Yüklenmesi Bekleniyor</h3>
-          <p>S/4HANA geçişi öncesi en çok bellek tüketen tablolar ve DVM danışman aksiyon planı yükleyeceğiniz Sizing Excel dosyasına göre hesaplanacaktır.</p>
-          <button class="btn btn-primary" routerLink="/data-import">
-            <app-icon name="upload" [size]="16"></app-icon>
-            <span>Excel Yükle (Veri İçe Aktar)</span>
-          </button>
+          <h3 style="color: #334155;">Veri Yok</h3>
+          <p style="color: #64748b;">En büyük tablolar ve DVM analizi için henüz veri bulunmamaktadır.</p>
         </div>
 
         <div class="section-container" *ngIf="basisService.hasUploadedData()">
@@ -363,15 +355,11 @@ Chart.register(...registerables);
       <div class="tab-content" *ngIf="activeTab() === 'overview'">
         <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
         <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
-          <div class="empty-icon-wrap">
-            <app-icon name="upload" [size]="32" color="#0284c7"></app-icon>
+          <div class="empty-icon-wrap" style="background: #f1f5f9;">
+            <app-icon name="pie-chart" [size]="32" color="#64748b"></app-icon>
           </div>
-          <h3>Grafikler İçin Excel Yüklenmesi Bekleniyor</h3>
-          <p>Departman ve modül dağılım grafikleri yükleyeceğiniz SAP Excel dosyasına göre otomatik üretilecektir. Lütfen veri dosyasını yükleyiniz.</p>
-          <button class="btn btn-primary" routerLink="/data-import">
-            <app-icon name="upload" [size]="16"></app-icon>
-            <span>Excel Yükle (Veri İçe Aktar)</span>
-          </button>
+          <h3 style="color: #334155;">Veri Yok</h3>
+          <p style="color: #64748b;">Grafikler için henüz veri bulunmamaktadır.</p>
         </div>
 
         <div class="charts-row" *ngIf="basisService.hasUploadedData()">
@@ -926,7 +914,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
       const s = this.basisService.fueSummary()!;
       return `${s.hbCount} + ${s.hcCount}/5 + ${s.hdCount}/30 ≈ ${Math.round(s.calculatedFUE)} FUE`;
     }
-    return 'Excel yüklendiğinde hesaplanacaktır';
+    return 'Veri bulunmamaktadır';
   });
 
   activeFueFormulaFull = computed(() => {
@@ -936,7 +924,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
       const hdVal = (s.hdCount / 30).toFixed(2);
       return `${s.hbCount}.0 (Professional) + ${hcVal} (Functional) + ${hdVal} (Productivity) = ${s.calculatedFUE.toFixed(1)} Net FUE (≈ ${Math.round(s.calculatedFUE)} FUE)`;
     }
-    return 'Excel yüklendiğinde detaylı formül açılacaktır';
+    return 'Veri bulunmamaktadır';
   });
 
   consultantNoteText = computed(() => {
@@ -947,7 +935,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
       const hdPart = (s.hdCount / 30).toFixed(2);
       return `"FUE sınıflandırma matrisine göre sistemdeki ${s.totalUsers} kullanıcıdan ${s.hbCount} Professional (HB), ${s.hcCount} Functional (HC) ve ${s.hdCount} Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (${s.hbCount} + ${hcPart} + ${hdPart}) RISE with SAP geçişinde ${fue} FUE paketi tam ve optimum seviye olarak belirlenmiştir. İlave %15 tampon eklenmeden doğrudan net değer önerilmektedir."`;
     }
-    return 'SAP Basis & Sizing Excel dosyası yüklendiğinde otomatik danışman analizi ve optimizasyon notu üretilecektir.';
+    return 'Henüz analiz verisi bulunmamaktadır.';
   });
 
   activeFueRows = computed(() => {
@@ -988,7 +976,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
   purchasedLicensesSummaryText = computed(() => {
     const lics = this.basisService.licenses();
     if (!lics || lics.length === 0) {
-      return 'Sözleşme lisans envanteri Excel yüklendiğinde görüntülenecektir.';
+      return 'Sözleşme lisans verisi bulunmamaktadır.';
     }
     const userLics = lics.filter(l => l.unit.toLowerCase().includes('user'));
     const totalUserCount = userLics.reduce((sum, l) => sum + l.quantity, 0);

@@ -35,3 +35,18 @@ export interface DataImportSummary {
   uploadDate: string;
   mappedCount: number;
 }
+
+export interface PoInterfaceItem {
+  id: number;
+  name: string;
+  sender: string;
+  receiver: string;
+  senderAdapter: string;
+  receiverAdapter: string;
+  protocol: string;
+  type: string;
+  role: 'outbound' | 'inbound' | 'sync';
+  roleLabel: string;
+  scenario: string;
+  operationMapping?: string;
+}

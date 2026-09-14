@@ -1,4 +1,6 @@
-export const PO_INTERFACES_DATA = [
+import { PoInterfaceItem } from '../models/sap-data.model';
+
+export const PO_INTERFACES_DATA: PoInterfaceItem[] = [
   {
     "id": 1,
     "name": "SI_SYNC_OUT_ICBCTransactionsInDateTim",

@@ -48,10 +48,10 @@ export interface ArchitectureEdge {
         <div>
           <h1 class="page-title">
             <app-icon [name]="architectureMode() === 'po' ? 'bolt' : 'map'" [size]="24" [color]="architectureMode() === 'po' ? '#0284c7' : '#0284c7'"></app-icon>
-            {{ architectureMode() === 'po' ? 'SAP PO 7.5 Canlı Entegrasyon Haritası' : 'Mimari Şema & Bulut Dönüşüm Konsolu' }}
+            {{ architectureMode() === 'po' ? 'SAP PO Canlı Entegrasyon Haritası' : 'Mimari Şema & Bulut Dönüşüm Konsolu' }}
           </h1>
           <p class="page-subtitle">
-            {{ architectureMode() === 'po' ? 'ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx (109 Canlı Servis & 16 Entegre Sunucu Mimarisi)' : 'Mevcut AS-IS Altyapı, PO Entegrasyon Haritası ve RISE with SAP Bulut Hedef Mimarisi' }}
+            {{ architectureMode() === 'po' ? (importService.hasUploadedPoData() ? (importService.uploadedFileName() + ' (' + poIntegrationInterfaces().length + ' Canlı Servis)') : 'Entegrasyon Haritası') : 'Mevcut AS-IS Altyapı, PO Entegrasyon Haritası ve RISE with SAP Bulut Hedef Mimarisi' }}
           </p>
         </div>
       </div>
@@ -115,15 +115,25 @@ export interface ArchitectureEdge {
       <!-- PO Specific Quick Action Bar -->
       <div class="mode-toolbar-card po-toolbar" *ngIf="architectureMode() === 'po'">
         <div class="po-toolbar-badge-group">
-          <span class="po-main-tag">ABC Sigorta PO Entegrasyon Mimarisi</span>
-          <span class="po-stat-pill green">83 Verici (Outbound)</span>
-          <span class="po-stat-pill blue">26 Alıcı (Inbound)</span>
-          <span class="po-stat-pill purple">72 Senkron</span>
-          <span class="po-stat-pill gray">37 Asenkron</span>
-          <span class="po-stat-pill dark">16 Entegre Sunucu</span>
+          <span class="po-main-tag">{{ customerService.activeCustomer().name }} PO Entegrasyon Mimarisi</span>
+          <span class="po-stat-pill green">{{ outboundCount() }} Verici (Outbound)</span>
+          <span class="po-stat-pill blue">{{ inboundCount() }} Alıcı (Inbound)</span>
+          <span class="po-stat-pill purple">{{ syncCount() }} Senkron</span>
+          <span class="po-stat-pill gray">{{ asyncCount() }} Asenkron</span>
+          <span class="po-stat-pill dark">{{ nodes().length - 1 > 0 ? nodes().length - 1 : 0 }} Dış Sistem</span>
         </div>
 
         <div class="toolbar-right-actions">
+          <button class="btn btn-services-nav" (click)="scrollToPoServices()" title="Canlı Entegrasyon Servisleri Listesine Git">
+            <app-icon name="layers" [size]="15" color="#ffffff"></app-icon>
+            <span>Servisler ({{ poIntegrationInterfaces().length }})</span>
+          </button>
+
+          <button class="btn btn-secondary" (click)="clearPoData()" title="Entegrasyon verisini temizle ve boş duruma dön">
+            <app-icon name="trash" [size]="15" color="#dc2626"></app-icon>
+            <span>Haritayı Temizle</span>
+          </button>
+
           <button class="btn btn-secondary" (click)="resetDiagram()" title="Düğümleri İlk Konumuna Getir">
             <app-icon name="refresh" [size]="15"></app-icon>
             <span>Haritayı Sıfırla</span>
@@ -152,15 +162,15 @@ export interface ArchitectureEdge {
               <strong>Mevcut AS-IS Altyapı Akış Analizi (11 Sunucu/Instance):</strong> PO 7.5 ve CS 6.5 doğrudan ERP EHP7'ye; WebDisp ise hem ERP EHP7 hem de Fiori S4H 1511'e (EoS 2020) bağlanmaktadır. Kartlara tıklayarak detaylı altyapı raporunu inceleyebilirsiniz.
             </div>
           </div>
-        } @else if (architectureMode() === 'po') {
+        } @else if (architectureMode() === 'po' && importService.hasUploadedPoData()) {
           <div class="banner-content po-info">
             <app-icon name="bolt" [size]="18" color="#0284c7"></app-icon>
             <div class="b-text">
-              <strong>ABC Sigorta PO Canlı Entegrasyon Haritası:</strong> <code>ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx</code> dosyasındaki <strong>109 canlı servis</strong>, alıcı/verici (Inbound/Outbound) akış yönleri ve 16 sunucu altyapısıyla haritalandırılmıştır.
+              <strong>{{ customerService.activeCustomer().name }} PO Canlı Entegrasyon Haritası:</strong> <code>{{ importService.uploadedFileName() }}</code> dosyasındaki <strong>{{ poIntegrationInterfaces().length }} canlı servis</strong>, alıcı/verici (Inbound/Outbound) akış yönleri ve sistem altyapısıyla haritalandırılmıştır.
             </div>
           </div>
         } @else {
-          <div class="banner-content success">
+          <div class="banner-content success" *ngIf="architectureMode() !== 'po'">
             <app-icon name="sparkles" [size]="18" color="#047857"></app-icon>
             <div class="b-text">
               <strong>RISE with SAP Bulut Dönüşüm Analizi:</strong> Mevcut 11 parçalı dağınık sunucu altyapısı ve PO canlı entegrasyonları analiz edilerek tek bir S/4HANA Private Cloud veritabanı ve SAP BTP Integration Suite mimarisinde birleştirilmiştir.
@@ -169,13 +179,24 @@ export interface ArchitectureEdge {
         }
       </div>
 
+      <!-- EMPTY STATE WHEN NO PO INTEGRATION EXCEL IS UPLOADED -->
+      <div class="empty-upload-card" *ngIf="architectureMode() === 'po' && !importService.hasUploadedPoData()" style="padding: 2.5rem 1.5rem; margin: 2rem auto; max-width: 650px; text-align: center; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 12px;">
+        <div class="empty-icon-wrap" style="background: #f1f5f9; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+          <app-icon name="bolt" [size]="28" color="#64748b"></app-icon>
+        </div>
+        <h3 style="color: #334155; font-size: 1.15rem; margin-bottom: 0.5rem;">Veri Yok</h3>
+        <p style="color: #64748b; font-size: 0.88rem; line-height: 1.5; margin: 0;">
+          Entegrasyon mimarisi ve canlı servis listesi için henüz veri bulunmamaktadır. Verilerinizi sol menüdeki <strong>Hızlı Araçlar > Veri Yükleme</strong> ekranından <em>(PO Canlı Entegrasyon Listesi)</em> içeri aktarabilirsiniz.
+        </p>
+      </div>
+
       <!-- Main Map Grid -->
-      <div class="map-grid">
+      <div class="map-grid" *ngIf="architectureMode() !== 'po' || importService.hasUploadedPoData()">
         <!-- Sidebar Controls & Configurator -->
         <div class="card-box config-panel">
           <div class="card-header">
             <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</h3>
-            <span class="sub-text">{{ architectureMode() === 'po' ? '109 Canlı Servis' : (totalServerCount() + ' Sunucu / Instance') }}</span>
+            <span class="sub-text">{{ architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Servis') : (totalServerCount() + ' Sunucu / Instance') }}</span>
           </div>
 
           <!-- Sidebar Tabs: Sunucular vs Bağlantı Kabloları -->
@@ -249,35 +270,35 @@ export interface ArchitectureEdge {
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Entegrasyon' : 'Sunucu Altyapı Adedi' }}</span>
               <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
-                {{ architectureMode() === 'asis' ? '11 Sunucu (Dağınık)' : (architectureMode() === 'po' ? '109 Canlı Arayüz' : '1 Bulut DB (Konsolide)') }}
+                {{ architectureMode() === 'asis' ? '11 Sunucu (Dağınık)' : (architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Arayüz') : '1 Bulut DB (Konsolide)') }}
               </strong>
             </div>
 
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Verici (Outbound)' : 'Entegrasyon Mimarisi' }}</span>
               <strong class="s-val green">
-                {{ architectureMode() === 'po' ? '83 Servis (%76.1)' : (architectureMode() === 'rise' ? 'SAP BTP Integration Suite' : 'PO 7.5 On-Premise') }}
+                {{ architectureMode() === 'po' ? (outboundCount() + ' Servis (Outbound)') : (architectureMode() === 'rise' ? 'SAP BTP Integration Suite' : 'PO 7.5 On-Premise') }}
               </strong>
             </div>
 
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Alıcı (Inbound)' : 'Hedef Lisans Paketi' }}</span>
               <strong class="s-val" [class.text-blue]="architectureMode() === 'po'" [class.green]="architectureMode() !== 'po'">
-                {{ architectureMode() === 'po' ? '26 Servis (%23.9)' : '70 FUE (Optimize Bulut)' }}
+                {{ architectureMode() === 'po' ? (inboundCount() + ' Servis (Inbound)') : '70 FUE (Optimize Bulut)' }}
               </strong>
             </div>
 
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Senkron / Anlık' : 'Tahmini Yıllık Tasarruf' }}</span>
               <strong class="s-val green">
-                {{ architectureMode() === 'po' ? '72 Canlı Servis' : '€140.000 / Yıl Net TCO' }}
+                {{ architectureMode() === 'po' ? (syncCount() + ' Canlı Servis') : '€140.000 / Yıl Net TCO' }}
               </strong>
             </div>
 
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Sunucu Adedi' : 'Destek Sonu (EoS) Riski' }}</span>
               <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
-                {{ architectureMode() === 'po' ? '16 Sunucu / Instance' : (architectureMode() === 'asis' ? 'Fiori 1511 & CS (2 Kritik)' : '0 Risk (%100 SAP Bulut)') }}
+                {{ architectureMode() === 'po' ? ((importService.poSummary()?.totalServers || nodes().length) + ' Sunucu / Instance') : (architectureMode() === 'asis' ? 'Fiori 1511 & CS (2 Kritik)' : '0 Risk (%100 SAP Bulut)') }}
               </strong>
             </div>
           </div>
@@ -288,7 +309,7 @@ export interface ArchitectureEdge {
           <div class="canvas-header">
             <div class="active-customer-tag">
               <app-icon name="customers" [size]="15" color="#0284c7"></app-icon>
-              <span>{{ customerService.activeCustomer().name }} — {{ architectureMode() === 'asis' ? 'Mevcut AS-IS Mimari Akış Şeması' : (architectureMode() === 'po' ? 'Excel PO Canlı Entegrasyon Haritası (10 Servis)' : 'RISE with SAP Hedef Mimari') }}</span>
+              <span>{{ customerService.activeCustomer().name }} — {{ architectureMode() === 'asis' ? 'Mevcut AS-IS Mimari Akış Şeması' : (architectureMode() === 'po' ? ('Excel PO Canlı Entegrasyon Haritası (' + poIntegrationInterfaces().length + ' Servis)') : 'RISE with SAP Hedef Mimari') }}</span>
             </div>
 
             <div class="map-legend">
@@ -774,42 +795,42 @@ export interface ArchitectureEdge {
         </div>
       </div>
 
-      <!-- PO LIVE INTEGRATION INTERFACES TABLE & SERVER COUNTS (ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx) -->
-      <div class="card-box po-integration-table-card" *ngIf="architectureMode() === 'po'">
+      <!-- PO LIVE INTEGRATION INTERFACES TABLE & SERVER COUNTS -->
+      <div class="card-box po-integration-table-card" *ngIf="architectureMode() === 'po' && importService.hasUploadedPoData()">
         <div class="card-header">
           <div class="po-table-title-group">
             <div class="icon-circle bg-blue">
               <app-icon name="bolt" [size]="16" color="#0284c7"></app-icon>
             </div>
             <div>
-              <h3>ABC Sigorta PO Canlı Entegrasyon Listesi (109 Arayüz & Sunucu Dağılımı)</h3>
-              <span class="c-sub">ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx dosyasındaki 109 canlı servis, alıcı/verici rolleri ve sunucu adetleri</span>
+              <h3>{{ customerService.activeCustomer().name }} PO Canlı Entegrasyon Listesi ({{ poIntegrationInterfaces().length }} Arayüz)</h3>
+              <span class="c-sub">{{ importService.uploadedFileName() }} dosyasındaki {{ poIntegrationInterfaces().length }} canlı servis, alıcı/verici rolleri ve sunucu dağılımları</span>
             </div>
           </div>
-          <span class="badge-source-file">Excel: ABC_Sigorta_PO_Entegrasyon_Listesi.xlsx (109 Servis)</span>
+          <span class="badge-source-file">Excel: {{ importService.uploadedFileName() }} ({{ poIntegrationInterfaces().length }} Servis)</span>
         </div>
 
         <!-- Sunucu Adetleri Özet Barı -->
         <div class="po-server-summary-bar">
           <div class="ps-item">
-            <span class="ps-lbl">Merkezi PO 7.5:</span>
-            <strong class="ps-val text-blue">3 Sunucu (Dev / QA / Prod)</strong>
+            <span class="ps-lbl">Merkezi Hub:</span>
+            <strong class="ps-val text-blue">SAP PO / Integration Suite</strong>
           </div>
           <div class="ps-item">
-            <span class="ps-lbl">SAP ERP Backend:</span>
-            <strong class="ps-val text-blue">3 Sunucu (ECC/S4)</strong>
+            <span class="ps-lbl">Toplam Servis:</span>
+            <strong class="ps-val text-blue">{{ poIntegrationInterfaces().length }} Canlı Servis</strong>
           </div>
           <div class="ps-item">
-            <span class="ps-lbl">Banka & Kurum Gatewayleri:</span>
-            <strong class="ps-val text-emerald">6 Sunucu</strong>
+            <span class="ps-lbl">Gönderen (Sender):</span>
+            <strong class="ps-val text-emerald">{{ importService.poSummary()?.uniqueSenders || 1 }} Sistem</strong>
           </div>
           <div class="ps-item">
-            <span class="ps-lbl">Sigorta & Entegrasyon Sunucuları:</span>
-            <strong class="ps-val text-purple">4 Sunucu</strong>
+            <span class="ps-lbl">Alıcı (Receiver):</span>
+            <strong class="ps-val text-purple">{{ importService.poSummary()?.uniqueReceivers || 1 }} Sistem</strong>
           </div>
           <div class="ps-item highlight">
-            <span class="ps-lbl">TOPLAM ENTEGRASYON SUNUCUSU:</span>
-            <strong class="ps-val text-dark">16 Sunucu / Instance</strong>
+            <span class="ps-lbl">TOPLAM DÜĞÜM / SUNUCU:</span>
+            <strong class="ps-val text-dark">{{ importService.poSummary()?.totalServers || nodes().length }} Sunucu</strong>
           </div>
         </div>
 
@@ -820,38 +841,38 @@ export interface ArchitectureEdge {
             <input 
               type="text" 
               [(ngModel)]="poSearchQuery" 
-              placeholder="Arayüz adı, servis, sistem veya protokol ara (Örn: ZFI, KUR, JDBC, WINSURE...)" 
+              placeholder="Arayüz adı, servis, sistem veya protokol ara..." 
               class="search-input" />
             <button *ngIf="poSearchQuery" class="clear-btn" (click)="poSearchQuery = ''">✕</button>
           </div>
 
           <div class="filter-pills-row">
             <button class="f-pill" [class.active]="poFilter() === 'ALL'" (click)="poFilter.set('ALL')">
-              Tümü ({{ poIntegrationInterfaces.length }})
+              Tümü ({{ poIntegrationInterfaces().length }})
             </button>
             <button class="f-pill pill-green" [class.active]="poFilter() === 'OUTBOUND'" (click)="poFilter.set('OUTBOUND')">
-              ▲ Verici / Outbound (83)
+              ▲ Verici / Outbound ({{ outboundCount() }})
             </button>
             <button class="f-pill pill-blue" [class.active]="poFilter() === 'INBOUND'" (click)="poFilter.set('INBOUND')">
-              ▼ Alıcı / Inbound (26)
+              ▼ Alıcı / Inbound ({{ inboundCount() }})
             </button>
             <button class="f-pill pill-purple" [class.active]="poFilter() === 'SYNC'" (click)="poFilter.set('SYNC')">
-              ⚡ Senkron (72)
+              ⚡ Senkron ({{ syncCount() }})
             </button>
             <button class="f-pill" [class.active]="poFilter() === 'ASYNC'" (click)="poFilter.set('ASYNC')">
-              ⏳ Asenkron (37)
+              ⏳ Asenkron ({{ asyncCount() }})
             </button>
             <button class="f-pill" [class.active]="poFilter() === 'JDBC'" (click)="poFilter.set('JDBC')">
-              JDBC (43)
+              JDBC ({{ jdbcCount() }})
             </button>
             <button class="f-pill" [class.active]="poFilter() === 'SOAP'" (click)="poFilter.set('SOAP')">
-              SOAP (28)
+              SOAP ({{ soapCount() }})
             </button>
             <button class="f-pill" [class.active]="poFilter() === 'RFC'" (click)="poFilter.set('RFC')">
-              RFC (18)
+              RFC ({{ rfcCount() }})
             </button>
             <button class="f-pill" [class.active]="poFilter() === 'REST'" (click)="poFilter.set('REST')">
-              REST (10)
+              REST ({{ restCount() }})
             </button>
           </div>
         </div>
@@ -906,7 +927,7 @@ export interface ArchitectureEdge {
         </div>
 
         <div class="po-table-footer">
-          <span>Toplam <strong>109</strong> servisten <strong>{{ filteredPoInterfaces().length }}</strong> servis listeleniyor.</span>
+          <span>Toplam <strong>{{ poIntegrationInterfaces().length }}</strong> servisten <strong>{{ filteredPoInterfaces().length }}</strong> servis listeleniyor.</span>
           <span class="text-emerald font-bold">✓ RISE with SAP BTP Migration Hazır</span>
         </div>
       </div>
@@ -2357,6 +2378,28 @@ export interface ArchitectureEdge {
           &.dark { background: #0f172a; color: #ffffff; }
         }
       }
+
+      .btn-services-nav {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        border: none;
+        padding: 0.45rem 0.95rem;
+        border-radius: 7px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(2, 132, 199, 0.38);
+        }
+      }
     }
 
     .po-node-card {
@@ -3662,14 +3705,28 @@ export class ArchitectureMapComponent {
     { id: 'pe10', fromId: 'node-core', toId: 'node-cust-search', label: 'Senkron (Çift Yönlü) ⇄' }
   ];
 
-  // Full ABC_Sigorta_PO_Entegrasyon_Listesi Excel Interfaces Data Table (109 Live Interfaces)
-  poIntegrationInterfaces = PO_INTERFACES_DATA;
+  // Dynamic PO Live Integration Interfaces
+  poIntegrationInterfaces = computed(() => {
+    if (this.importService.hasUploadedPoData()) {
+      return this.importService.poInterfaces();
+    }
+    return [];
+  });
 
   poSearchQuery = '';
   poFilter = signal<string>('ALL');
 
+  outboundCount = computed(() => this.poIntegrationInterfaces().filter(i => i.role === 'outbound').length);
+  inboundCount = computed(() => this.poIntegrationInterfaces().filter(i => i.role === 'inbound').length);
+  syncCount = computed(() => this.poIntegrationInterfaces().filter(i => i.type === 'Synchronous').length);
+  asyncCount = computed(() => this.poIntegrationInterfaces().filter(i => i.type === 'Asynchronous').length);
+  jdbcCount = computed(() => this.poIntegrationInterfaces().filter(i => i.protocol.includes('JDBC') || i.senderAdapter.includes('JDBC') || i.receiverAdapter.includes('JDBC')).length);
+  soapCount = computed(() => this.poIntegrationInterfaces().filter(i => i.protocol.includes('SOAP') || i.senderAdapter.includes('SOAP') || i.receiverAdapter.includes('SOAP')).length);
+  rfcCount = computed(() => this.poIntegrationInterfaces().filter(i => i.protocol.includes('RFC') || i.senderAdapter.includes('RFC') || i.receiverAdapter.includes('RFC')).length);
+  restCount = computed(() => this.poIntegrationInterfaces().filter(i => i.protocol.includes('REST') || i.senderAdapter.includes('REST') || i.receiverAdapter.includes('REST')).length);
+
   filteredPoInterfaces = computed(() => {
-    let list = this.poIntegrationInterfaces;
+    let list = this.poIntegrationInterfaces();
     const filter = this.poFilter();
     const query = this.poSearchQuery.trim().toLowerCase();
 
@@ -3759,16 +3816,24 @@ export class ArchitectureMapComponent {
 
     // Reactive Effect: Automatically draws diagram when an Excel file is uploaded!
     effect(() => {
-      const recs = this.importService.records();
-      if (recs && recs.length > 0) {
-        const custom = this.importService.getDiagramFromUploadedExcel();
-        if (custom.nodes && custom.nodes.length > 0) {
-          this.nodes.set(custom.nodes);
-          this.currentEdges.set(custom.edges);
-          this.excelImportSuccess.set(true);
-          
-          if (this.importService.importCategory() === 'po' || this.importService.uploadedFileName().toLowerCase().includes('po')) {
-            this.architectureMode.set('po');
+      if (this.importService.hasUploadedPoData()) {
+        const customNodes = this.importService.poDiagramNodes();
+        const customEdges = this.importService.poDiagramEdges();
+        if (customNodes && customNodes.length > 0) {
+          if (this.architectureMode() === 'po') {
+            this.nodes.set(JSON.parse(JSON.stringify(customNodes)));
+            this.currentEdges.set(JSON.parse(JSON.stringify(customEdges)));
+            this.coreNode = { x: 520, y: 300 };
+          }
+        }
+      } else {
+        const recs = this.importService.records();
+        if (recs && recs.length > 0) {
+          const custom = this.importService.getDiagramFromUploadedExcel();
+          if (custom.nodes && custom.nodes.length > 0) {
+            this.nodes.set(custom.nodes);
+            this.currentEdges.set(custom.edges);
+            this.excelImportSuccess.set(true);
           }
         }
       }
@@ -3890,8 +3955,14 @@ export class ArchitectureMapComponent {
       this.currentEdges.set(JSON.parse(JSON.stringify(this.asisEdges)));
       this.coreNode = { x: 520, y: 160 };
     } else if (mode === 'po') {
-      this.nodes.set(JSON.parse(JSON.stringify(this.poNodes)));
-      this.currentEdges.set(JSON.parse(JSON.stringify(this.poEdges)));
+      const activePoNodes = this.importService.hasUploadedPoData() && this.importService.poDiagramNodes().length > 0
+        ? this.importService.poDiagramNodes()
+        : [];
+      const activePoEdges = this.importService.hasUploadedPoData() && this.importService.poDiagramEdges().length > 0
+        ? this.importService.poDiagramEdges()
+        : [];
+      this.nodes.set(JSON.parse(JSON.stringify(activePoNodes)));
+      this.currentEdges.set(JSON.parse(JSON.stringify(activePoEdges)));
       this.coreNode = { x: 520, y: 300 };
     } else {
       const riseTarget = this.generateRiseNodesFromCurrentData();
@@ -4203,6 +4274,23 @@ export class ArchitectureMapComponent {
       this.currentEdges.set([]);
       this.selectedNode.set(null);
       this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
+    }
+  }
+
+  scrollToPoServices(): void {
+    const el = document.querySelector('.po-integration-table-card');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  clearPoData(): void {
+    if (confirm('PO entegrasyon verisini silmek ve boş duruma dönmek istiyor musunuz?')) {
+      this.importService.clearUploadedPoData();
+      this.nodes.set([]);
+      this.currentEdges.set([]);
+      this.selectedNode.set(null);
+      this.showToast('Entegrasyon verisi temizlendi. Veri Yükleme ekranından yeni Excel yükleyebilirsiniz.');
     }
   }
 

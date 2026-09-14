@@ -104,9 +104,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                     <button class="btn-icon" (click)="viewCustomer360(cust.id)" title="Customer 360">
                       <app-icon name="search" [size]="14"></app-icon>
                     </button>
-                    <button class="btn-icon primary" (click)="uploadForCustomer(cust.id)" title="Excel Yükle">
-                      <app-icon name="upload" [size]="14" color="#0284c7"></app-icon>
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -474,7 +471,6 @@ export class CustomerListComponent {
 
   onSearchInput(e: Event): void { this.searchQuery.set((e.target as HTMLInputElement).value); }
   viewCustomer360(id: string): void { this.customerService.selectCustomer(id); this.router.navigate(['/customers', id]); }
-  uploadForCustomer(id: string): void { this.customerService.selectCustomer(id); this.router.navigate(['/data-import']); }
 
   saveNewCustomer(name: string, sector: string, usersStr: string, contact: string): void {
     if (!name) return;
