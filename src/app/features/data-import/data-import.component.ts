@@ -23,16 +23,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </h1>
           <p class="page-subtitle">Seçili Müşteri: <strong style="color: #0284c7; font-weight: 700;">{{ customerService.activeCustomer().name }}</strong> • Bu müşteriye ait Excel kategorisini seçip dosyanızı yükleyin</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-sample" (click)="downloadTemplate()" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;" title="SAP Modülleri Excel format şablonunu indirin">
-            <app-icon name="download" [size]="16" color="#047857"></app-icon>
-            <span>Şablon / Format İndir (.xlsx)</span>
-          </button>
-          <button class="btn btn-sample" (click)="loadSampleData()">
-            <app-icon name="file-spreadsheet" [size]="16" color="#0284c7"></app-icon>
-            <span>{{ selectedCategory() === 'modules' ? 'Örnek SAP Modül Verisi Yükle (6 Kart)' : (selectedCategory() === 'po' ? 'Örnek PO Entegrasyon Verisi Yükle (109 Servis)' : ('Örnek SAP Basis Verisi Yükle (' + customerService.activeCustomer().name + ')')) }}</span>
-          </button>
-        </div>
       </div>
 
       <!-- 2 Ana Yükleme Kategorisi: Basis & Sizing ve Integration -->
@@ -131,10 +121,35 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <p class="drop-sub">
             {{ selectedCategory() === 'basis' ? 'Desteklenen Formatlar: .xlsx, .csv — S/4HANA Sizing matrisi, En Büyük Tablolar ve FUE sayfaları' : (selectedCategory() === 'po' ? 'Desteklenen Formatlar: .xlsx, .csv — Canlı arayüzler, gönderen/alıcı sistemler ve protokol kolonları' : 'Format: Kategori • Başlık • Önem Derecesi • Durum • Madde ve Detaylar • Dipnot / Tahmini Süre') }}
           </p>
-          <button class="btn btn-primary" (click)="$event.stopPropagation(); fileInput.click()">
-            <app-icon name="upload" [size]="15" color="#ffffff"></app-icon>
-            <span>{{ selectedCategory() === 'basis' ? 'Basis Excel Dosyası Seç & Analiz Et' : (selectedCategory() === 'po' ? 'Entegrasyon Excel Dosyası Seç & Haritayı Çiz' : 'Modül Excel Dosyası Seç & Kartları Aktar') }}</span>
-          </button>
+          <div class="dropzone-actions" (click)="$event.stopPropagation()" style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+            <button class="btn btn-primary" (click)="fileInput.click()">
+              <app-icon name="upload" [size]="15" color="#ffffff"></app-icon>
+              <span>{{ selectedCategory() === 'basis' ? 'Basis Excel Dosyası Seç & Analiz Et' : (selectedCategory() === 'po' ? 'Entegrasyon Excel Dosyası Seç & Haritayı Çiz' : 'Modül Excel Dosyası Seç & Kartları Aktar') }}</span>
+            </button>
+
+            <!-- Sadece SAP Uygulamaları & Modüller seçiliyken görünen Format İndir & Örnek Veri -->
+            <button *ngIf="selectedCategory() === 'modules'" class="btn btn-sample" (click)="downloadTemplate()" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;" title="SAP Modülleri Excel format şablonunu indirin">
+              <app-icon name="download" [size]="15" color="#047857"></app-icon>
+              <span>Format / Şablon İndir (.xlsx)</span>
+            </button>
+
+            <button *ngIf="selectedCategory() === 'modules'" class="btn btn-sample" (click)="loadSampleData()" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;" title="Örnek 6 değerlendirme kartı yükle">
+              <app-icon name="file-spreadsheet" [size]="15" color="#166534"></app-icon>
+              <span>Örnek Modül Verisi Yükle</span>
+            </button>
+
+            <!-- Sadece Basis seçiliyken görünen Örnek Veri -->
+            <button *ngIf="selectedCategory() === 'basis'" class="btn btn-sample" (click)="loadSampleData()">
+              <app-icon name="file-spreadsheet" [size]="15" color="#0284c7"></app-icon>
+              <span>Örnek SAP Basis Verisi Yükle</span>
+            </button>
+
+            <!-- Sadece PO seçiliyken görünen Örnek Veri -->
+            <button *ngIf="selectedCategory() === 'po'" class="btn btn-sample" (click)="loadSampleData()">
+              <app-icon name="file-spreadsheet" [size]="15" color="#0284c7"></app-icon>
+              <span>Örnek PO Entegrasyon Verisi Yükle</span>
+            </button>
+          </div>
         </ng-container>
 
         <!-- BEAUTIFUL PROCESSING LOADER STATE -->

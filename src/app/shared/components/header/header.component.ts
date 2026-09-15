@@ -59,14 +59,13 @@ import { IconComponent } from '../icon/icon.component';
 
       <!-- Quick Upload Button, Notifications & Profile -->
       <div class="right-section">
-        <!-- Reset Uploaded Data Button (when uploaded) -->
+        <!-- Verileri Temizle Butonu (Her zaman üst barda) -->
         <button 
-          *ngIf="basisService.hasUploadedData() || importService.hasUploadedPoData()" 
           class="btn-header-reset" 
           (click)="resetCurrentCustomerData()" 
-          [title]="customerService.activeCustomer().name + ' için yüklenen Excel verilerini sıfırla'">
+          [title]="customerService.activeCustomer().name + ' için yüklenen verileri temizle'">
           <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
-          <span>Verileri Sıfırla</span>
+          <span>Verileri Temizle</span>
         </button>
 
 
@@ -528,9 +527,13 @@ export class HeaderComponent {
   }
 
   resetCurrentCustomerData(): void {
-    this.basisService.clearUploadedData();
-    this.importService.clearUploadedPoData();
-    this.modullerService.clearCustomerModules();
+    const custName = this.customerService.activeCustomer().name;
+    const confirmed = window.confirm(`${custName} için yüklenen tüm Excel ve modül verilerini temizlemek istediğinize emin misiniz?`);
+    if (confirmed) {
+      this.basisService.clearUploadedData();
+      this.importService.clearUploadedPoData();
+      this.modullerService.clearCustomerModules();
+    }
   }
 }
 
