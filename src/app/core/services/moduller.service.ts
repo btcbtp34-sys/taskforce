@@ -1,19 +1,21 @@
 import { Injectable, signal, inject, effect } from '@angular/core';
 import { CustomerService } from './customer.service';
 
-export type CardSeverity = 
-  | 'KRİTİK' 
-  | 'GELİŞTİRME' 
-  | 'STANDART' 
-  | 'FIRSAT' 
-  | 'UYGUN DEĞİL' 
-  | 'KISMEN UYGUN' 
-  | 'ÖNERİLEN';
+export type CardSeverity = 'Düşük' | 'Orta' | 'Yüksek' | 'Kritik';
+
+export type CardStatus = 
+  | 'Geliştirme' 
+  | 'Standart' 
+  | 'Fırsat' 
+  | 'Uygun Değil' 
+  | 'Kısmen Uygun' 
+  | 'Önerilen';
 
 export interface ModuleCard {
   id: string;
   title: string;
   severity: CardSeverity;
+  status: CardStatus;
   bullets: string[];
   footerNote?: string;
   isFullWidth?: boolean;
@@ -36,6 +38,48 @@ export interface ModuleItem {
 }
 
 const STORAGE_PREFIX = 'taskforce_modules_';
+
+const validSeverities: CardSeverity[] = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
+const validStatuses: CardStatus[] = ['Geliştirme', 'Standart', 'Fırsat', 'Uygun Değil', 'Kısmen Uygun', 'Önerilen'];
+
+export function normalizeCard(c: any): ModuleCard {
+  let severity: CardSeverity = 'Orta';
+  let status: CardStatus = 'Standart';
+
+  if (validSeverities.includes(c.severity)) {
+    severity = c.severity;
+  } else if (c.severity === 'KRİTİK' || c.severity === 'Kritik') {
+    severity = 'Kritik';
+  } else if (c.severity === 'GELİŞTİRME' || c.severity === 'FIRSAT') {
+    severity = 'Orta';
+  }
+
+  if (validStatuses.includes(c.status)) {
+    status = c.status;
+  } else if (c.status === 'GELİŞTİRME' || c.severity === 'GELİŞTİRME' || c.status === 'Geliştirme') {
+    status = 'Geliştirme';
+  } else if (c.status === 'STANDART' || c.severity === 'STANDART' || c.status === 'Standart') {
+    status = 'Standart';
+  } else if (c.status === 'FIRSAT' || c.severity === 'FIRSAT' || c.status === 'Fırsat') {
+    status = 'Fırsat';
+  } else if (c.status === 'UYGUN DEĞİL' || c.severity === 'UYGUN DEĞİL' || c.status === 'Uygun Değil') {
+    status = 'Uygun Değil';
+  } else if (c.status === 'KISMEN UYGUN' || c.severity === 'KISMEN UYGUN' || c.status === 'Kısmen Uygun') {
+    status = 'Kısmen Uygun';
+  } else if (c.status === 'ÖNERİLEN' || c.severity === 'ÖNERİLEN' || c.status === 'Önerilen') {
+    status = 'Önerilen';
+  }
+
+  return {
+    id: c.id || ('card-' + Date.now()),
+    title: c.title || '',
+    severity,
+    status,
+    bullets: Array.isArray(c.bullets) ? c.bullets : [],
+    footerNote: c.footerNote,
+    isFullWidth: !!c.isFullWidth
+  };
+}
 
 const DEFAULT_EMPTY_MODULES: ModuleItem[] = [
   {
@@ -132,7 +176,14 @@ export class ModullerService {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.modulesList.set(parsed);
+          const normalized = parsed.map((m: ModuleItem) => ({
+            ...m,
+            slides: (m.slides || []).map(s => ({
+              ...s,
+              cards: (s.cards || []).map(normalizeCard)
+            }))
+          }));
+          this.modulesList.set(normalized);
           return;
         }
       }

@@ -72,24 +72,24 @@
           (ngModelChange)="onFilterChange()" />
       </div>
 
-      <div class="severity-pills-group">
-        <button 
-          type="button" 
-          class="severity-pill-btn" 
-          [class.active]="selectedSeverityFilter === 'TÜMÜ'"
-          (click)="setSeverityFilter('TÜMÜ')">
-          Tümü ({{ currentSlide?.cards?.length || 0 }})
-        </button>
-        <button 
-          *ngFor="let item of availableSeverities"
-          type="button" 
-          class="severity-pill-btn" 
-          [ngClass]="'pill-' + getSeverityClass(item.severity)"
-          [class.active]="selectedSeverityFilter === item.severity"
-          (click)="setSeverityFilter(item.severity)">
-          <span class="dot" [ngClass]="'dot-' + getSeverityClass(item.severity)"></span>
-          {{ item.severity }} ({{ item.count }})
-        </button>
+      <div class="filters-wrap">
+        <!-- Severity Filters -->
+        <div class="filter-select-wrapper">
+          <span class="filter-label">Önem:</span>
+          <select class="filter-select" [(ngModel)]="selectedSeverityFilter" (ngModelChange)="onFilterChange()">
+            <option value="TÜMÜ">Tümü ({{ currentSlide?.cards?.length || 0 }})</option>
+            <option *ngFor="let opt of severityOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+
+        <!-- Status Filters -->
+        <div class="filter-select-wrapper">
+          <span class="filter-label">Durum:</span>
+          <select class="filter-select" [(ngModel)]="selectedStatusFilter" (ngModelChange)="onFilterChange()">
+            <option value="TÜMÜ">Tümü</option>
+            <option *ngFor="let opt of statusOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -107,8 +107,15 @@
               <span class="severity-dot" [ngClass]="'dot-' + getSeverityClass(card.severity)"></span>
               <h3 class="assessment-card-title">{{ card.title }}</h3>
             </div>
-            <div class="card-badge-label" [ngClass]="'badge-' + getSeverityClass(card.severity)">
-              {{ card.severity }}
+            
+            <!-- Badges: Severity + Durum -->
+            <div class="card-badges-row">
+              <span class="badge-pill sev-badge" [ngClass]="'badge-' + getSeverityClass(card.severity)">
+                <span class="badge-label-prefix">Önem:</span> {{ card.severity }}
+              </span>
+              <span class="badge-pill status-badge" [ngClass]="'badge-' + getStatusClass(card.status)">
+                <span class="badge-label-prefix">Durum:</span> {{ card.status }}
+              </span>
             </div>
           </div>
 
@@ -178,14 +185,23 @@
             type="text" 
             class="form-input" 
             [(ngModel)]="formTitle" 
-            placeholder="Örn: Brownfield (System Conversion)" />
+            placeholder="Örn: Brownfield (System Conversion) / Business Partner Dönüşümü" />
         </div>
 
-        <div class="form-group">
-          <label class="form-label-bold">DURUM / SEVERITY *</label>
-          <select class="form-input" [(ngModel)]="formSeverity">
-            <option *ngFor="let opt of severityOptions" [value]="opt">{{ opt }}</option>
-          </select>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label class="form-label-bold">SEVERITY (ÖNEM DERECESİ) *</label>
+            <select class="form-input" [(ngModel)]="formSeverity">
+              <option *ngFor="let opt of severityOptions" [value]="opt">{{ opt }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-bold">DURUM (STATUS) *</label>
+            <select class="form-input" [(ngModel)]="formStatus">
+              <option *ngFor="let opt of statusOptions" [value]="opt">{{ opt }}</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
