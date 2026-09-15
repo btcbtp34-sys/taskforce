@@ -24,8 +24,9 @@ export interface SystemFieldOption {
 }
 
 import { CustomerService } from './customer.service';
+import { ModullerService, ModuleCard, normalizeCardSeverity, normalizeCardStatus } from './moduller.service';
 
-export type ExcelImportCategory = 'asis' | 'po' | 'usage' | 'basis';
+export type ExcelImportCategory = 'asis' | 'po' | 'usage' | 'basis' | 'modules';
 
 @Injectable({
   providedIn: 'root'
@@ -33,6 +34,7 @@ export type ExcelImportCategory = 'asis' | 'po' | 'usage' | 'basis';
 export class DataImportService {
   basisService = inject(BasisSizingService);
   customerService = inject(CustomerService);
+  modullerService = inject(ModullerService);
 
   records = signal<SapUsageRecord[]>([]);
   columnMappings = signal<ColumnMapping[]>([]);
@@ -244,6 +246,8 @@ export class DataImportService {
         this.importCategory.set('po');
       } else if (lower.includes('basis') || lower.includes('sizing') || lower.includes('hdb')) {
         this.importCategory.set('basis');
+      } else if (lower.includes('modül') || lower.includes('modul') || lower.includes('uygulama')) {
+        this.importCategory.set('modules');
       } else if (lower.includes('bilgiler') || lower.includes('sunucu') || lower.includes('asis')) {
         this.importCategory.set('asis');
       } else {
@@ -300,6 +304,19 @@ export class DataImportService {
         return;
       }
 
+      // Check if Modules Evaluation Excel Package
+      const isModulesPackage = this.importCategory() === 'modules' || 
+        sheetNames.some(n => {
+          const l = n.toLowerCase();
+          return l.includes('modül') || l.includes('modul') || l.includes('uygulama') || l.includes('degerlendirme') || l.includes('bulgu');
+        }) || file.name.toLowerCase().includes('modül') || file.name.toLowerCase().includes('modul') || file.name.toLowerCase().includes('uygulama');
+
+      if (isModulesPackage) {
+        this.importCategory.set('modules');
+        this.parseModulesWorkbook(workbook, file.name, file.size);
+        return;
+      }
+
       const firstSheetName = sheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
@@ -317,6 +334,197 @@ export class DataImportService {
       const activeId = this.customerService.activeCustomerId();
       localStorage.removeItem(`taskforce_po_pkg_${activeId}`);
     } catch (e) {}
+  }
+
+  parseModulesWorkbook(workbook: XLSX.WorkBook, fileName: string, fileSize: number): void {
+    const sheetNames = workbook.SheetNames;
+    const targetSheetName = sheetNames.find(s => /modül|modul|uygulama|degerlendirme|bulgu/i.test(s)) || sheetNames[0];
+    const worksheet = workbook.Sheets[targetSheetName];
+    if (!worksheet) return;
+
+    const rawData: any[][] = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+    if (!rawData || rawData.length === 0) return;
+
+    let headerRowIdx = 0;
+    let colCategory = -1;
+    let colTitle = -1;
+    let colSeverity = -1;
+    let colStatus = -1;
+    let colBullets = -1;
+    let colFooter = -1;
+
+    for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+      const row = rawData[i];
+      if (!Array.isArray(row)) continue;
+      const rowTexts = row.map(cell => String(cell || '').toLowerCase().trim());
+      
+      const catIdx = rowTexts.findIndex(t => /kategori|category|modül|module|alan/i.test(t));
+      const titleIdx = rowTexts.findIndex(t => /başlık|baslik|title|kart|konu/i.test(t));
+      const sevIdx = rowTexts.findIndex(t => /önem|onem|severity|kritiklik/i.test(t));
+      const statIdx = rowTexts.findIndex(t => /durum|status/i.test(t));
+      const bullIdx = rowTexts.findIndex(t => /madde|detay|bullet|içerik|icerik|açıklama|aciklama/i.test(t));
+      const footIdx = rowTexts.findIndex(t => /dipnot|süre|sure|tahmini|footer|not/i.test(t));
+
+      if (titleIdx !== -1 || (catIdx !== -1 && bullIdx !== -1)) {
+        headerRowIdx = i;
+        colCategory = catIdx;
+        colTitle = titleIdx;
+        colSeverity = sevIdx;
+        colStatus = statIdx;
+        colBullets = bullIdx;
+        colFooter = footIdx;
+        break;
+      }
+    }
+
+    if (colTitle === -1) colTitle = 1;
+    if (colCategory === -1) colCategory = 0;
+    if (colSeverity === -1) colSeverity = 2;
+    if (colStatus === -1) colStatus = 3;
+    if (colBullets === -1) colBullets = 4;
+    if (colFooter === -1) colFooter = 5;
+
+    const cardsToImport: { category: string; card: ModuleCard }[] = [];
+
+    for (let r = headerRowIdx + 1; r < rawData.length; r++) {
+      const row = rawData[r];
+      if (!Array.isArray(row) || row.length === 0) continue;
+
+      const title = String(row[colTitle] || '').trim();
+      if (!title) continue;
+
+      const category = String(row[colCategory] || '').trim() || 'Genel Bulgular';
+      const severity = normalizeCardSeverity(row[colSeverity]);
+      const status = normalizeCardStatus(row[colStatus]);
+      const rawBullets = String(row[colBullets] || '').trim();
+      const footerNote = String(row[colFooter] || '').trim();
+
+      const bullets = rawBullets
+        ? rawBullets
+            .split(/\r?\n|•|;/)
+            .map(b => b.replace(/^[-*•\s]+/, '').trim())
+            .filter(b => b.length > 0)
+        : [title];
+
+      const card: ModuleCard = {
+        id: 'card-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        title,
+        severity,
+        status,
+        bullets,
+        footerNote: footerNote || undefined
+      };
+
+      cardsToImport.push({ category, card });
+    }
+
+    if (cardsToImport.length > 0) {
+      const importedCount = this.modullerService.importCardsFromExcel(cardsToImport);
+      this.summary.set({
+        fileName,
+        fileSize: `${(fileSize / (1024 * 1024)).toFixed(2)} MB`,
+        totalRows: importedCount,
+        totalCols: 6,
+        mappedCount: importedCount,
+        uploadDate: new Date().toLocaleDateString('tr-TR'),
+        dataQualityScore: 100
+      });
+    }
+  }
+
+  loadSampleModulesData(): void {
+    const sampleCards: { category: string; card: ModuleCard }[] = [
+      {
+        category: 'Genel Bulgular',
+        card: {
+          id: 'card-sample-1',
+          title: 'Business Partner Dönüşümü',
+          severity: 'Kritik',
+          status: 'Standart',
+          bullets: [
+            "MM ve FI'daki tüm satıcı/müşteri ana veri entegrasyonları (Z programları) S/4HANA'nın zorunlu Business Partner modeline göre yeniden tasarlanmalı."
+          ],
+          footerNote: 'Tahmini Süre: 4 Ay'
+        }
+      },
+      {
+        category: 'Genel Bulgular',
+        card: {
+          id: 'card-sample-2',
+          title: 'Ana Veri Kalitesi (CO Ağırlıklı)',
+          severity: 'Kritik',
+          status: 'Uygun Değil',
+          bullets: [
+            'Kâr merkezi, masraf çeşidi ve iç sipariş ana verisinde tutarsızlıklar var; go-live öncesi kapsamlı temizlik gerekiyor.'
+          ]
+        }
+      },
+      {
+        category: 'MM Modülü',
+        card: {
+          id: 'card-sample-3',
+          title: 'Satıcı Ana Veri — BP Entegrasyonu',
+          severity: 'Kritik',
+          status: 'Geliştirme',
+          bullets: [
+            'ZSD_CREATE/CHANGE/BLOKE_VENDOR programları klasik satıcı yapısına göre kurgulanmış.',
+            'Business Partner modeline uyumlu hale getirilecek.'
+          ],
+          footerNote: 'Tahmini Süre: 2 Ay'
+        }
+      },
+      {
+        category: 'MM Modülü',
+        card: {
+          id: 'card-sample-4',
+          title: 'SAS Onay Workflow',
+          severity: 'Orta',
+          status: 'Önerilen',
+          bullets: [
+            "S/4HANA'nın Esnek İş Akışı (Flexible Workflow) yapısıyla revize edilmesi önerilir."
+          ]
+        }
+      },
+      {
+        category: 'FI Modülü',
+        card: {
+          id: 'card-sample-5',
+          title: 'Paralel Para Birimleri',
+          severity: 'Orta',
+          status: 'Fırsat',
+          bullets: [
+            'UPB2/UPB3 para birimleri USD ve EUR için devreye alınmalı.',
+            'Dövizli muavin/mizan raporlaması mümkün olacak.'
+          ],
+          footerNote: 'Düşük Efor'
+        }
+      },
+      {
+        category: 'CO Modülü',
+        card: {
+          id: 'card-sample-6',
+          title: 'Kâr Merkezi Ana Verisi',
+          severity: 'Kritik',
+          status: 'Uygun Değil',
+          bullets: [
+            "CO kayıtlarının yapay veya 999 kâr merkezine düşüşü engellenmeli.",
+            'Türetim kuralları yeniden tasarlanmalı.'
+          ]
+        }
+      }
+    ];
+
+    const count = this.modullerService.importCardsFromExcel(sampleCards);
+    this.uploadedFileName.set('Ornek_SAP_Modul_Degerlendirme.xlsx');
+    this.summary.set({
+      fileName: 'Ornek_SAP_Modul_Degerlendirme.xlsx',
+      fileSize: '0.04 MB',
+      totalRows: count,
+      totalCols: 6,
+      mappedCount: count,
+      uploadDate: new Date().toLocaleDateString('tr-TR'),
+      dataQualityScore: 100
+    });
   }
 
   parsePoWorkbook(workbook: XLSX.WorkBook, fileName: string, fileSize: number): void {
@@ -843,6 +1051,11 @@ export class DataImportService {
   }
 
   loadSampleData(): void {
+    if (this.importCategory() === 'modules') {
+      this.loadSampleModulesData();
+      return;
+    }
+
     if (this.importCategory() === 'po') {
       const diagram = this.generateDiagramFromPoInterfaces(PO_INTERFACES_DATA);
       this.poInterfaces.set(PO_INTERFACES_DATA);

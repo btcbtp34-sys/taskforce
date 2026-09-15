@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { DataImportService, ExcelImportCategory } from '../../core/services/data-import.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { CustomerService } from '../../core/services/customer.service';
+import { ModullerService, downloadModulesTemplate } from '../../core/services/moduller.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -22,10 +23,16 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </h1>
           <p class="page-subtitle">Seçili Müşteri: <strong style="color: #0284c7; font-weight: 700;">{{ customerService.activeCustomer().name }}</strong> • Bu müşteriye ait Excel kategorisini seçip dosyanızı yükleyin</p>
         </div>
-        <button class="btn btn-sample" (click)="loadSampleData()">
-          <app-icon name="file-spreadsheet" [size]="16" color="#0284c7"></app-icon>
-          <span>{{ selectedCategory() === 'po' ? 'Örnek PO Entegrasyon Verisi Yükle (109 Servis)' : ('Örnek SAP Basis Verisi Yükle (' + customerService.activeCustomer().name + ')') }}</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-sample" (click)="downloadTemplate()" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;" title="SAP Modülleri Excel format şablonunu indirin">
+            <app-icon name="download" [size]="16" color="#047857"></app-icon>
+            <span>Şablon / Format İndir (.xlsx)</span>
+          </button>
+          <button class="btn btn-sample" (click)="loadSampleData()">
+            <app-icon name="file-spreadsheet" [size]="16" color="#0284c7"></app-icon>
+            <span>{{ selectedCategory() === 'modules' ? 'Örnek SAP Modül Verisi Yükle (6 Kart)' : (selectedCategory() === 'po' ? 'Örnek PO Entegrasyon Verisi Yükle (109 Servis)' : ('Örnek SAP Basis Verisi Yükle (' + customerService.activeCustomer().name + ')')) }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- 2 Ana Yükleme Kategorisi: Basis & Sizing ve Integration -->
@@ -75,6 +82,29 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <span>Veri Yüklü ({{ importService.uploadedFileName() }} • {{ importService.poInterfaces().length }} Servis)</span>
           </div>
         </div>
+
+        <!-- 3. Kategori: SAP Uygulamaları & Modül Değerlendirmeleri -->
+        <div 
+          class="cat-card primary-card" 
+          [class.selected]="selectedCategory() === 'modules'"
+          (click)="selectedCategory.set('modules')">
+          <div class="cat-header-badge badge-emerald">3. ANA ALAN</div>
+          <div class="cat-card-body">
+            <div class="cat-icon-box emerald"><app-icon name="layers" [size]="22" color="#059669"></app-icon></div>
+            <div class="cat-text">
+              <strong class="cat-title">3. SAP Uygulamaları & Modül Değerlendirmeleri</strong>
+              <p class="cat-desc">Genel Bulgular, MM, FI, CO, SD vb. modül değerlendirme maddeleri, önem derecesi ve durumları</p>
+              <div class="cat-screens-pill">
+                <span>Beslediği Ekranlar:</span>
+                <strong>SAP Uygulamaları (Modüller) • Sunum & Raporlama</strong>
+              </div>
+            </div>
+          </div>
+          <div class="cat-status-indicator" *ngIf="modullerService.hasUploadedData()">
+            <span class="dot-active"></span>
+            <span>Veri Yüklü ({{ modullerService.totalCardsCount() }} Değerlendirme Kartı)</span>
+          </div>
+        </div>
       </div>
 
       <!-- Drag & Drop Upload Zone -->
@@ -96,14 +126,14 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
           
           <h3 class="drop-title">
-            {{ selectedCategory() === 'basis' ? '1. SAP Basis & Sizing Analiz Excel Dosyanızı Buraya Sürükleyin' : '2. SAP Integration / PO Canlı Entegrasyon Excel Dosyanızı Buraya Sürükleyin' }}
+            {{ selectedCategory() === 'basis' ? '1. SAP Basis & Sizing Analiz Excel Dosyanızı Buraya Sürükleyin' : (selectedCategory() === 'po' ? '2. SAP Integration / PO Canlı Entegrasyon Excel Dosyanızı Buraya Sürükleyin' : '3. SAP Uygulamaları & Modül Değerlendirme Excel Dosyanızı Buraya Sürükleyin') }}
           </h3>
           <p class="drop-sub">
-            {{ selectedCategory() === 'basis' ? 'Desteklenen Formatlar: .xlsx, .csv — S/4HANA Sizing matrisi, En Büyük Tablolar ve FUE sayfaları' : 'Desteklenen Formatlar: .xlsx, .csv — Canlı arayüzler, gönderen/alıcı sistemler ve protokol kolonları' }}
+            {{ selectedCategory() === 'basis' ? 'Desteklenen Formatlar: .xlsx, .csv — S/4HANA Sizing matrisi, En Büyük Tablolar ve FUE sayfaları' : (selectedCategory() === 'po' ? 'Desteklenen Formatlar: .xlsx, .csv — Canlı arayüzler, gönderen/alıcı sistemler ve protokol kolonları' : 'Format: Kategori • Başlık • Önem Derecesi • Durum • Madde ve Detaylar • Dipnot / Tahmini Süre') }}
           </p>
           <button class="btn btn-primary" (click)="$event.stopPropagation(); fileInput.click()">
             <app-icon name="upload" [size]="15" color="#ffffff"></app-icon>
-            <span>{{ selectedCategory() === 'basis' ? 'Basis Excel Dosyası Seç & Analiz Et' : 'Entegrasyon Excel Dosyası Seç & Haritayı Çiz' }}</span>
+            <span>{{ selectedCategory() === 'basis' ? 'Basis Excel Dosyası Seç & Analiz Et' : (selectedCategory() === 'po' ? 'Entegrasyon Excel Dosyası Seç & Haritayı Çiz' : 'Modül Excel Dosyası Seç & Kartları Aktar') }}</span>
           </button>
         </ng-container>
 
@@ -182,7 +212,14 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </button>
         </div>
 
-        <div class="map-shortcut-box" *ngIf="importService.importCategory() !== 'basis' && importService.importCategory() !== 'po'">
+        <div class="map-shortcut-box" *ngIf="importService.importCategory() === 'modules'">
+          <button class="btn btn-primary" (click)="router.navigate(['/modules'])" style="background: #059669; border-color: #059669;">
+            <app-icon name="layers" [size]="16" color="#ffffff"></app-icon>
+            <span>SAP Uygulamaları (Modüller) Ekranına Git ➔</span>
+          </button>
+        </div>
+
+        <div class="map-shortcut-box" *ngIf="importService.importCategory() !== 'basis' && importService.importCategory() !== 'po' && importService.importCategory() !== 'modules'">
           <button class="btn btn-map" (click)="goToArchitectureMap()">
             <app-icon name="map" [size]="16" color="#ffffff"></app-icon>
             <span>Şirket Haritasını Çiz ➔</span>
@@ -359,6 +396,59 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
         </div>
 
+        <!-- CASE 3: SAP Uygulamaları & Modül Değerlendirmeleri -->
+        <div class="table-card" *ngIf="selectedCategory() === 'modules' && modullerService.hasUploadedData()">
+          <div class="card-header">
+            <div>
+              <h3>Yüklenen Modül Değerlendirme Kartları ({{ modullerService.totalCardsCount() }} Kart)</h3>
+              <p class="sub">Kategori, başlık, önem derecesi ve durum verileri başarıyla aktarıldı.</p>
+            </div>
+            <button class="btn btn-primary" (click)="router.navigate(['/modules'])" style="background: #059669; border-color: #059669;">
+              <app-icon name="layers" [size]="15" color="#ffffff"></app-icon>
+              <span>SAP Uygulamaları Ekranına Git ➔</span>
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Modül / Kategori</th>
+                  <th>Kart Başlığı</th>
+                  <th>Önem Derecesi</th>
+                  <th>Durum</th>
+                  <th>Detay Maddeleri</th>
+                  <th>Dipnot</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let mod of modullerService.modules()">
+                  <ng-container *ngFor="let s of mod.slides">
+                    <tr *ngFor="let c of s.cards; let i = index">
+                      <td>{{ i + 1 }}</td>
+                      <td><strong>{{ mod.name }}</strong></td>
+                      <td>{{ c.title }}</td>
+                      <td>
+                        <span class="badge-pill" [style.background]="c.severity === 'Kritik' ? '#fee2e2' : (c.severity === 'Yüksek' ? '#ffedd5' : '#eff6ff')" [style.color]="c.severity === 'Kritik' ? '#b91c1c' : (c.severity === 'Yüksek' ? '#c2410c' : '#1d4ed8')">
+                          {{ c.severity }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge-pill" [style.background]="c.status === 'Standart' ? '#dcfce7' : (c.status === 'Geliştirme' ? '#fef3c7' : '#e0e7ff')" [style.color]="c.status === 'Standart' ? '#15803d' : (c.status === 'Geliştirme' ? '#b45309' : '#4338ca')">
+                          {{ c.status }}
+                        </span>
+                      </td>
+                      <td>{{ c.bullets.length }} madde</td>
+                      <td><small>{{ c.footerNote || '—' }}</small></td>
+                    </tr>
+                  </ng-container>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- CASE 3: General Usage Records / Fallback -->
         <div class="table-card" *ngIf="selectedCategory() !== 'po' && !basisService.hasUploadedData() && importService.records().length > 0">
           <div class="card-header">
@@ -446,7 +536,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
     .category-cards-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
       gap: 1.25rem;
 
       @media (max-width: 860px) {
@@ -512,6 +602,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
           &.purple { background: #faf5ff; border: 1px solid #e9d5ff; }
           &.blue { background: #f0f9ff; border: 1px solid #bae6fd; }
+          &.emerald { background: #ecfdf5; border: 1px solid #a7f3d0; }
         }
 
         .cat-text {
@@ -1072,6 +1163,7 @@ export class DataImportComponent {
   importService = inject(DataImportService);
   basisService = inject(BasisSizingService);
   customerService = inject(CustomerService);
+  modullerService = inject(ModullerService);
   router = inject(Router);
 
   activeTab = signal<'mapping' | 'preview'>('preview');
@@ -1133,9 +1225,12 @@ export class DataImportComponent {
   }
 
   runAnalysis(): void { this.router.navigate(['/analytics']); }
+  downloadTemplate(): void { downloadModulesTemplate(); }
   goToArchitectureMap(): void {
     if (this.importService.importCategory() === 'po') {
       this.router.navigate(['/architecture-map'], { queryParams: { mode: 'po' } });
+    } else if (this.importService.importCategory() === 'modules') {
+      this.router.navigate(['/modules']);
     } else {
       this.router.navigate(['/architecture-map']);
     }
