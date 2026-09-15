@@ -61,7 +61,7 @@ export interface ArchitectureEdge {
         <div class="view-mode-toggle-lg">
           <button class="mode-btn" [class.active-asis]="architectureMode() === 'asis'" (click)="setArchitectureMode('asis')">
             <app-icon name="alert" [size]="15" [color]="architectureMode() === 'asis' ? '#ffffff' : '#d97706'"></app-icon>
-            <span>Mevcut Durum (AS-IS 11 Sunucu)</span>
+            <span>Mevcut Durum (AS-IS)</span>
           </button>
 
           <button class="mode-btn" [class.active-rise]="architectureMode() === 'rise'" (click)="setArchitectureMode('rise')">
@@ -85,27 +85,27 @@ export interface ArchitectureEdge {
             <span>{{ isConnectingMode() ? (connectSourceNode() ? '2. Hedefe Tıkla' : '1. Kaynağa Tıkla') : 'Bağlantı Kur' }}</span>
           </button>
 
-          <button class="btn btn-secondary" (click)="openManageEdgesModal()" title="Mevcut kabloları listele ve sil">
+          <button class="btn btn-secondary" (click)="openManageEdgesModal()" title="Mevcut kabloları listele ve sil" *ngIf="currentEdges().length > 0">
             <app-icon name="link" [size]="14" color="#dc2626"></app-icon>
             <span>Kabloları Sil ({{ currentEdges().length }})</span>
           </button>
 
-          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="Mimari çizimi tarayıcıya kaydet">
+          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="Mimari çizimi tarayıcıya (Local Storage) kaydet">
             <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
             <span>Çizimi Kaydet</span>
           </button>
 
-          <button class="btn btn-secondary" (click)="clearCanvas()" title="Tüm bileşenleri temizle ve sıfırdan çiz">
+          <button class="btn btn-secondary" (click)="clearCanvas()" title="Tüm bileşenleri temizle ve sıfırdan çiz" *ngIf="nodes().length > 0 || currentEdges().length > 0">
             <app-icon name="trash" [size]="14" color="#dc2626"></app-icon>
             <span>Haritayı Temizle</span>
           </button>
 
-          <button class="btn btn-secondary" (click)="resetDiagram()" title="Orijinal şablona geri dön">
+          <button class="btn btn-secondary" (click)="loadSampleTemplate()" title="Örnek referans şablonu yükle">
             <app-icon name="refresh" [size]="14"></app-icon>
-            <span>Şablona Sıfırla</span>
+            <span>Örnek Şablon</span>
           </button>
 
-          <button class="btn btn-primary" (click)="exportDiagram()" title="Çizimi PNG Görseli Olarak İndir">
+          <button class="btn btn-primary" (click)="exportDiagram()" title="Çizimi PNG Görseli Olarak İndir" *ngIf="nodes().length > 0">
             <app-icon name="download" [size]="14"></app-icon>
             <span>PNG İndir</span>
           </button>
@@ -159,7 +159,11 @@ export interface ArchitectureEdge {
           <div class="banner-content warning">
             <app-icon name="alert" [size]="18" color="#b45309"></app-icon>
             <div class="b-text">
-              <strong>Mevcut AS-IS Altyapı Akış Analizi (11 Sunucu/Instance):</strong> PO 7.5 ve CS 6.5 doğrudan ERP EHP7'ye; WebDisp ise hem ERP EHP7 hem de Fiori S4H 1511'e (EoS 2020) bağlanmaktadır. Kartlara tıklayarak detaylı altyapı raporunu inceleyebilirsiniz.
+              @if (nodes().length === 0) {
+                <strong>Mevcut Durum (AS-IS) Mimari Çizim Alanı:</strong> Sisteminize ait mevcut sunucu ve bileşenleri <code>+ Bileşen Ekle</code> ile ekleyip <code>Bağlantı Kur</code> ile akışları çizmeye başlayabilirsiniz. Çiziminizi <code>Çizimi Kaydet</code> butonuyla tarayıcınıza saklayabilirsiniz.
+              } @else {
+                <strong>Mevcut AS-IS Altyapı Akış Analizi ({{ totalServerCount() }} Sunucu/Instance):</strong> Çizdiğiniz mimari bileşenleri ve bağlantı akışları aşağıda listelenmektedir. Kartları sürükleyebilir ve <code>Çizimi Kaydet</code> ile güncelleyebilirsiniz.
+              }
             </div>
           </div>
         } @else if (architectureMode() === 'po' && importService.hasUploadedPoData()) {
@@ -173,7 +177,11 @@ export interface ArchitectureEdge {
           <div class="banner-content success" *ngIf="architectureMode() !== 'po'">
             <app-icon name="sparkles" [size]="18" color="#047857"></app-icon>
             <div class="b-text">
-              <strong>RISE with SAP Bulut Dönüşüm Analizi:</strong> Mevcut 11 parçalı dağınık sunucu altyapısı ve PO canlı entegrasyonları analiz edilerek tek bir S/4HANA Private Cloud veritabanı ve SAP BTP Integration Suite mimarisinde birleştirilmiştir.
+              @if (nodes().length === 0) {
+                <strong>RISE with SAP Bulut Hedef Çizim Alanı:</strong> Hedef S/4HANA Private Cloud ve SAP BTP bulut bileşenlerinizi <code>+ Bileşen Ekle</code> ile ekleyip tasarlayabilirsiniz. Çizimi tamamlayınca <code>Çizimi Kaydet</code> ile kaydedebilirsiniz.
+              } @else {
+                <strong>RISE with SAP Bulut Dönüşüm Analizi ({{ totalServerCount() }} Bulut Servisi):</strong> Çizdiğiniz hedef bulut mimarisi ve BTP entegrasyon akışları aşağıda yer almaktadır.
+              }
             </div>
           </div>
         }
@@ -213,24 +221,34 @@ export interface ArchitectureEdge {
 
           <!-- Tab 1: System Nodes List -->
           <div class="node-config-list" *ngIf="activeSidebarTab() === 'nodes'">
-            @for (node of nodes(); track node.id) {
-              <div 
-                class="node-item" 
-                [class.selected]="selectedNode()?.id === node.id"
-                [class.eos-item]="node.isEosRisk"
-                (click)="selectNode(node)">
-                
-                <div class="node-header-row">
-                  <strong class="node-name">{{ node.name }}</strong>
-                  <span class="instance-pill-badge" *ngIf="architectureMode() !== 'po'" title="Sunucu / Instance Adedi">{{ node.instanceCount || 1 }}x</span>
-                  <span class="eos-badge" *ngIf="node.isEosRisk">EoS 2020</span>
-                </div>
-
-                <div class="node-footer-row">
-                  <span class="meta">{{ node.dbInfo || node.category }} • {{ node.userCount }} Kullanıcı</span>
-                  <button class="btn-detail-sm" (click)="$event.stopPropagation(); openDetailModal(node)">Detay ➔</button>
-                </div>
+            @if (nodes().length === 0) {
+              <div class="empty-edges-msg">
+                <p>Henüz eklenmiş bir bileşen bulunmuyor.</p>
+                <button class="btn btn-sm btn-studio-add" (click)="openCreateNodeModal()">
+                  <app-icon name="plus" [size]="13" color="#ffffff"></app-icon>
+                  <span>+ Bileşen Ekle</span>
+                </button>
               </div>
+            } @else {
+              @for (node of nodes(); track node.id) {
+                <div 
+                  class="node-item" 
+                  [class.selected]="selectedNode()?.id === node.id"
+                  [class.eos-item]="node.isEosRisk"
+                  (click)="selectNode(node)">
+                  
+                  <div class="node-header-row">
+                    <strong class="node-name">{{ node.name }}</strong>
+                    <span class="instance-pill-badge" *ngIf="architectureMode() !== 'po'" title="Sunucu / Instance Adedi">{{ node.instanceCount || 1 }}x</span>
+                    <span class="eos-badge" *ngIf="node.isEosRisk">EoS 2020</span>
+                  </div>
+
+                  <div class="node-footer-row">
+                    <span class="meta">{{ node.dbInfo || node.category }} • {{ node.userCount }} Kullanıcı</span>
+                    <button class="btn-detail-sm" (click)="$event.stopPropagation(); openDetailModal(node)">Detay ➔</button>
+                  </div>
+                </div>
+              }
             }
           </div>
 
@@ -270,7 +288,7 @@ export interface ArchitectureEdge {
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Entegrasyon' : 'Sunucu Altyapı Adedi' }}</span>
               <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
-                {{ architectureMode() === 'asis' ? '11 Sunucu (Dağınık)' : (architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Arayüz') : '1 Bulut DB (Konsolide)') }}
+                {{ architectureMode() === 'asis' ? (nodes().length > 0 ? (totalServerCount() + ' Sunucu / Instance') : '0 Sunucu (Çizim Bekleniyor)') : (architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Arayüz') : (nodes().length > 0 ? (totalServerCount() + ' Bulut Bileşeni') : '0 Servis (Çizim Bekleniyor)')) }}
               </strong>
             </div>
 
@@ -298,7 +316,7 @@ export interface ArchitectureEdge {
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Sunucu Adedi' : 'Destek Sonu (EoS) Riski' }}</span>
               <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
-                {{ architectureMode() === 'po' ? ((importService.poSummary()?.totalServers || nodes().length) + ' Sunucu / Instance') : (architectureMode() === 'asis' ? 'Fiori 1511 & CS (2 Kritik)' : '0 Risk (%100 SAP Bulut)') }}
+                {{ architectureMode() === 'po' ? ((importService.poSummary()?.totalServers || nodes().length) + ' Sunucu / Instance') : (architectureMode() === 'asis' ? (nodes().some(hasEosRisk) ? (countEosNodes() + ' Kritik EoS Riski') : '0 EoS Riski') : '0 Risk (%100 SAP Bulut)') }}
               </strong>
             </div>
           </div>
@@ -432,9 +450,32 @@ export interface ArchitectureEdge {
               }
             </svg>
 
+            <!-- Canvas Empty State (when user hasn't added any components yet) -->
+            <div class="canvas-empty-state" *ngIf="nodes().length === 0">
+              <div class="empty-icon-circle">
+                <app-icon [name]="architectureMode() === 'rise' ? 'sparkles' : 'map'" [size]="36" [color]="architectureMode() === 'rise' ? '#059669' : '#0284c7'"></app-icon>
+              </div>
+              <h3>{{ architectureMode() === 'rise' ? 'RISE with SAP Çizim Alanı Boş' : 'Mevcut Durum (AS-IS) Çizim Alanı Boş' }}</h3>
+              <p>
+                {{ architectureMode() === 'rise' 
+                  ? 'Hedef RISE with SAP bulut mimarinizi tasarlamak için "+ Bileşen Ekle" ile başlayabilir, BTP servisleri veya S/4HANA çekirdek düğümlerini ekleyip aralarında bağlantı kurabilirsiniz.' 
+                  : 'Mevcut AS-IS altyapı mimarinizi çizmek için "+ Bileşen Ekle" butonuna tıklayarak sunucuları ekleyebilir, sürükleyip "Bağlantı Kur" ile veri akışlarını belirleyebilirsiniz.' }}
+              </p>
+              <div class="empty-actions">
+                <button class="btn btn-studio-add" (click)="openCreateNodeModal()">
+                  <app-icon name="plus" [size]="14" color="#ffffff"></app-icon>
+                  <span>+ İlk Bileşeni Ekle</span>
+                </button>
+                <button class="btn btn-secondary" (click)="loadSampleTemplate()">
+                  <app-icon name="refresh" [size]="14"></app-icon>
+                  <span>Örnek Şablonu Yükle</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Rendered System Nodes on Canvas matching Slide Layout -->
             @for (node of nodes(); track node.id) {
-              @if (architectureMode() === 'rise' && node.id === 'node-s4p') {
+              @if (architectureMode() === 'rise' && (node.id === 'node-s4p' || node.category === 'Core')) {
                 <!-- Flagship RISE with SAP S4P Center Node with SaaS Card & Aura -->
                 <div 
                   class="rise-s4p-card" 
@@ -1689,6 +1730,61 @@ export interface ArchitectureEdge {
       min-height: 1040px;
       height: 1040px;
       user-select: none;
+
+      .canvas-empty-state {
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 2px dashed #94a3b8;
+        border-radius: 16px;
+        padding: 2.75rem 2.5rem;
+        max-width: 540px;
+        box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.08);
+        z-index: 10;
+        pointer-events: auto;
+
+        .empty-icon-circle {
+          width: 70px;
+          height: 70px;
+          border-radius: 50%;
+          background: #f0f9ff;
+          border: 2px solid #bae6fd;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.25rem;
+          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+        }
+
+        h3 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.5rem 0;
+        }
+
+        p {
+          font-size: 0.9rem;
+          color: #64748b;
+          line-height: 1.55;
+          margin: 0 0 1.5rem 0;
+        }
+
+        .empty-actions {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+        }
+      }
     }
 
     .connections-svg {
@@ -3755,16 +3851,22 @@ export class ArchitectureMapComponent {
     return list;
   });
 
-  // Current Active Nodes & Edges Signals
-  nodes = signal<ArchitectureNode[]>(this.asisNodes);
-  edges = signal<ArchitectureEdge[]>(this.asisEdges);
+  // Current Active Nodes & Edges Signals (Starts empty so user draws their own architecture)
+  nodes = signal<ArchitectureNode[]>([]);
+  edges = signal<ArchitectureEdge[]>([]);
   selectedNode = signal<ArchitectureNode | null>(null);
 
   // Smooth Window-Level Dragging State
   draggingNodeId: string | null = null;
-  currentEdges = signal<ArchitectureEdge[]>(this.asisEdges);
+  currentEdges = signal<ArchitectureEdge[]>([]);
   detailModalNode = signal<ArchitectureNode | null>(null);
   activeSidebarTab = signal<'nodes' | 'edges'>('nodes');
+
+  // Helpers for template checks
+  hasEosRisk = (n: ArchitectureNode): boolean => !!n.isEosRisk;
+  countEosNodes(): number {
+    return this.nodes().filter(n => n.isEosRisk).length;
+  }
 
   // Studio Interactive Canvas State
   showStudioNodeModal = signal<boolean>(false);
@@ -3811,36 +3913,27 @@ export class ArchitectureMapComponent {
       const mode = params['mode'];
       if (mode && (mode === 'asis' || mode === 'po' || mode === 'rise')) {
         this.setArchitectureMode(mode);
+      } else {
+        this.setArchitectureMode('asis');
       }
     });
 
-    // Reactive Effect: Automatically draws diagram when an Excel file is uploaded or customer changes!
+    // Reactive Effect: Customer change or Excel PO data
     effect(() => {
       const activeCust = this.customerService.activeCustomerId();
-      if (this.importService.hasUploadedPoData()) {
+      if (this.importService.hasUploadedPoData() && this.architectureMode() === 'po') {
         const customNodes = this.importService.poDiagramNodes();
         const customEdges = this.importService.poDiagramEdges();
         if (customNodes && customNodes.length > 0) {
-          if (this.architectureMode() === 'po') {
-            this.nodes.set(JSON.parse(JSON.stringify(customNodes)));
-            this.currentEdges.set(JSON.parse(JSON.stringify(customEdges)));
-            this.coreNode = { x: 520, y: 300 };
-          }
+          this.nodes.set(JSON.parse(JSON.stringify(customNodes)));
+          this.currentEdges.set(JSON.parse(JSON.stringify(customEdges)));
+          this.coreNode = { x: 520, y: 300 };
         }
       } else {
-        if (this.architectureMode() === 'po') {
-          this.nodes.set([]);
-          this.currentEdges.set([]);
-        } else {
-          const recs = this.importService.records();
-          if (recs && recs.length > 0) {
-            const custom = this.importService.getDiagramFromUploadedExcel();
-            if (custom.nodes && custom.nodes.length > 0) {
-              this.nodes.set(custom.nodes);
-              this.currentEdges.set(custom.edges);
-              this.excelImportSuccess.set(true);
-            }
-          }
+        // Load saved diagram for the new active customer if on asis or rise
+        const mode = this.architectureMode();
+        if (mode !== 'po') {
+          this.loadDiagramForMode(mode);
         }
       }
     });
@@ -3934,33 +4027,35 @@ export class ArchitectureMapComponent {
     return node ? { x: node.x, y: node.y } : null;
   }
 
-  setArchitectureMode(mode: 'asis' | 'po' | 'rise'): void {
-    this.architectureMode.set(mode);
-    this.excelImportSuccess.set(false);
-    this.cancelConnectingMode();
+  getStorageKey(mode: string): string {
+    const custId = this.customerService.activeCustomerId();
+    return `taskforce_custom_arch_${custId}_${mode}`;
+  }
 
-    // Check if custom user diagram is saved in localStorage for this mode
-    const savedCustom = localStorage.getItem('taskforce_custom_arch_' + mode);
-    if (savedCustom) {
+  loadDiagramForMode(mode: 'asis' | 'po' | 'rise'): boolean {
+    const key = this.getStorageKey(mode);
+    const fallbackKey = 'taskforce_custom_arch_' + mode;
+    let saved = localStorage.getItem(key);
+    if (!saved) {
+      saved = localStorage.getItem(fallbackKey);
+    }
+
+    if (saved) {
       try {
-        const parsed = JSON.parse(savedCustom);
-        if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.nodes)) {
           this.nodes.set(parsed.nodes);
           this.currentEdges.set(parsed.edges || []);
           this.selectedNode.set(null);
-          this.showToast(`Kaydedilmiş özel ${mode.toUpperCase()} mimarisi yüklendi.`);
-          return;
+          return true;
         }
       } catch (e) {
         console.error('Error loading saved diagram', e);
       }
     }
 
-    if (mode === 'asis') {
-      this.nodes.set(JSON.parse(JSON.stringify(this.asisNodes)));
-      this.currentEdges.set(JSON.parse(JSON.stringify(this.asisEdges)));
-      this.coreNode = { x: 520, y: 160 };
-    } else if (mode === 'po') {
+    // Default when no saved drawing exists:
+    if (mode === 'po') {
       const activePoNodes = this.importService.hasUploadedPoData() && this.importService.poDiagramNodes().length > 0
         ? this.importService.poDiagramNodes()
         : [];
@@ -3971,12 +4066,20 @@ export class ArchitectureMapComponent {
       this.currentEdges.set(JSON.parse(JSON.stringify(activePoEdges)));
       this.coreNode = { x: 520, y: 300 };
     } else {
-      const riseTarget = this.generateRiseNodesFromCurrentData();
-      this.nodes.set(riseTarget.nodes);
-      this.currentEdges.set(riseTarget.edges);
-      this.coreNode = { x: 520, y: 300 };
+      // AS-IS and RISE start completely empty - NO dummy drawings!
+      this.nodes.set([]);
+      this.currentEdges.set([]);
+      this.coreNode = { x: 520, y: 160 };
     }
     this.selectedNode.set(null);
+    return false;
+  }
+
+  setArchitectureMode(mode: 'asis' | 'po' | 'rise'): void {
+    this.architectureMode.set(mode);
+    this.excelImportSuccess.set(false);
+    this.cancelConnectingMode();
+    this.loadDiagramForMode(mode);
   }
 
   /* --- Interactive Studio: Node Modal & Presets --- */
@@ -4266,12 +4369,27 @@ export class ArchitectureMapComponent {
   /* --- Interactive Studio: Persistence & Storage --- */
   saveCustomLayout(): void {
     const mode = this.architectureMode();
+    const custId = this.customerService.activeCustomerId();
+    const key = this.getStorageKey(mode);
+    const fallbackKey = 'taskforce_custom_arch_' + mode;
     const data = {
       nodes: this.nodes(),
-      edges: this.currentEdges()
+      edges: this.currentEdges(),
+      savedAt: new Date().toISOString(),
+      customerId: custId,
+      mode: mode
     };
-    localStorage.setItem('taskforce_custom_arch_' + mode, JSON.stringify(data));
-    this.showToast(`Mimari çiziminiz (${mode.toUpperCase()}) tarayıcınıza başarıyla kaydedildi!`);
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem(fallbackKey, JSON.stringify(data));
+      const count = this.nodes().length;
+      const edgeCount = this.currentEdges().length;
+      const modeTitle = mode === 'asis' ? 'Mevcut Durum (AS-IS)' : (mode === 'rise' ? 'RISE with SAP' : 'PO Entegrasyon');
+      this.showToast(`✓ Mimari çiziminiz (${modeTitle}) tarayıcıya (Local Storage) başarıyla kaydedildi! (${count} bileşen, ${edgeCount} bağlantı)`);
+    } catch (e) {
+      console.error('Save diagram error', e);
+      this.showToast('Çizim kaydedilirken bir hata oluştu.');
+    }
   }
 
   clearCanvas(): void {
@@ -4281,6 +4399,21 @@ export class ArchitectureMapComponent {
       this.selectedNode.set(null);
       this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
     }
+  }
+
+  loadSampleTemplate(): void {
+    const mode = this.architectureMode();
+    if (mode === 'asis') {
+      this.nodes.set(JSON.parse(JSON.stringify(this.asisNodes)));
+      this.currentEdges.set(JSON.parse(JSON.stringify(this.asisEdges)));
+      this.coreNode = { x: 520, y: 160 };
+    } else if (mode === 'rise') {
+      const riseTarget = this.generateRiseNodesFromCurrentData();
+      this.nodes.set(riseTarget.nodes);
+      this.currentEdges.set(riseTarget.edges);
+      this.coreNode = { x: 520, y: 300 };
+    }
+    this.showToast('Örnek referans şablon yüklendi. Değişikliklerinizi "Çizimi Kaydet" ile kalıcı yapabilirsiniz.');
   }
 
   scrollToPoServices(): void {
@@ -4302,9 +4435,15 @@ export class ArchitectureMapComponent {
 
   resetDiagram(): void {
     const mode = this.architectureMode();
-    localStorage.removeItem('taskforce_custom_arch_' + mode);
-    this.setArchitectureMode(mode);
-    this.showToast('Harita orijinal şablon durumuna sıfırlandı.');
+    if (confirm('Kayıtlı çizimi sıfırlamak istiyor musunuz? Kaydedilen veriler silinecektir.')) {
+      const key = this.getStorageKey(mode);
+      localStorage.removeItem(key);
+      localStorage.removeItem('taskforce_custom_arch_' + mode);
+      this.nodes.set([]);
+      this.currentEdges.set([]);
+      this.selectedNode.set(null);
+      this.showToast('Kayıt sıfırlandı ve çizim alanı temizlendi.');
+    }
   }
 
   showToast(message: string): void {

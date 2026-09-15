@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
+import { DataImportService } from '../../core/services/data-import.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { Chart, registerables } from 'chart.js';
 
@@ -47,18 +48,19 @@ Chart.register(...registerables);
         </p>
       </div>
 
-      <!-- Live Architecture KPIs (4 Cards) -->
+      <!-- Live Architecture KPIs (6 Cards) -->
       <div class="kpi-grid">
         <div class="kpi-card" routerLink="/architecture-map">
           <div class="kpi-top">
             <span class="kpi-title">Mevcut Sunucu Envanteri</span>
             <div class="kpi-icon-box bg-blue"><app-icon name="database" [size]="18" color="#0284c7"></app-icon></div>
           </div>
-          <div class="kpi-val">11 Sunucu</div>
-          <div class="kpi-sub">Target: 1 Konsolide Bulut DB</div>
+          <div class="kpi-val">{{ serverInventoryVal() }}</div>
+          <div class="kpi-sub">{{ serverInventorySub() }}</div>
           <div class="kpi-tag-row">
-            <span class="tag-pill red">11 Dağınık On-Prem</span>
-            <span class="tag-pill green">%91 Konsolidasyon</span>
+            <span class="tag-pill red" *ngIf="serverInventoryVal() !== '—'">{{ serverInventoryPill() }}</span>
+            <span class="tag-pill green" *ngIf="serverInventoryVal() !== '—'">%91 Konsolidasyon</span>
+            <span class="tag-pill gray" *ngIf="serverInventoryVal() === '—'">Mimari Çizim Bekleniyor</span>
           </div>
         </div>
 
@@ -70,8 +72,9 @@ Chart.register(...registerables);
           <div class="kpi-val text-emerald">{{ fueDisplayValue() }}</div>
           <div class="kpi-sub">{{ fueUserSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill green">Net Formül</span>
-            <span class="tag-pill blue">Optimum Paket</span>
+            <span class="tag-pill green" *ngIf="basisService.fueSummary()">Net Formül: HB+HC/5+HD/30</span>
+            <span class="tag-pill blue" *ngIf="basisService.fueSummary()">Optimum Paket</span>
+            <span class="tag-pill gray" *ngIf="!basisService.fueSummary()">Veri Bekleniyor</span>
           </div>
         </div>
 
@@ -83,7 +86,8 @@ Chart.register(...registerables);
           <div class="kpi-val">{{ sizingDisplayValue() }}</div>
           <div class="kpi-sub">{{ sizingSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill blue">Sizing Raporu</span>
+            <span class="tag-pill blue" *ngIf="basisService.memoryDetails()">Sizing Raporu</span>
+            <span class="tag-pill gray" *ngIf="!basisService.memoryDetails()">Veri Bekleniyor</span>
           </div>
         </div>
 
@@ -92,11 +96,12 @@ Chart.register(...registerables);
             <span class="kpi-title">Canlı PO Servisleri</span>
             <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
           </div>
-          <div class="kpi-val text-purple">109 Servis</div>
-          <div class="kpi-sub">83 Verici • 26 Alıcı Arayüz</div>
+          <div class="kpi-val text-purple">{{ poServicesVal() }}</div>
+          <div class="kpi-sub">{{ poServicesSub() }}</div>
           <div class="tag-row">
-            <span class="tag-pill purple">16 Entegre Sunucu</span>
-            <span class="tag-pill green">BTP Ready</span>
+            <span class="tag-pill purple" *ngIf="poServicesVal() !== '—'">{{ poServersCount() }} Entegre Sunucu</span>
+            <span class="tag-pill green" *ngIf="poServicesVal() !== '—'">BTP Ready</span>
+            <span class="tag-pill gray" *ngIf="poServicesVal() === '—'">PO Listesi Bekleniyor</span>
           </div>
         </div>
 
@@ -108,8 +113,9 @@ Chart.register(...registerables);
           <div class="kpi-val text-amber">{{ tablesDisplayValue() }}</div>
           <div class="kpi-sub">{{ tablesSubtitle() }}</div>
           <div class="tag-row">
-            <span class="tag-pill amber">DVM Analizi</span>
-            <span class="tag-pill gray">Housekeeping</span>
+            <span class="tag-pill amber" *ngIf="basisService.largestTables().length > 0">DVM Analizi</span>
+            <span class="tag-pill gray" *ngIf="basisService.largestTables().length > 0">Housekeeping</span>
+            <span class="tag-pill gray" *ngIf="basisService.largestTables().length === 0">Veri Bekleniyor</span>
           </div>
         </div>
 
@@ -118,10 +124,11 @@ Chart.register(...registerables);
             <span class="kpi-title">Tahmini Yıllık Tasarruf</span>
             <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="18" color="#059669"></app-icon></div>
           </div>
-          <div class="kpi-val text-emerald">€140.000 / Yıl</div>
-          <div class="kpi-sub">Donanım, OS, DB & Lisans ROI</div>
+          <div class="kpi-val text-emerald">{{ savingsVal() }}</div>
+          <div class="kpi-sub">{{ savingsSub() }}</div>
           <div class="tag-row">
-            <span class="tag-pill green">3 Yıllık Net: €420.000</span>
+            <span class="tag-pill green" *ngIf="savingsVal() !== '—'">{{ savingsPill() }}</span>
+            <span class="tag-pill gray" *ngIf="savingsVal() === '—'">Veri Yüklenmesi Bekleniyor</span>
           </div>
         </div>
       </div>
@@ -133,12 +140,17 @@ Chart.register(...registerables);
           <div class="chart-header">
             <div class="ch-left">
               <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
-              <h3>Altyapı & Sunucu Dağılımı (11 Sunucu ➔ 1 Bulut DB)</h3>
+              <h3>Altyapı & Sunucu Dağılımı <span *ngIf="serverInventoryVal() !== '—'">({{ serverInventoryVal() }} ➔ 1 Bulut DB)</span></h3>
             </div>
             <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="ch-link">Mimari Şema ➔</a>
           </div>
           <div class="chart-body">
-            <canvas #infraChart></canvas>
+            <canvas #infraChart *ngIf="serverInventoryVal() !== '—'"></canvas>
+            <div class="chart-empty-msg" *ngIf="serverInventoryVal() === '—'">
+              <app-icon name="info" [size]="20" color="#94a3b8"></app-icon>
+              <span>Mimari şeması veya sunucu verisi henüz girilmedi.</span>
+              <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="empty-btn">+ Mimariyi Çiz</a>
+            </div>
           </div>
         </div>
 
@@ -147,12 +159,16 @@ Chart.register(...registerables);
           <div class="chart-header">
             <div class="ch-left">
               <app-icon name="users" [size]="16" color="#059669"></app-icon>
-              <h3>FUE Lisanslama Dağılımı (Toplam 70 FUE)</h3>
+              <h3>FUE Lisanslama Dağılımı <span *ngIf="basisService.fueSummary()">(Toplam {{ round(basisService.fueSummary()!.calculatedFUE) }} FUE)</span></h3>
             </div>
             <a routerLink="/analytics" class="ch-link">Lisans Analizi ➔</a>
           </div>
           <div class="chart-body">
-            <canvas #licenseChart></canvas>
+            <canvas #licenseChart *ngIf="basisService.fueSummary()"></canvas>
+            <div class="chart-empty-msg" *ngIf="!basisService.fueSummary()">
+              <app-icon name="info" [size]="20" color="#94a3b8"></app-icon>
+              <span>FUE lisans tablosu yüklenmedi. Excel ile USMM/FUE verisi yükleyebilirsiniz.</span>
+            </div>
           </div>
         </div>
 
@@ -166,7 +182,11 @@ Chart.register(...registerables);
             <a routerLink="/source-sizing" class="ch-link">Sizing Kokpiti ➔</a>
           </div>
           <div class="chart-body">
-            <canvas #sizingChart></canvas>
+            <canvas #sizingChart *ngIf="basisService.memoryDetails()"></canvas>
+            <div class="chart-empty-msg" *ngIf="!basisService.memoryDetails()">
+              <app-icon name="info" [size]="20" color="#94a3b8"></app-icon>
+              <span>Source Sizing verisi henüz yüklenmedi.</span>
+            </div>
           </div>
         </div>
 
@@ -175,12 +195,16 @@ Chart.register(...registerables);
           <div class="chart-header">
             <div class="ch-left">
               <app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon>
-              <h3>PO Canlı Entegrasyon Protokolleri (109 Servis)</h3>
+              <h3>PO Canlı Entegrasyon Protokolleri <span *ngIf="poServicesVal() !== '—'">({{ poServicesVal() }})</span></h3>
             </div>
             <a routerLink="/architecture-map" [queryParams]="{ mode: 'po' }" class="ch-link">PO Listesi ➔</a>
           </div>
           <div class="chart-body">
-            <canvas #integrationChart></canvas>
+            <canvas #integrationChart *ngIf="importService.hasUploadedPoData() && importService.poInterfaces().length > 0"></canvas>
+            <div class="chart-empty-msg" *ngIf="!importService.hasUploadedPoData() || importService.poInterfaces().length === 0">
+              <app-icon name="info" [size]="20" color="#94a3b8"></app-icon>
+              <span>PO servis listesi Excel dosyası henüz yüklenmedi.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -192,15 +216,15 @@ Chart.register(...registerables);
             <app-icon name="sparkles" [size]="18" color="#0284c7"></app-icon>
             <h3>Detaylı Analiz Modülleri ve Veri Setleri</h3>
           </div>
-          <span class="qn-sub">Tüm veri setleri Excel analizleri ile senkronize edilmiştir</span>
+          <span class="qn-sub">Tüm veri setleri Excel analizleri ve mimari çizimler ile senkronize edilir</span>
         </div>
 
         <div class="modules-grid">
           <a routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }" class="module-nav-item">
             <div class="m-icon bg-blue"><app-icon name="map" [size]="18" color="#0284c7"></app-icon></div>
             <div class="m-info">
-              <strong>Lanscape & EoS Haritası</strong>
-              <span>11 Sunucu, Fiori 1511 & CS 6.5 Risk Analizi</span>
+              <strong>Landscape & EoS Haritası</strong>
+              <span>{{ serverInventoryVal() !== '—' ? serverInventoryVal() + ' Kayıtlı Bileşen' : 'Özel AS-IS & RISE Çizim Alanı' }}</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -209,7 +233,7 @@ Chart.register(...registerables);
             <div class="m-icon bg-emerald"><app-icon name="users" [size]="18" color="#059669"></app-icon></div>
             <div class="m-info">
               <strong>FUE & Lisans Optimizasyonu</strong>
-              <span>83 Aktif Kullanıcı ➔ 70 FUE Paketi</span>
+              <span>{{ basisService.fueSummary() ? (basisService.fueSummary()!.totalUsers + ' Aktif Kullanıcı ➔ ' + round(basisService.fueSummary()!.calculatedFUE) + ' FUE') : 'USMM / FUE Excel Analizi' }}</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -218,7 +242,7 @@ Chart.register(...registerables);
             <div class="m-icon bg-cyan"><app-icon name="database" [size]="18" color="#0891b2"></app-icon></div>
             <div class="m-info">
               <strong>Source Sizing (HANA 2.0)</strong>
-              <span>1.311 GiB RAM & 336 GiB Disk Tasarrufu</span>
+              <span>{{ basisService.memoryDetails() ? (round(basisService.memoryDetails()!.anticipatedInitialMemoryGiB) + ' GiB RAM Hedef') : 'HANA Sizing Raporlama' }}</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -227,7 +251,7 @@ Chart.register(...registerables);
             <div class="m-icon bg-amber"><app-icon name="layers" [size]="18" color="#d97706"></app-icon></div>
             <div class="m-info">
               <strong>Largest Tables (DVM)</strong>
-              <span>REGUP, ACDOCA 30 Kritik Tablo Arşivleme</span>
+              <span>{{ basisService.largestTables().length > 0 ? (basisService.largestTables().length + ' Kritik Tablo Analiz Edildi') : 'Kritik Tablo & DVM Arşivleme' }}</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -236,7 +260,7 @@ Chart.register(...registerables);
             <div class="m-icon bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
             <div class="m-info">
               <strong>PO Entegrasyon Listesi</strong>
-              <span>109 Canlı Servis (83 Verici, 26 Alıcı)</span>
+              <span>{{ importService.hasUploadedPoData() && importService.poInterfaces().length > 0 ? (importService.poInterfaces().length + ' Canlı Servis') : 'Entegrasyon Excel Yükleme' }}</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -245,7 +269,7 @@ Chart.register(...registerables);
             <div class="m-icon bg-emerald"><app-icon name="file-text" [size]="18" color="#059669"></app-icon></div>
             <div class="m-info">
               <strong>Executive Summary (PDF Rapor)</strong>
-              <span>%84 RISE Match Skoru & Yönetici Raporu</span>
+              <span>Yönetici ve Karar Verici Özeti</span>
             </div>
             <span class="m-arrow">➔</span>
           </a>
@@ -505,6 +529,36 @@ Chart.register(...registerables);
           position: relative;
           height: 220px;
           width: 100%;
+
+          .chart-empty-msg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 0.6rem;
+            color: #94a3b8;
+            font-size: 0.82rem;
+            text-align: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px dashed #e2e8f0;
+
+            .empty-btn {
+              display: inline-block;
+              margin-top: 0.25rem;
+              padding: 0.35rem 0.75rem;
+              background: #0284c7;
+              color: white;
+              border-radius: 6px;
+              font-size: 0.75rem;
+              font-weight: 600;
+              text-decoration: none;
+              transition: background 0.15s;
+              &:hover { background: #0369a1; }
+            }
+          }
         }
       }
     }
@@ -635,7 +689,46 @@ Chart.register(...registerables);
 export class DashboardComponent implements AfterViewInit {
   customerService = inject(CustomerService);
   basisService = inject(BasisSizingService);
+  importService = inject(DataImportService);
 
+  round(v: number): number {
+    return Math.round(v);
+  }
+
+  // 1. Server Inventory (Checks LocalStorage saved architecture or Basis Sizing Matrix)
+  serverInventoryVal = computed(() => {
+    const custId = this.customerService.activeCustomerId();
+    const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`) || localStorage.getItem('taskforce_custom_arch_asis');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+          const total = parsed.nodes.reduce((sum: number, n: any) => sum + (n.instanceCount || 1), 0);
+          return `${total} Sunucu`;
+        }
+      } catch (e) {}
+    }
+    if (this.basisService.hasUploadedData() && this.basisService.sizingMatrix().length > 0) {
+      return `${this.basisService.sizingMatrix().length} Sunucu`;
+    }
+    return '—';
+  });
+
+  serverInventorySub = computed(() => {
+    if (this.serverInventoryVal() !== '—') {
+      return 'Target: 1 Konsolide Bulut DB';
+    }
+    return 'Veri veya Çizim Bekleniyor';
+  });
+
+  serverInventoryPill = computed(() => {
+    if (this.serverInventoryVal() !== '—') {
+      return `${this.serverInventoryVal()} On-Prem`;
+    }
+    return 'Çizim Bekleniyor';
+  });
+
+  // 2. FUE Display Values
   fueDisplayValue = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
       return `${Math.round(this.basisService.fueSummary()!.calculatedFUE)} FUE`;
@@ -650,6 +743,7 @@ export class DashboardComponent implements AfterViewInit {
     return 'Veri Yüklenmesi Bekleniyor';
   });
 
+  // 3. HANA DB Sizing Display Values
   sizingDisplayValue = computed(() => {
     const mem = this.basisService.memoryDetails();
     if (this.basisService.hasUploadedData() && mem) {
@@ -666,6 +760,32 @@ export class DashboardComponent implements AfterViewInit {
     return 'Veri Yüklenmesi Bekleniyor';
   });
 
+  // 4. Live PO Services Display Values (Dynamic from importService)
+  poServicesVal = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poInterfaces().length > 0) {
+      return `${this.importService.poInterfaces().length} Servis`;
+    }
+    return '—';
+  });
+
+  poServicesSub = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poInterfaces().length > 0) {
+      const list = this.importService.poInterfaces();
+      const outCount = list.filter(i => i.role === 'outbound').length;
+      const inCount = list.filter(i => i.role === 'inbound').length;
+      return `${outCount} Verici • ${inCount} Alıcı Arayüz`;
+    }
+    return 'Veri Yüklenmesi Bekleniyor';
+  });
+
+  poServersCount = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poSummary()) {
+      return this.importService.poSummary()!.totalServers;
+    }
+    return 0;
+  });
+
+  // 5. Largest Tables Display Values
   tablesDisplayValue = computed(() => {
     const tables = this.basisService.largestTables();
     if (this.basisService.hasUploadedData() && tables.length > 0) {
@@ -682,6 +802,28 @@ export class DashboardComponent implements AfterViewInit {
     return 'Veri Yüklenmesi Bekleniyor';
   });
 
+  // 6. Estimated Savings Display Values
+  savingsVal = computed(() => {
+    if (this.basisService.hasUploadedData()) {
+      return '€140.000 / Yıl';
+    }
+    return '—';
+  });
+
+  savingsSub = computed(() => {
+    if (this.basisService.hasUploadedData()) {
+      return 'Donanım, OS, DB & Lisans ROI';
+    }
+    return 'Veri Yüklenmesi Bekleniyor';
+  });
+
+  savingsPill = computed(() => {
+    if (this.basisService.hasUploadedData()) {
+      return '3 Yıllık Net: €420.000';
+    }
+    return 'Hesaplama Bekleniyor';
+  });
+
   @ViewChild('infraChart') infraChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('licenseChart') licenseChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('sizingChart') sizingChartRef!: ElementRef<HTMLCanvasElement>;
@@ -694,36 +836,58 @@ export class DashboardComponent implements AfterViewInit {
   }
 
   private initCharts(): void {
-    // 1. Infrastructure Chart (Bar Chart: AS-IS vs Target)
-    if (this.infraChartRef?.nativeElement) {
-      new Chart(this.infraChartRef.nativeElement, {
-        type: 'bar',
-        data: {
-          labels: ['ERP EHP7', 'PO 7.5', 'Fiori 1511 (EoS)', 'Content Server (EoS)', 'WebDisp', 'RISE Target'],
-          datasets: [{
-            label: 'Sunucu Adedi',
-            data: [3, 3, 2, 1, 2, 1],
-            backgroundColor: ['#ef4444', '#ef4444', '#dc2626', '#dc2626', '#f59e0b', '#10b981'],
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } }
+    // 1. Infrastructure Chart (Only initialized if real server data or saved diagram exists)
+    if (this.infraChartRef?.nativeElement && this.serverInventoryVal() !== '—') {
+      const custId = this.customerService.activeCustomerId();
+      const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`) || localStorage.getItem('taskforce_custom_arch_asis');
+      let labels: string[] = [];
+      let data: number[] = [];
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+            labels = parsed.nodes.slice(0, 6).map((n: any) => n.name);
+            data = parsed.nodes.slice(0, 6).map((n: any) => n.instanceCount || 1);
           }
-        }
-      });
+        } catch (e) {}
+      }
+
+      if (labels.length === 0 && this.basisService.hasUploadedData() && this.basisService.sizingMatrix().length > 0) {
+        labels = this.basisService.sizingMatrix().slice(0, 6).map((m: any) => m.component || m.name || '');
+        data = this.basisService.sizingMatrix().slice(0, 6).map((m: any) => m.sourceInstances || 1);
+      }
+
+      if (labels.length > 0) {
+        new Chart(this.infraChartRef.nativeElement, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Sunucu Adedi',
+              data,
+              backgroundColor: ['#ef4444', '#ef4444', '#dc2626', '#f59e0b', '#0284c7', '#10b981'],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+          }
+        });
+      }
     }
 
-    // 2. FUE License Chart (Doughnut)
-    if (this.licenseChartRef?.nativeElement) {
-      const fue = this.basisService.fueSummary();
-      const hb = fue ? fue.hbCount : 0;
-      const hc = fue ? Math.round(fue.hcCount / 5) : 0;
-      const hd = fue ? Math.round(fue.hdCount / 30) : 0;
+    // 2. FUE License Chart (Only initialized if FUE summary exists)
+    if (this.licenseChartRef?.nativeElement && this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      const fue = this.basisService.fueSummary()!;
+      const hb = fue.hbCount;
+      const hc = Math.round(fue.hcCount / 5);
+      const hd = Math.round(fue.hdCount / 30);
 
       new Chart(this.licenseChartRef.nativeElement, {
         type: 'doughnut',
@@ -746,8 +910,8 @@ export class DashboardComponent implements AfterViewInit {
       });
     }
 
-    // 3. HANA Sizing Chart (Bar Chart)
-    if (this.sizingChartRef?.nativeElement) {
+    // 3. HANA Sizing Chart (Only initialized if Sizing data exists)
+    if (this.sizingChartRef?.nativeElement && this.basisService.hasUploadedData()) {
       const mem = this.basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 0;
       const disk = this.basisService.diskDetails()?.initialNetDiskGiB || 0;
 
@@ -778,15 +942,25 @@ export class DashboardComponent implements AfterViewInit {
       });
     }
 
-    // 4. PO Integration Protocols Chart (Horizontal Bar or Polar)
-    if (this.integrationChartRef?.nativeElement) {
+    // 4. PO Integration Protocols Chart (Dynamic grouping from actual PO Excel)
+    if (this.integrationChartRef?.nativeElement && this.importService.hasUploadedPoData() && this.importService.poInterfaces().length > 0) {
+      const interfaces = this.importService.poInterfaces();
+      const protoMap: Record<string, number> = {};
+      for (const item of interfaces) {
+        const p = (item.protocol || 'DİĞER').trim().toUpperCase();
+        protoMap[p] = (protoMap[p] || 0) + 1;
+      }
+      const sorted = Object.entries(protoMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      const labels = sorted.map(s => s[0]);
+      const data = sorted.map(s => s[1]);
+
       new Chart(this.integrationChartRef.nativeElement, {
         type: 'bar',
         data: {
-          labels: ['JDBC (Veritabanı)', 'SOAP (Web Servis)', 'RFC (SAP İçi)', 'REST (API)', 'SFTP / NFS', 'XI'],
+          labels,
           datasets: [{
             label: 'Servis Sayısı',
-            data: [43, 28, 18, 10, 8, 2],
+            data,
             backgroundColor: ['#7e22ce', '#0284c7', '#059669', '#d97706', '#0891b2', '#64748b'],
             borderRadius: 6
           }]
@@ -797,7 +971,7 @@ export class DashboardComponent implements AfterViewInit {
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { beginAtZero: true, max: 50 }
+            x: { beginAtZero: true }
           }
         }
       });

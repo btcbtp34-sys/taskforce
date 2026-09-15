@@ -225,8 +225,26 @@ export class BasisSizingService {
       largestTables = this.parseLargestTablesSheet(workbook.Sheets[largestTablesSheetName]);
     }
 
-    // 4. FUE Sheet Parser
-    const fueSheetName = sheetNames.find(n => n.toLowerCase().includes('fue'));
+    // 4. FUE Sheet Parser (Checks fue, usmm, kullanıcı, user, lisans, or scans headers)
+    let fueSheetName = sheetNames.find(n => {
+      const l = n.toLowerCase();
+      return l.includes('fue') || l.includes('usmm') || l.includes('kullanıcı') || l.includes('user') || l.includes('classification');
+    });
+
+    if (!fueSheetName) {
+      // Scan sheets for FUE headers
+      for (const sName of sheetNames) {
+        const sheet = workbook.Sheets[sName];
+        if (!sheet) continue;
+        const rawJson = XLSX.utils.sheet_to_json<any>(sheet, { header: 1, defval: '' });
+        const textDump = JSON.stringify(rawJson.slice(0, 10)).toLowerCase();
+        if (textDump.includes('professional') || textDump.includes('functional') || textDump.includes('productivity') || (textDump.includes('hb') && textDump.includes('hc'))) {
+          fueSheetName = sName;
+          break;
+        }
+      }
+    }
+
     let fueSummary: FueSummary = {
       totalUsers: 0,
       hbCount: 0,
@@ -469,34 +487,83 @@ export class BasisSizingService {
     return result;
   }
 
-  // Parses FUE Sheet
+  // Parses FUE Sheet based on Total / Genel Toplam row: (HB Professional) + (HC Functional / 5) + (HD Productivity / 30)
   private parseFueSheet(sheet: XLSX.WorkSheet): { summary: FueSummary; rows: FueClassificationItem[] } {
-    const rawRows = XLSX.utils.sheet_to_json<any>(sheet);
+    const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
     const rows: FueClassificationItem[] = [];
+
+    const parseNum = (val: any): number => {
+      if (typeof val === 'number') return isNaN(val) ? 0 : Math.abs(val);
+      if (typeof val === 'string') {
+        const n = Number(val.replace(/[^0-9.-]+/g, ''));
+        return isNaN(n) ? 0 : Math.abs(n);
+      }
+      return 0;
+    };
+
+    // Find header row (first row containing HB/HC/HD or Professional/Functional)
+    let headerRowIdx = -1;
+    let hbColIdx = -1;
+    let hcColIdx = -1;
+    let hdColIdx = -1;
+    let classColIdx = 0;
+    let totalColIdx = -1;
+
+    for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+      const row = rawRows[i];
+      if (!row) continue;
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j] || '').trim().toLowerCase();
+        if (cell.includes('professional') || cell.includes('profesyonel') || (cell.startsWith('hb') && cell.length <= 5)) {
+          hbColIdx = j; headerRowIdx = i;
+        }
+        if (cell.includes('functional') || cell.includes('fonksiyonel') || (cell.startsWith('hc') && cell.length <= 5)) {
+          hcColIdx = j; headerRowIdx = i;
+        }
+        if (cell.includes('productivity') || cell.includes('üretkenlik') || (cell.startsWith('hd') && cell.length <= 5)) {
+          hdColIdx = j; headerRowIdx = i;
+        }
+        if (cell === 'total' || cell === 'toplam' || cell === 'total users' || cell === 'toplam kullanıcı') {
+          totalColIdx = j;
+        }
+      }
+      if (hbColIdx >= 0 || hcColIdx >= 0 || hdColIdx >= 0) break;
+    }
 
     let totalUsers = 0;
     let hbCount = 0;
     let hcCount = 0;
     let hdCount = 0;
+    let foundTotalRow = false;
 
-    for (const r of rawRows) {
-      const classification = String(r['Current Classification'] || r['Kullanıcı Tipi'] || '').trim();
-      if (!classification || classification.toLowerCase().includes('355 +') || classification.includes('≈')) continue;
+    const dataStart = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+    for (let i = dataStart; i < rawRows.length; i++) {
+      const r = rawRows[i];
+      if (!r || r.every((c: any) => !c)) continue;
 
-      const total = Number(r['Total'] || r['Toplam'] || 0);
-      const hb = Number(r['HB Professional Use'] || r['HB'] || 0);
-      const hc = Number(r['HC Functional Use'] || r['HC'] || 0);
-      const hd = Number(r['HD Productivity Use'] || r['HD'] || 0);
+      const label = String(r[classColIdx] || r[0] || '').trim();
+      if (!label) continue;
 
-      if (classification.toLowerCase().includes('genel toplam') || classification.toLowerCase().includes('total')) {
-        totalUsers = total;
+      const labelLower = label.toLowerCase();
+      const isTotalRow = labelLower === 'total' || labelLower === 'genel toplam' ||
+                         labelLower === 'grand total' || labelLower === 'toplam' ||
+                         labelLower.startsWith('genel toplam') || labelLower.startsWith('grand total');
+
+      const hb = hbColIdx >= 0 ? parseNum(r[hbColIdx]) : 0;
+      const hc = hcColIdx >= 0 ? parseNum(r[hcColIdx]) : 0;
+      const hd = hdColIdx >= 0 ? parseNum(r[hdColIdx]) : 0;
+      const tot = totalColIdx >= 0 ? parseNum(r[totalColIdx]) : (hb + hc + hd);
+
+      if (isTotalRow) {
+        totalUsers = tot > 0 ? tot : (hb + hc + hd);
         hbCount = hb;
         hcCount = hc;
         hdCount = hd;
-      } else {
+        foundTotalRow = true;
+      } else if (label && !label.includes('≈')) {
         rows.push({
-          classification,
-          total,
+          classification: label,
+          total: tot > 0 ? tot : (hb + hc + hd),
           hbProfessional: hb,
           hcFunctional: hc,
           hdProductivity: hd
@@ -504,30 +571,24 @@ export class BasisSizingService {
       }
     }
 
-    // If general total row was not explicitly named, sum up rows
-    if (totalUsers === 0 && rows.length > 0) {
-      totalUsers = rows.reduce((acc, x) => acc + x.total, 0);
+    // Fallback: sum detail rows if no explicit Total row found
+    if (!foundTotalRow && rows.length > 0) {
       hbCount = rows.reduce((acc, x) => acc + x.hbProfessional, 0);
       hcCount = rows.reduce((acc, x) => acc + x.hcFunctional, 0);
       hdCount = rows.reduce((acc, x) => acc + x.hdProductivity, 0);
+      totalUsers = rows.reduce((acc, x) => acc + x.total, 0);
     }
 
-    // SAP Standard FUE calculation formula: HB + (HC / 5) + (HD / 30)
-    const calculatedFUE = parseFloat((hbCount + (hcCount / 5) + (hdCount / 30)).toFixed(1));
-    const formulaText = `${hbCount} + ${hcCount}/5 + ${hdCount}/30 ≈ ${calculatedFUE} FUE`;
+    // FUE Formula: HB + (HC / 5) + (HD / 30)
+    const calculatedFUE = parseFloat((hbCount + (hcCount / 5) + (hdCount / 30)).toFixed(2));
+    const formulaText = `${hbCount} + (${hcCount} ÷ 5) + (${hdCount} ÷ 30) = ${calculatedFUE} FUE`;
 
     return {
-      summary: {
-        totalUsers,
-        hbCount,
-        hcCount,
-        hdCount,
-        calculatedFUE,
-        formulaText
-      },
+      summary: { totalUsers, hbCount, hcCount, hdCount, calculatedFUE, formulaText },
       rows
     };
   }
+
 
   // Parses me.sap Lisanslar Sheet
   private parseLicensesSheet(sheet: XLSX.WorkSheet): SapLicenseItem[] {
