@@ -59,9 +59,35 @@ import { IconComponent } from '../icon/icon.component';
 
       <!-- Quick Upload Button, Notifications & Profile -->
       <div class="right-section">
+        <!-- Hidden File Input for JSON Backup Import -->
+        <input 
+          type="file" 
+          id="taskforce-backup-input" 
+          accept=".json" 
+          (change)="onBackupFileSelected($event)" 
+          style="display: none" />
+
+        <!-- Yedek Al Butonu (Tüm verileri JSON olarak export eder) -->
+        <button 
+          class="btn-header-action btn-export" 
+          (click)="exportFullBackup()" 
+          title="Tüm müşterileri, Excel analizlerini ve mimari çizimleri JSON olarak indirin">
+          <app-icon name="download" [size]="13" color="#16a34a"></app-icon>
+          <span>Yedek Al (JSON)</span>
+        </button>
+
+        <!-- Yedek Yükle Butonu (JSON yedeğini içe aktarır) -->
+        <button 
+          class="btn-header-action btn-import" 
+          (click)="triggerImport()" 
+          title="Farklı bir bilgisayardan alınan JSON yedeğini sisteme yükleyin">
+          <app-icon name="upload" [size]="13" color="#0284c7"></app-icon>
+          <span>Yedek Yükle</span>
+        </button>
+
         <!-- Verileri Temizle Butonu (Her zaman üst barda) -->
         <button 
-          class="btn-header-reset" 
+          class="btn-header-action btn-reset" 
           (click)="resetCurrentCustomerData()" 
           [title]="customerService.activeCustomer().name + ' için yüklenen verileri temizle'">
           <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
@@ -472,25 +498,50 @@ import { IconComponent } from '../icon/icon.component';
       }
     }
 
-    .btn-header-reset {
+    .btn-header-action, .btn-header-reset {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      padding: 0.4rem 0.75rem;
+      padding: 0.35rem 0.65rem;
       border-radius: 6px;
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
       transition: all 0.15s;
 
-      &:hover {
-        background: #fee2e2;
-        border-color: #fca5a5;
+      &.btn-export {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #16a34a;
+
+        &:hover {
+          background: #dcfce7;
+          border-color: #86efac;
+        }
+      }
+
+      &.btn-import {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        color: #0284c7;
+
+        &:hover {
+          background: #e0f2fe;
+          border-color: #7dd3fc;
+        }
+      }
+
+      &.btn-reset, &.btn-header-reset {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+
+        &:hover {
+          background: #fee2e2;
+          border-color: #fca5a5;
+        }
       }
     }
   `]
@@ -542,6 +593,103 @@ export class HeaderComponent {
         localStorage.removeItem(`taskforce_tco_rise_${activeId}`);
       }
     }
+  }
+
+  exportFullBackup(): void {
+    try {
+      const backupData: Record<string, string> = {};
+      let count = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('taskforce_')) {
+          const val = localStorage.getItem(key);
+          if (val !== null) {
+            backupData[key] = val;
+            count++;
+          }
+        }
+      }
+
+      if (count === 0) {
+        alert('Yedeklenecek herhangi bir TaskForce verisi bulunamadı.');
+        return;
+      }
+
+      const activeCust = this.customerService.activeCustomer().name || 'Genel';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const payload = {
+        appName: 'TaskForce SAP Sizing & Architecture Studio',
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        itemCount: count,
+        storage: backupData
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `TaskForce_Tum_Veriler_Yedek_${dateStr}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (e) {
+      console.error('Yedekleme hatası:', e);
+      alert('Yedek dosyası oluşturulurken bir hata oluştu.');
+    }
+  }
+
+  triggerImport(): void {
+    const input = document.getElementById('taskforce-backup-input') as HTMLInputElement;
+    if (input) {
+      input.value = '';
+      input.click();
+    }
+  }
+
+  onBackupFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = JSON.parse(content);
+
+        const storageObj = parsed.storage || parsed.data;
+        if (!storageObj || typeof storageObj !== 'object') {
+          alert('Geçersiz dosya formatı! Lütfen TaskForce tarafından üretilmiş geçerli bir JSON yedek dosyası seçin.');
+          return;
+        }
+
+        const keys = Object.keys(storageObj);
+        const validKeys = keys.filter(k => k.startsWith('taskforce_'));
+
+        if (validKeys.length === 0) {
+          alert('Yedek dosyasında TaskForce sistemine ait herhangi bir veri bulunamadı.');
+          return;
+        }
+
+        const confirmed = window.confirm(
+          `Yedek dosyasında ${validKeys.length} adet veri kaydı tespit edildi.\n\n` +
+          `Mevcut tarayıcı verileriniz bu yedek ile güncellenecektir. Devam etmek istiyor musunuz?`
+        );
+
+        if (confirmed) {
+          validKeys.forEach(k => {
+            localStorage.setItem(k, storageObj[k]);
+          });
+
+          alert('Yedek başarıyla içe aktarıldı! Sayfa şimdi yeni verilerle yenileniyor.');
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error('İçe aktarma hatası:', err);
+        alert('Yedek dosyası okunurken veya ayrıştırılırken bir hata oluştu.');
+      }
+    };
+    reader.readAsText(file);
   }
 }
 
