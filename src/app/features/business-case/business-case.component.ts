@@ -647,18 +647,19 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
 
           &.col-name {
             text-align: left;
-            width: auto;
-            min-width: 220px;
+            width: 27%;
+            min-width: 200px;
           }
 
           &.col-year {
-            width: 110px;
-            min-width: 110px;
-            max-width: 110px;
+            width: 11.5%;
+            min-width: 90px;
             padding: 0.35rem 0.45rem;
 
             .header-year-input {
               width: 100%;
+              max-width: 90px;
+              margin-left: auto;
               background: rgba(255, 255, 255, 0.2);
               border: 1px dashed rgba(0, 0, 0, 0.35);
               border-radius: 5px;
@@ -686,9 +687,8 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
           }
 
           &.col-total {
-            width: 150px;
-            min-width: 150px;
-            max-width: 150px;
+            width: 15%;
+            min-width: 120px;
             background: #d97706;
             color: #ffffff;
             white-space: nowrap;
@@ -719,8 +719,6 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
 
             &.cell-name {
               text-align: left;
-              width: auto;
-              min-width: 240px;
 
               .input-name {
                 width: 100%;
@@ -740,14 +738,13 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
             }
 
             &.cell-val {
-              width: 110px;
-              min-width: 110px;
-              max-width: 110px;
               text-align: right;
               padding: 0.35rem 0.45rem;
 
               .input-val {
                 width: 100%;
+                max-width: 110px;
+                margin-left: auto;
                 text-align: right;
                 border: 1px solid #e2e8f0;
                 background: #ffffff;
@@ -766,9 +763,6 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
             }
 
             &.cell-row-total {
-              width: 150px;
-              min-width: 150px;
-              max-width: 150px;
               text-align: right;
               font-weight: 800;
               color: #0f172a;
