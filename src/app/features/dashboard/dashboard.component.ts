@@ -803,26 +803,11 @@ export class DashboardComponent implements AfterViewInit {
   });
 
   // 6. Estimated Savings Display Values
-  savingsVal = computed(() => {
-    if (this.basisService.hasUploadedData()) {
-      return '€140.000 / Yıl';
-    }
-    return '—';
-  });
+  savingsVal = computed(() => '—');
 
-  savingsSub = computed(() => {
-    if (this.basisService.hasUploadedData()) {
-      return 'Donanım, OS, DB & Lisans ROI';
-    }
-    return 'Veri Yüklenmesi Bekleniyor';
-  });
+  savingsSub = computed(() => 'Veri Yüklenmesi Bekleniyor');
 
-  savingsPill = computed(() => {
-    if (this.basisService.hasUploadedData()) {
-      return '3 Yıllık Net: €420.000';
-    }
-    return 'Hesaplama Bekleniyor';
-  });
+  savingsPill = computed(() => 'Hesaplama Bekleniyor');
 
   @ViewChild('infraChart') infraChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('licenseChart') licenseChartRef!: ElementRef<HTMLCanvasElement>;

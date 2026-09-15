@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { DataImportService } from '../../core/services/data-import.service';
+import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { PO_INTERFACES_DATA } from '../../core/data/mock-po-interfaces';
@@ -309,7 +310,7 @@ export interface ArchitectureEdge {
             <div class="summary-stat">
               <span class="s-label">{{ architectureMode() === 'po' ? 'Senkron / Anlık' : 'Tahmini Yıllık Tasarruf' }}</span>
               <strong class="s-val green">
-                {{ architectureMode() === 'po' ? (syncCount() + ' Canlı Servis') : '€140.000 / Yıl Net TCO' }}
+                {{ architectureMode() === 'po' ? (syncCount() + ' Canlı Servis') : (basisService.hasUploadedData() ? 'Excel Verisi Mevcut' : 'Veri Bekleniyor') }}
               </strong>
             </div>
 
@@ -681,78 +682,48 @@ export interface ArchitectureEdge {
                 <span class="spec-tag">RISE Spec</span>
               </div>
 
-              <div class="table-container">
-                <table class="sizing-table">
-                  <thead>
-                    <tr>
-                      <th>Bileşen / Ürün</th>
-                      <th>Mevcut (Current)</th>
-                      <th>Hedef (Target)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot db"></span>
-                        <strong>S4 HANA DB Prod</strong>
-                      </td>
-                      <td><span class="spec-badge cur">1 TB</span></td>
-                      <td><span class="spec-badge target">1 TB HANA Cloud</span></td>
-                    </tr>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot db"></span>
-                        <strong>S4 HANA DB QA</strong>
-                      </td>
-                      <td><span class="spec-badge cur">768 GB</span></td>
-                      <td><span class="spec-badge target">768 GB HANA Cloud</span></td>
-                    </tr>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot db"></span>
-                        <strong>S4 HANA DB Dev</strong>
-                      </td>
-                      <td><span class="spec-badge cur">256 GB</span></td>
-                      <td><span class="spec-badge target">256 GB HANA Cloud</span></td>
-                    </tr>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot app"></span>
-                        <strong>S4 App Prod</strong>
-                      </td>
-                      <td><span class="spec-badge cur">2x64 GB</span></td>
-                      <td><span class="spec-badge target">2x64 GB App Server</span></td>
-                    </tr>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot app"></span>
-                        <strong>S4 App Qa</strong>
-                      </td>
-                      <td><span class="spec-badge cur">32 GB</span></td>
-                      <td><span class="spec-badge target">32 GB App Server</span></td>
-                    </tr>
-                    <tr>
-                      <td class="prod-cell">
-                        <span class="p-dot app"></span>
-                        <strong>S4 App Dev</strong>
-                      </td>
-                      <td><span class="spec-badge cur">32 GB</span></td>
-                      <td><span class="spec-badge target">32 GB App Server</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <!-- Dynamic data from Source-Target Excel sheet -->
+              <ng-container *ngIf="basisService.sizingMatrix().length > 0; else noSizingData">
+                <div class="table-container">
+                  <table class="sizing-table">
+                    <thead>
+                      <tr>
+                        <th>Bileşen / Ürün</th>
+                        <th>Mevcut (Current)</th>
+                        <th>Hedef (Target)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of basisService.sizingMatrix()">
+                        <td class="prod-cell">
+                          <span class="p-dot" [class.db]="row.isDb" [class.app]="!row.isDb"></span>
+                          <strong>{{ row.product }}</strong>
+                        </td>
+                        <td><span class="spec-badge cur">{{ row.current }}</span></td>
+                        <td><span class="spec-badge target">{{ row.target }}</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="panel-footer">
+                  <div class="stat-summary">
+                    <span class="f-label">Hedef HANA Memory:</span>
+                    <strong class="f-val">{{ basisService.memoryDetails() ? (basisService.memoryDetails()!.anticipatedInitialMemoryGiB | number:'1.0-0') + ' GiB' : '—' }}</strong>
+                  </div>
+                  <div class="stat-summary">
+                    <span class="f-label">Disk:</span>
+                    <strong class="f-val">{{ basisService.diskDetails() ? (basisService.diskDetails()!.initialNetDiskGiB | number:'1.0-0') + ' GiB' : '—' }}</strong>
+                  </div>
+                </div>
+              </ng-container>
 
-              <div class="panel-footer">
-                <div class="stat-summary">
-                  <span class="f-label">Toplam HANA Memory:</span>
-                  <strong class="f-val">2.02 TB</strong>
+              <ng-template #noSizingData>
+                <div style="padding:1.5rem; text-align:center; color:#94a3b8; font-size:0.82rem;">
+                  <div style="font-size:1.5rem; margin-bottom:0.5rem;">📂</div>
+                  <div>Source-Target verisi yüklenmedi.</div>
+                  <div style="margin-top:0.25rem;">Veri Yükleme ekranından Excel yükleyebilirsiniz.</div>
                 </div>
-                <div class="stat-summary">
-                  <span class="f-label">Uygulama RAM:</span>
-                  <strong class="f-val">192 GB</strong>
-                </div>
-              </div>
+              </ng-template>
             </div>
           </div>
 
@@ -774,66 +745,47 @@ export interface ArchitectureEdge {
         </div>
       </div>
 
-      <!-- RISE with SAP Transformation Comparison Table (AS-IS ➔ RISE 1-to-1 Mapping) -->
+      <!-- RISE with SAP Transformation Comparison Table (Dynamic from Source-Target sheet) -->
       <div class="card-box rise-comparison-table-card" *ngIf="architectureMode() === 'rise'">
         <div class="card-header">
           <h3>
             <app-icon name="sparkles" [size]="16" color="#047857"></app-icon>
-            RISE with SAP Bulut Dönüşüm Tablosu (Birebir Sistem Karşılaştırması)
+            RISE with SAP Bulut Dönüşüm Tablosu (Source-Target Karşılaştırması)
           </h3>
-          <span class="sub-text">11 Sunuculu Dağınık Altyapı ➔ Tek Konsolide Private Cloud DB</span>
+          <span class="sub-text" *ngIf="basisService.sizingMatrix().length > 0">{{ basisService.sizingMatrix().length }} bileşen — Mevcut Altyapı ➔ Hedef Private Cloud</span>
+          <span class="sub-text" *ngIf="basisService.sizingMatrix().length === 0">Veri Bekleniyor — Veri Yükleme ekranından Source-Target Excel yükleyin</span>
         </div>
 
-        <div class="table-responsive">
-          <table class="rise-compare-table">
-            <thead>
-              <tr>
-                <th>Mevcut Durum Bileşeni (AS-IS 11 Sunucu)</th>
-                <th>Sunucu / Instance</th>
-                <th>EoS Riski</th>
-                <th>RISE with SAP Bulut Karşılığı (Target)</th>
-                <th>Elde Edilen Bulut Avantajı</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>ERP EHP7 (SAP 1503 SFinancials)</strong></td>
-                <td><span class="badge-red">3 Sunucu</span></td>
-                <td>—</td>
-                <td><strong class="text-teal">SAP S/4HANA Private Cloud Edition</strong></td>
-                <td>1 Konsolide HANA 2.0 In-Memory DB, %40 performans artışı</td>
-              </tr>
-              <tr>
-                <td><strong>PO 7.5 (Process Orchestration)</strong></td>
-                <td><span class="badge-red">3 Sunucu</span></td>
-                <td>—</td>
-                <td><strong class="text-teal">SAP BTP Integration Suite (Cloud iFlows)</strong></td>
-                <td>10+ Canlı PO entegrasyonu BTP bulutuna taşındı, 0 sunucu bakımı</td>
-              </tr>
-              <tr>
-                <td><strong>Fiori S4H 1511 (FES 200 Front-End)</strong></td>
-                <td><span class="badge-red">2 Sunucu</span></td>
-                <td><span class="badge-eos">EoS 2020</span></td>
-                <td><strong class="text-teal">Embedded Fiori Launchpad S/4HANA</strong></td>
-                <td>Ayrı Front-End sunucusu kaldırıldı, %100 SAP bulut güvencesi (0 EoS Risk)</td>
-              </tr>
-              <tr>
-                <td><strong>CS 6.5 (Content Server)</strong></td>
-                <td><span class="badge-red">1 Sunucu</span></td>
-                <td><span class="badge-eos">EoS 2020</span></td>
-                <td><strong class="text-teal">SAP Document Management Service (BTP)</strong></td>
-                <td>MaxDB sunucusu kapatıldı, sınırsız BTP Object Storage arşivleme</td>
-              </tr>
-              <tr>
-                <td><strong>WebDisp (Web Dispatcher)</strong></td>
-                <td><span class="badge-red">2 Sunucu</span></td>
-                <td>—</td>
-                <td><strong class="text-teal">SAP Cloud Connector & BTP Gateway</strong></td>
-                <td>Güvenli TLS 1.3 tünelleme, 0 Donanım/OS lisans maliyeti</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ng-container *ngIf="basisService.sizingMatrix().length > 0; else noCompareData">
+          <div class="table-responsive">
+            <table class="rise-compare-table">
+              <thead>
+                <tr>
+                  <th>Mevcut Durum Bileşeni (AS-IS)</th>
+                  <th>Mevcut Durum</th>
+                  <th>RISE with SAP Hedef (Target)</th>
+                  <th>Açıklama</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of basisService.sizingMatrix()">
+                  <td><strong>{{ row.product }}</strong></td>
+                  <td><span class="badge-red">{{ row.current }}</span></td>
+                  <td><strong class="text-teal">{{ row.targetDb || row.target }}</strong></td>
+                  <td>{{ row.description }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+
+        <ng-template #noCompareData>
+          <div style="padding:2rem; text-align:center; color:#94a3b8;">
+            <div style="font-size:2rem; margin-bottom:0.75rem;">📂</div>
+            <div style="font-size:0.9rem; font-weight:600;">Source-Target verisi yüklenmedi</div>
+            <div style="font-size:0.8rem; margin-top:0.4rem;">Veri Yükleme ekranından Sizing Excel dosyanızı yükleyin. Bileşenler buraya otomatik dolar.</div>
+          </div>
+        </ng-template>
       </div>
 
       <!-- PO LIVE INTEGRATION INTERFACES TABLE & SERVER COUNTS -->
@@ -3488,6 +3440,7 @@ export interface ArchitectureEdge {
 export class ArchitectureMapComponent {
   customerService = inject(CustomerService);
   importService = inject(DataImportService);
+  basisService = inject(BasisSizingService);
   route = inject(ActivatedRoute);
 
   @ViewChild('canvasRef') canvasRef!: ElementRef<HTMLDivElement>;
