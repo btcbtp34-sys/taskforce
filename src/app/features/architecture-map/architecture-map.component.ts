@@ -4323,14 +4323,14 @@ export class ArchitectureMapComponent {
       id: 'edge-custom-' + Date.now(),
       fromId: source.id,
       toId: target.id,
-      label: this.edgeForm.label.trim() || `${source.name} ➔`,
+      label: this.edgeForm.label.trim() || `${source.name} ➞`,
       isEosRisk: this.edgeForm.isEosRisk
     };
 
     this.currentEdges.update(list => [...list, newEdge]);
     this.showEdgeModal.set(false);
     this.cancelConnectingMode();
-    this.showToast(`Bağlantı kuruldu: ${source.name} ➔ ${target.name}`);
+    this.showToast(`Bağlantı kuruldu: ${source.name} ➞ ${target.name}`);
   }
 
   cancelEdgeModal(): void {
@@ -4392,11 +4392,36 @@ export class ArchitectureMapComponent {
     }
   }
 
+  /** Silent auto-save — persists current diagram without showing a toast. Used by delete operations. */
+  private autoSave(): void {
+    try {
+      const mode = this.architectureMode();
+      const custId = this.customerService.activeCustomerId();
+      const key = this.getStorageKey(mode);
+      const data = {
+        nodes: this.nodes(),
+        edges: this.currentEdges(),
+        savedAt: new Date().toISOString(),
+        customerId: custId,
+        mode
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem('taskforce_custom_arch_' + mode, JSON.stringify(data));
+    } catch (e) {
+      console.error('autoSave error', e);
+    }
+  }
+
   clearCanvas(): void {
     if (confirm('Tüm bileşenleri ve bağlantıları silip sıfırdan çizim yapmak istiyor musunuz?')) {
       this.nodes.set([]);
       this.currentEdges.set([]);
       this.selectedNode.set(null);
+      // localStorage kaydını da sil - yeniden yüklemede de boş kalsın
+      const mode = this.architectureMode();
+      const key = this.getStorageKey(mode);
+      localStorage.removeItem(key);
+      localStorage.removeItem('taskforce_custom_arch_' + mode);
       this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
     }
   }
@@ -4497,6 +4522,8 @@ export class ArchitectureMapComponent {
     if (this.selectedNode()?.id === id) {
       this.selectedNode.set(null);
     }
+    // Auto-save so deletion persists on reload
+    this.autoSave();
   }
 
   exportDiagram(): void {
