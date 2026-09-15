@@ -2,7 +2,6 @@ import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { IconComponent } from '../icon/icon.component';
-import { ModullerService } from '../../../core/services/moduller.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -107,61 +106,11 @@ import { ModullerService } from '../../../core/services/moduller.service';
           </div>
         </div>
 
-        <!-- 5. SAP Uygulamaları (Eski Modules - Expandable Group) -->
-        <div class="nav-group" [class.open]="modulesExpanded">
-          <div 
-            class="nav-item group-header" 
-            [class.active]="isModulesActive()"
-            routerLink="/modules"
-            [title]="collapsed ? 'SAP Uygulamaları' : ''">
-            <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
-            <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
-            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleModules()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="modulesExpanded ? 'rotate(90deg)' : 'none'">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Alt Kırılımlar (Sub Items - Geçiş Modülleri kaldırıldı) -->
-          <div class="nav-sub-list" *ngIf="modulesExpanded && !collapsed">
-            <a 
-              (click)="onSelectModule('genel-bulgular')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'genel-bulgular'"
-              style="cursor: pointer;"
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">Genel Bulgular</span>
-            </a>
-
-            <a 
-              (click)="onSelectModule('mm-modulu')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'mm-modulu'"
-              style="cursor: pointer;"
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">MM Modülü</span>
-            </a>
-
-            <a 
-              (click)="onSelectModule('fi-modulu')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'fi-modulu'"
-              style="cursor: pointer;"
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">FI Modülü</span>
-            </a>
-
-            <a 
-              (click)="onSelectModule('co-modulu')"
-              [class.sub-active]="isModulesActive() && modullerService.activeModuleKey() === 'co-modulu'"
-              style="cursor: pointer;"
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">CO Modülü</span>
-            </a>
-          </div>
-        </div>
+        <!-- 5. SAP Uygulamaları -->
+        <a routerLink="/modules" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'SAP Uygulamaları' : ''">
+          <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
+        </a>
 
         <!-- 6. SAP Customization (Eski Development) -->
         <a routerLink="/development" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'SAP Customization' : ''">
@@ -471,35 +420,20 @@ export class SidebarComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
 
   router = inject(Router);
-  modullerService = inject(ModullerService);
   basisExpanded = true;
-  modulesExpanded = true;
   solutionExpanded = true;
 
   toggleBasis(): void {
     this.basisExpanded = !this.basisExpanded;
   }
 
-  toggleModules(): void {
-    this.modulesExpanded = !this.modulesExpanded;
-  }
-
   toggleSolution(): void {
     this.solutionExpanded = !this.solutionExpanded;
-  }
-
-  onSelectModule(key: string): void {
-    this.modullerService.selectModule(key);
-    this.router.navigate(['/modules'], { queryParams: { tab: key } });
   }
 
   isBasisActive(): boolean {
     const url = this.router.url;
     return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category')) || url.includes('source-sizing') || url.includes('largest-tables');
-  }
-
-  isModulesActive(): boolean {
-    return this.router.url.includes('module');
   }
 
   isSolutionActive(): boolean {

@@ -14,6 +14,7 @@ export type CardStatus =
 
 export interface ModuleCard {
   id: string;
+  category: string; // e.g. "MM Modülü", "FI Modülü", "Genel Bulgular", "SD Modülü" etc.
   title: string;
   severity: CardSeverity;
   status: CardStatus;
@@ -22,26 +23,24 @@ export interface ModuleCard {
   isFullWidth?: boolean;
 }
 
-export interface ModuleSlide {
-  id: string;
-  slideTag: string; // e.g. "FI MODÜLÜ — 1/2", "MM MODÜLÜ"
-  mainTitle: string; // e.g. "Organizasyon Yapısı & Genel Muhasebe"
-  cards: ModuleCard[];
-}
-
-export interface ModuleItem {
-  id: string;
-  key: string;
-  name: string;
-  description: string;
-  icon: string;
-  slides: ModuleSlide[];
-}
-
-const STORAGE_PREFIX = 'taskforce_modules_';
+const STORAGE_PREFIX = 'taskforce_modules_cards_';
 
 export const VALID_SEVERITIES: CardSeverity[] = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
 export const VALID_STATUSES: CardStatus[] = ['Geliştirme', 'Standart', 'Fırsat', 'Uygun Değil', 'Kısmen Uygun', 'Önerilen'];
+
+export const COMMON_CATEGORIES: string[] = [
+  'Genel Bulgular',
+  'MM Modülü',
+  'FI Modülü',
+  'CO Modülü',
+  'SD Modülü',
+  'PP Modülü',
+  'QM Modülü',
+  'PM Modülü',
+  'HR / SuccessFactors',
+  'SAP Basis & Mimari',
+  'Entegrasyon (PO/CPI)'
+];
 
 export function normalizeCardSeverity(val: any): CardSeverity {
   const str = String(val || '').trim();
@@ -68,77 +67,42 @@ export function normalizeCardStatus(val: any): CardStatus {
 export function normalizeCard(c: any): ModuleCard {
   return {
     id: c.id || ('card-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
-    title: c.title || '',
-    severity: normalizeCardSeverity(c.severity),
-    status: normalizeCardStatus(c.status || c.severity),
-    bullets: Array.isArray(c.bullets) ? c.bullets : (c.bullets ? [String(c.bullets)] : []),
-    footerNote: c.footerNote,
+    category: (c.category || c.kategori || 'Genel Bulgular').trim(),
+    title: (c.title || c.baslik || '').trim(),
+    severity: normalizeCardSeverity(c.severity || c.onem),
+    status: normalizeCardStatus(c.status || c.durum || c.severity),
+    bullets: Array.isArray(c.bullets) 
+      ? c.bullets 
+      : (c.bullets ? String(c.bullets).split(/\r?\n|•|;/).map(b => b.trim()).filter(Boolean) : []),
+    footerNote: c.footerNote || c.dipnot,
     isFullWidth: !!c.isFullWidth
   };
 }
 
-const DEFAULT_EMPTY_MODULES: ModuleItem[] = [
-  {
-    id: 'genel-bulgular',
-    key: 'genel-bulgular',
-    name: 'Genel Bulgular',
-    description: 'S/4HANA geçiş değerlendirmesi genel bulguları ve kritik öncelikler',
-    icon: 'sparkles',
-    slides: [
-      {
-        id: 'gb-1',
-        slideTag: 'GENEL BULGULAR',
-        mainTitle: 'Genel Bulgular',
-        cards: []
+function normalizeStoredCards(data: any): ModuleCard[] {
+  if (!data) return [];
+  if (Array.isArray(data)) {
+    // If old format with module slides
+    if (data.length > 0 && 'slides' in data[0]) {
+      const flat: ModuleCard[] = [];
+      for (const m of data) {
+        const catName = m.name || m.key || 'Genel Bulgular';
+        for (const s of (m.slides || [])) {
+          for (const c of (s.cards || [])) {
+            flat.push({
+              ...normalizeCard(c),
+              category: c.category || catName
+            });
+          }
+        }
       }
-    ]
-  },
-  {
-    id: 'mm-modulu',
-    key: 'mm-modulu',
-    name: 'MM Modülü',
-    description: 'Satınalma & Malzeme Yönetimi geçiş değerlendirmesi ve program analizleri',
-    icon: 'box',
-    slides: [
-      {
-        id: 'mm-1',
-        slideTag: 'MM MODÜLÜ',
-        mainTitle: 'Satınalma & Malzeme Yönetimi — Geçiş Değerlendirmesi',
-        cards: []
-      }
-    ]
-  },
-  {
-    id: 'fi-modulu',
-    key: 'fi-modulu',
-    name: 'FI Modülü',
-    description: 'Finansal Muhasebe, organizasyon yapısı, satıcı/müşteri muhasebesi ve kapanış',
-    icon: 'coins',
-    slides: [
-      {
-        id: 'fi-1',
-        slideTag: 'FI MODÜLÜ',
-        mainTitle: 'Organizasyon Yapısı & Genel Muhasebe',
-        cards: []
-      }
-    ]
-  },
-  {
-    id: 'co-modulu',
-    key: 'co-modulu',
-    name: 'CO Modülü',
-    description: 'Maliyet Muhasebesi, kâr merkezi ve masraf yerleri ana veri kalitesi',
-    icon: 'pie-chart',
-    slides: [
-      {
-        id: 'co-1',
-        slideTag: 'CO MODÜLÜ',
-        mainTitle: 'Organizasyon Yapısı & Ana Veri Kalitesi',
-        cards: []
-      }
-    ]
+      return flat;
+    }
+    // Flat ModuleCard array
+    return data.map(c => normalizeCard(c));
   }
-];
+  return [];
+}
 
 export function downloadModulesTemplate(): void {
   const wb = XLSX.utils.book_new();
@@ -215,244 +179,98 @@ export function downloadModulesTemplate(): void {
 export class ModullerService {
   private customerService = inject(CustomerService);
 
-  private modulesList = signal<ModuleItem[]>(this.getCleanModulesTemplate());
-  readonly modules = this.modulesList.asReadonly();
-  readonly activeModuleKey = signal<string>('genel-bulgular');
+  private cardsList = signal<ModuleCard[]>([]);
+  readonly cards = this.cardsList.asReadonly();
 
-  readonly totalCardsCount = computed(() => {
-    let count = 0;
-    for (const m of this.modulesList()) {
-      for (const s of m.slides) {
-        count += (s.cards?.length || 0);
-      }
+  readonly totalCardsCount = computed(() => this.cardsList().length);
+  readonly hasUploadedData = computed(() => this.cardsList().length > 0);
+
+  // Distinct categories present in active customer's cards
+  readonly existingCategories = computed(() => {
+    const cats = new Set<string>();
+    for (const c of this.cardsList()) {
+      const trimmed = (c.category || '').trim();
+      if (trimmed) cats.add(trimmed);
     }
-    return count;
+    return Array.from(cats).sort((a, b) => a.localeCompare(b, 'tr'));
   });
 
-  readonly hasUploadedData = computed(() => this.totalCardsCount() > 0);
-
   constructor() {
-    // Automatically load customer-specific cards when active customer changes
     effect(() => {
       const custId = this.customerService.activeCustomerId();
       this.loadForCustomer(custId);
     });
   }
 
-  private getCleanModulesTemplate(): ModuleItem[] {
-    return JSON.parse(JSON.stringify(DEFAULT_EMPTY_MODULES));
-  }
-
-  private loadForCustomer(custId: string) {
+  private loadForCustomer(custId: string): void {
     if (!custId) {
-      this.modulesList.set(this.getCleanModulesTemplate());
+      this.cardsList.set([]);
       return;
     }
     try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + custId);
+      // First check new storage key
+      let saved = localStorage.getItem(STORAGE_PREFIX + custId);
+      if (!saved) {
+        // Fallback to legacy key
+        saved = localStorage.getItem('taskforce_modules_' + custId);
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const normalized = parsed.map((m: ModuleItem) => ({
-            ...m,
-            slides: (m.slides || []).map(s => ({
-              ...s,
-              cards: (s.cards || []).map(normalizeCard)
-            }))
-          }));
-          this.modulesList.set(normalized);
-          return;
-        }
+        const normalized = normalizeStoredCards(parsed);
+        this.cardsList.set(normalized);
+        return;
       }
     } catch (e) {
       console.warn('Failed to load modules from storage', e);
     }
-    this.modulesList.set(this.getCleanModulesTemplate());
+    this.cardsList.set([]);
   }
 
   private saveCurrentCustomerData(): void {
     try {
       const custId = this.customerService.activeCustomerId();
       if (custId) {
-        localStorage.setItem(STORAGE_PREFIX + custId, JSON.stringify(this.modulesList()));
+        localStorage.setItem(STORAGE_PREFIX + custId, JSON.stringify(this.cardsList()));
       }
     } catch (e) {
       console.warn('Failed to save modules to storage', e);
     }
   }
 
-  selectModule(key: string) {
-    this.activeModuleKey.set(key);
+  addCard(card: ModuleCard): void {
+    this.cardsList.update(list => [...list, card]);
+    this.saveCurrentCustomerData();
   }
 
-  getModuleByKey(key: string): ModuleItem | undefined {
-    return this.modulesList().find(m => m.key === key || m.id === key);
-  }
-
-  addSlide(moduleKey: string, slide: ModuleSlide) {
-    this.modulesList.update(list =>
-      list.map(m => {
-        if (m.key === moduleKey) {
-          return { ...m, slides: [...m.slides, slide] };
-        }
-        return m;
-      })
+  updateCard(updatedCard: ModuleCard): void {
+    this.cardsList.update(list =>
+      list.map(c => c.id === updatedCard.id ? updatedCard : c)
     );
     this.saveCurrentCustomerData();
   }
 
-  addCard(moduleKey: string, slideId: string, card: ModuleCard) {
-    this.modulesList.update(list =>
-      list.map(m => {
-        if (m.key === moduleKey) {
-          return {
-            ...m,
-            slides: m.slides.map(s => {
-              if (s.id === slideId) {
-                return { ...s, cards: [...s.cards, card] };
-              }
-              return s;
-            })
-          };
-        }
-        return m;
-      })
-    );
+  deleteCard(cardId: string): void {
+    this.cardsList.update(list => list.filter(c => c.id !== cardId));
     this.saveCurrentCustomerData();
   }
 
-  updateCard(moduleKey: string, slideId: string, updatedCard: ModuleCard) {
-    this.modulesList.update(list =>
-      list.map(m => {
-        if (m.key === moduleKey) {
-          return {
-            ...m,
-            slides: m.slides.map(s => {
-              if (s.id === slideId) {
-                return {
-                  ...s,
-                  cards: s.cards.map(c => c.id === updatedCard.id ? updatedCard : c)
-                };
-              }
-              return s;
-            })
-          };
-        }
-        return m;
-      })
-    );
+  importCardsFromExcel(cards: ModuleCard[]): number {
+    if (!cards || cards.length === 0) return 0;
+    this.cardsList.update(current => {
+      return [...current, ...cards];
+    });
     this.saveCurrentCustomerData();
+    return cards.length;
   }
 
-  deleteCard(moduleKey: string, slideId: string, cardId: string) {
-    this.modulesList.update(list =>
-      list.map(m => {
-        if (m.key === moduleKey) {
-          return {
-            ...m,
-            slides: m.slides.map(s => {
-              if (s.id === slideId) {
-                return {
-                  ...s,
-                  cards: s.cards.filter(c => c.id !== cardId)
-                };
-              }
-              return s;
-            })
-          };
-        }
-        return m;
-      })
-    );
-    this.saveCurrentCustomerData();
-  }
-
-  clearCustomerModules(custId?: string) {
+  clearCustomerModules(custId?: string): void {
     const id = custId || this.customerService.activeCustomerId();
     if (id) {
       try {
         localStorage.removeItem(STORAGE_PREFIX + id);
+        localStorage.removeItem('taskforce_modules_' + id);
       } catch (e) {}
     }
-    this.modulesList.set(this.getCleanModulesTemplate());
-  }
-
-  importCardsFromExcel(cardsWithCategory: { category: string; card: ModuleCard }[]): number {
-    if (!cardsWithCategory || cardsWithCategory.length === 0) return 0;
-
-    let currentModules = [...this.modulesList()];
-
-    for (const item of cardsWithCategory) {
-      const rawCat = (item.category || '').trim();
-      const lower = rawCat.toLowerCase();
-      
-      let targetKey = 'genel-bulgular';
-      let targetName = 'Genel Bulgular';
-      let targetIcon = 'sparkles';
-
-      if (lower.includes('genel') || !rawCat) {
-        targetKey = 'genel-bulgular';
-        targetName = 'Genel Bulgular';
-        targetIcon = 'sparkles';
-      } else if (lower.includes('mm') || lower.includes('satınalma') || lower.includes('malzeme')) {
-        targetKey = 'mm-modulu';
-        targetName = 'MM Modülü';
-        targetIcon = 'box';
-      } else if (lower.includes('fi') || lower.includes('finans') || lower.includes('muhasebe')) {
-        targetKey = 'fi-modulu';
-        targetName = 'FI Modülü';
-        targetIcon = 'coins';
-      } else if (lower.includes('co') || lower.includes('maliyet') || lower.includes('kontrol')) {
-        targetKey = 'co-modulu';
-        targetName = 'CO Modülü';
-        targetIcon = 'pie-chart';
-      } else if (lower.includes('sd') || lower.includes('satış') || lower.includes('satis')) {
-        targetKey = 'sd-modulu';
-        targetName = 'SD Modülü';
-        targetIcon = 'shopping-cart';
-      } else {
-        targetKey = rawCat.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-modulu';
-        targetName = rawCat.endsWith('Modülü') || rawCat.endsWith('modülü') ? rawCat : `${rawCat} Modülü`;
-        targetIcon = 'layers';
-      }
-
-      let mod = currentModules.find(m => m.key === targetKey || m.name.toLowerCase() === targetName.toLowerCase());
-      if (!mod) {
-        mod = {
-          id: targetKey,
-          key: targetKey,
-          name: targetName,
-          description: `${targetName} geçiş değerlendirmesi ve bulguları`,
-          icon: targetIcon,
-          slides: [
-            {
-              id: `${targetKey}-1`,
-              slideTag: targetName.toUpperCase(),
-              mainTitle: `${targetName} Değerlendirmesi`,
-              cards: []
-            }
-          ]
-        };
-        currentModules.push(mod);
-      }
-
-      if (!mod.slides || mod.slides.length === 0) {
-        mod.slides = [
-          {
-            id: `${targetKey}-1`,
-            slideTag: targetName.toUpperCase(),
-            mainTitle: `${targetName} Değerlendirmesi`,
-            cards: []
-          }
-        ];
-      }
-
-      // Add to first slide
-      mod.slides[0].cards.push(item.card);
-    }
-
-    this.modulesList.set(currentModules);
-    this.saveCurrentCustomerData();
-    return cardsWithCategory.length;
+    this.cardsList.set([]);
   }
 }

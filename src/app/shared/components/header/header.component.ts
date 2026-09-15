@@ -484,6 +484,8 @@ import { IconComponent } from '../icon/icon.component';
       padding: 0.4rem 0.75rem;
       border-radius: 6px;
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
       transition: all 0.15s;
 
       &:hover {

@@ -1,40 +1,46 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { ModullerService, ModuleItem, ModuleSlide, ModuleCard, CardSeverity, CardStatus } from '../../core/services/moduller.service';
+import { RouterModule } from '@angular/router';
+import { 
+  ModullerService, 
+  ModuleCard, 
+  CardSeverity, 
+  CardStatus, 
+  VALID_SEVERITIES, 
+  VALID_STATUSES, 
+  COMMON_CATEGORIES,
+  downloadModulesTemplate
+} from '../../core/services/moduller.service';
 import { CustomerService } from '../../core/services/customer.service';
+
+export interface CategoryGroup {
+  category: string;
+  cards: ModuleCard[];
+}
 
 @Component({
   selector: 'app-modules',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './modules.component.html',
   styleUrl: './modules.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ModulesComponent implements OnInit {
+export class ModulesComponent {
   modullerService = inject(ModullerService);
   customerService = inject(CustomerService);
-  private route = inject(ActivatedRoute);
-  private cdr = inject(ChangeDetectorRef);
 
-  selectedModuleKey = 'genel-bulgular';
-  activeSlideIndex = 0;
-  searchFilter = '';
-  selectedSeverityFilter = 'TÜMÜ';
-  selectedStatusFilter = 'TÜMÜ';
-
-  moduleList: ModuleItem[] = [];
-  currentModule: ModuleItem | undefined;
-  currentSlide: ModuleSlide | undefined;
-  availableSeverities: { severity: CardSeverity; count: number }[] = [];
-  availableStatuses: { status: CardStatus; count: number }[] = [];
-  filteredCards: ModuleCard[] = [];
+  // Filters State
+  searchFilter = signal<string>('');
+  selectedCategoryFilter = signal<string>('TÜMÜ');
+  selectedSeverityFilter = signal<string>('TÜMÜ');
+  selectedStatusFilter = signal<string>('TÜMÜ');
 
   // Modal State
   isModalOpen = false;
   editingCardId: string | null = null;
+  formCategory = 'Genel Bulgular';
   formTitle = '';
   formSeverity: CardSeverity = 'Kritik';
   formStatus: CardStatus = 'Geliştirme';
@@ -42,186 +48,125 @@ export class ModulesComponent implements OnInit {
   formFooterNote = '';
   formIsFullWidth = false;
 
-  readonly severityOptions: CardSeverity[] = [
-    'Düşük',
-    'Orta',
-    'Yüksek',
-    'Kritik'
-  ];
+  readonly severityOptions = VALID_SEVERITIES;
+  readonly statusOptions = VALID_STATUSES;
+  readonly commonCategories = COMMON_CATEGORIES;
 
-  readonly statusOptions: CardStatus[] = [
-    'Geliştirme',
-    'Standart',
-    'Fırsat',
-    'Uygun Değil',
-    'Kısmen Uygun',
-    'Önerilen'
-  ];
+  // Categories currently in data
+  readonly dynamicCategories = computed(() => {
+    return this.modullerService.existingCategories();
+  });
 
-  constructor() {
-    // Re-render whenever modules change or customer switches
-    effect(() => {
-      this.moduleList = this.modullerService.modules();
-      this.updateView();
-      this.cdr.markForCheck();
-    });
-  }
+  // Filtered and Grouped Cards
+  readonly groupedCategories = computed<CategoryGroup[]>(() => {
+    const query = this.searchFilter().trim().toLowerCase();
+    const catFilter = this.selectedCategoryFilter();
+    const sevFilter = this.selectedSeverityFilter();
+    const statFilter = this.selectedStatusFilter();
 
-  ngOnInit() {
-    this.moduleList = this.modullerService.modules();
+    let list = this.modullerService.cards();
 
-    this.route.queryParams.subscribe(params => {
-      const tab = params['tab'];
-      if (tab) {
-        this.modullerService.selectModule(tab);
-      }
-      this.syncActiveModule();
-    });
-
-    this.syncActiveModule();
-  }
-
-  syncActiveModule() {
-    this.selectedModuleKey = this.modullerService.activeModuleKey();
-    this.activeSlideIndex = 0;
-    this.selectedSeverityFilter = 'TÜMÜ';
-    this.selectedStatusFilter = 'TÜMÜ';
-    this.searchFilter = '';
-    this.updateView();
-    this.cdr.markForCheck();
-  }
-
-  updateView() {
-    this.currentModule = this.modullerService.getModuleByKey(this.selectedModuleKey);
-    if (this.currentModule && this.currentModule.slides && this.currentModule.slides.length > 0) {
-      const idx = Math.min(this.activeSlideIndex, this.currentModule.slides.length - 1);
-      this.currentSlide = this.currentModule.slides[idx];
-    } else {
-      this.currentSlide = undefined;
-    }
-
-    if (!this.currentSlide) {
-      this.availableSeverities = [];
-      this.availableStatuses = [];
-      this.filteredCards = [];
-      return;
-    }
-
-    // Severity counts
-    const sevCounts = new Map<CardSeverity, number>();
-    const statCounts = new Map<CardStatus, number>();
-    for (const card of this.currentSlide.cards) {
-      sevCounts.set(card.severity, (sevCounts.get(card.severity) || 0) + 1);
-      statCounts.set(card.status, (statCounts.get(card.status) || 0) + 1);
-    }
-    this.availableSeverities = Array.from(sevCounts.entries()).map(([severity, count]) => ({ severity, count }));
-    this.availableStatuses = Array.from(statCounts.entries()).map(([status, count]) => ({ status, count }));
-
-    // Filtered cards
-    let list = this.currentSlide.cards;
-    const query = this.searchFilter.trim().toLowerCase();
+    // 1. Search Query
     if (query) {
       list = list.filter(c =>
+        c.category.toLowerCase().includes(query) ||
         c.title.toLowerCase().includes(query) ||
         c.bullets.some(b => b.toLowerCase().includes(query)) ||
         (c.footerNote && c.footerNote.toLowerCase().includes(query))
       );
     }
-    if (this.selectedSeverityFilter !== 'TÜMÜ') {
-      list = list.filter(c => c.severity === this.selectedSeverityFilter);
+
+    // 2. Category Filter
+    if (catFilter !== 'TÜMÜ') {
+      list = list.filter(c => c.category.trim().toLowerCase() === catFilter.trim().toLowerCase());
     }
-    if (this.selectedStatusFilter !== 'TÜMÜ') {
-      list = list.filter(c => c.status === this.selectedStatusFilter);
+
+    // 3. Severity Filter
+    if (sevFilter !== 'TÜMÜ') {
+      list = list.filter(c => c.severity === sevFilter);
     }
-    this.filteredCards = list;
+
+    // 4. Status Filter
+    if (statFilter !== 'TÜMÜ') {
+      list = list.filter(c => c.status === statFilter);
+    }
+
+    // 5. Group by Category
+    const map = new Map<string, ModuleCard[]>();
+    for (const card of list) {
+      const cat = (card.category || 'Genel Bulgular').trim();
+      if (!map.has(cat)) {
+        map.set(cat, []);
+      }
+      map.get(cat)!.push(card);
+    }
+
+    // 6. Sort categories alphabetically (Turkish locale)
+    const sortedCatNames = Array.from(map.keys()).sort((a, b) => a.localeCompare(b, 'tr'));
+
+    // 7. Sort cards within each category alphabetically by Title
+    return sortedCatNames.map(category => {
+      const cards = map.get(category)!.sort((a, b) => a.title.localeCompare(b.title, 'tr'));
+      return { category, cards };
+    });
+  });
+
+  readonly totalFilteredCards = computed(() => {
+    return this.groupedCategories().reduce((sum, g) => sum + g.cards.length, 0);
+  });
+
+  // Helper count for specific category
+  getCategoryCount(catName: string): number {
+    return this.modullerService.cards().filter(c => c.category.trim().toLowerCase() === catName.trim().toLowerCase()).length;
   }
 
-  selectModule(key: string) {
-    if (this.selectedModuleKey === key) return;
-    this.modullerService.selectModule(key);
-    this.selectedModuleKey = key;
-    this.activeSlideIndex = 0;
-    this.searchFilter = '';
-    this.selectedSeverityFilter = 'TÜMÜ';
-    this.selectedStatusFilter = 'TÜMÜ';
-    this.updateView();
-    this.cdr.markForCheck();
+  setCategoryFilter(cat: string): void {
+    this.selectedCategoryFilter.set(cat);
   }
 
-  setSlide(index: number) {
-    if (this.activeSlideIndex === index) return;
-    this.activeSlideIndex = index;
-    this.selectedSeverityFilter = 'TÜMÜ';
-    this.selectedStatusFilter = 'TÜMÜ';
-    this.updateView();
-    this.cdr.markForCheck();
+  setSeverityFilter(sev: string): void {
+    this.selectedSeverityFilter.set(sev);
   }
 
-  onFilterChange() {
-    this.updateView();
-    this.cdr.markForCheck();
+  setStatusFilter(stat: string): void {
+    this.selectedStatusFilter.set(stat);
   }
 
-  setSeverityFilter(sev: string) {
-    this.selectedSeverityFilter = sev;
-    this.updateView();
-    this.cdr.markForCheck();
-  }
-
-  setStatusFilter(stat: string) {
-    this.selectedStatusFilter = stat;
-    this.updateView();
-    this.cdr.markForCheck();
-  }
-
-  trackByModuleKey(index: number, mod: ModuleItem): string {
-    return mod.key;
-  }
-
-  trackBySlideId(index: number, slide: ModuleSlide): string {
-    return slide.id;
-  }
-
-  trackByCardId(index: number, card: ModuleCard): string {
-    return card.id;
+  onSearchChange(val: string): void {
+    this.searchFilter.set(val);
   }
 
   getSeverityClass(severity: CardSeverity): string {
     switch (severity) {
-      case 'Kritik':
-        return 'sev-kritik';
-      case 'Yüksek':
-        return 'sev-yuksek';
-      case 'Orta':
-        return 'sev-orta';
-      case 'Düşük':
-        return 'sev-dusuk';
-      default:
-        return 'sev-orta';
+      case 'Kritik': return 'sev-kritik';
+      case 'Yüksek': return 'sev-yuksek';
+      case 'Orta': return 'sev-orta';
+      case 'Düşük': return 'sev-dusuk';
+      default: return 'sev-orta';
     }
   }
 
   getStatusClass(status: CardStatus): string {
     switch (status) {
-      case 'Geliştirme':
-        return 'status-gelistirme';
-      case 'Standart':
-        return 'status-standart';
-      case 'Fırsat':
-        return 'status-firsat';
-      case 'Uygun Değil':
-        return 'status-uygun-degil';
-      case 'Kısmen Uygun':
-        return 'status-kismen-uygun';
-      case 'Önerilen':
-        return 'status-onerilen';
-      default:
-        return 'status-standart';
+      case 'Geliştirme': return 'status-gelistirme';
+      case 'Standart': return 'status-standart';
+      case 'Fırsat': return 'status-firsat';
+      case 'Uygun Değil': return 'status-uygun-degil';
+      case 'Kısmen Uygun': return 'status-kismen-uygun';
+      case 'Önerilen': return 'status-onerilen';
+      default: return 'status-standart';
     }
   }
 
-  openAddModal() {
+  openAddModal(prefilledCategory?: string): void {
     this.editingCardId = null;
+    if (prefilledCategory) {
+      this.formCategory = prefilledCategory;
+    } else if (this.selectedCategoryFilter() !== 'TÜMÜ') {
+      this.formCategory = this.selectedCategoryFilter();
+    } else {
+      this.formCategory = this.dynamicCategories()[0] || 'Genel Bulgular';
+    }
     this.formTitle = '';
     this.formSeverity = 'Kritik';
     this.formStatus = 'Geliştirme';
@@ -229,11 +174,11 @@ export class ModulesComponent implements OnInit {
     this.formFooterNote = '';
     this.formIsFullWidth = false;
     this.isModalOpen = true;
-    this.cdr.markForCheck();
   }
 
-  openEditModal(card: ModuleCard) {
+  openEditModal(card: ModuleCard): void {
     this.editingCardId = card.id;
+    this.formCategory = card.category;
     this.formTitle = card.title;
     this.formSeverity = card.severity;
     this.formStatus = card.status;
@@ -241,58 +186,57 @@ export class ModulesComponent implements OnInit {
     this.formFooterNote = card.footerNote || '';
     this.formIsFullWidth = !!card.isFullWidth;
     this.isModalOpen = true;
-    this.cdr.markForCheck();
   }
 
-  closeModal() {
+  closeModal(): void {
     this.isModalOpen = false;
-    this.cdr.markForCheck();
   }
 
-  saveCard() {
+  saveCard(): void {
     if (!this.formTitle.trim()) return;
-    if (!this.currentSlide) return;
 
+    const cat = this.formCategory.trim() || 'Genel Bulgular';
     const bullets = this.formBulletsText
       .split('\n')
       .map(b => b.trim())
       .filter(b => b.length > 0);
 
     if (this.editingCardId) {
-      const updatedCard: ModuleCard = {
+      const updated: ModuleCard = {
         id: this.editingCardId,
+        category: cat,
         title: this.formTitle.trim(),
         severity: this.formSeverity,
         status: this.formStatus,
-        bullets: bullets,
+        bullets,
         footerNote: this.formFooterNote.trim() || undefined,
         isFullWidth: this.formIsFullWidth
       };
-      this.modullerService.updateCard(this.selectedModuleKey, this.currentSlide.id, updatedCard);
+      this.modullerService.updateCard(updated);
     } else {
       const newCard: ModuleCard = {
-        id: 'card-' + Date.now(),
+        id: 'card-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        category: cat,
         title: this.formTitle.trim(),
         severity: this.formSeverity,
         status: this.formStatus,
-        bullets: bullets,
+        bullets,
         footerNote: this.formFooterNote.trim() || undefined,
         isFullWidth: this.formIsFullWidth
       };
-      this.modullerService.addCard(this.selectedModuleKey, this.currentSlide.id, newCard);
+      this.modullerService.addCard(newCard);
     }
 
-    this.updateView();
     this.closeModal();
   }
 
-  deleteCard(cardId: string) {
-    if (!this.currentSlide) return;
-    const confirmDelete = window.confirm('Bu değerlendirme kartını silmek istediğinize emin misiniz?');
-    if (!confirmDelete) return;
+  deleteCard(cardId: string): void {
+    if (confirm('Bu değerlendirme kartını silmek istediğinize emin misiniz?')) {
+      this.modullerService.deleteCard(cardId);
+    }
+  }
 
-    this.modullerService.deleteCard(this.selectedModuleKey, this.currentSlide.id, cardId);
-    this.updateView();
-    this.cdr.markForCheck();
+  downloadTemplate(): void {
+    downloadModulesTemplate();
   }
 }

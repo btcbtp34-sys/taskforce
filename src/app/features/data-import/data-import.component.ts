@@ -438,27 +438,23 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                 </tr>
               </thead>
               <tbody>
-                <ng-container *ngFor="let mod of modullerService.modules()">
-                  <ng-container *ngFor="let s of mod.slides">
-                    <tr *ngFor="let c of s.cards; let i = index">
-                      <td>{{ i + 1 }}</td>
-                      <td><strong>{{ mod.name }}</strong></td>
-                      <td>{{ c.title }}</td>
-                      <td>
-                        <span class="badge-pill" [style.background]="c.severity === 'Kritik' ? '#fee2e2' : (c.severity === 'Yüksek' ? '#ffedd5' : '#eff6ff')" [style.color]="c.severity === 'Kritik' ? '#b91c1c' : (c.severity === 'Yüksek' ? '#c2410c' : '#1d4ed8')">
-                          {{ c.severity }}
-                        </span>
-                      </td>
-                      <td>
-                        <span class="badge-pill" [style.background]="c.status === 'Standart' ? '#dcfce7' : (c.status === 'Geliştirme' ? '#fef3c7' : '#e0e7ff')" [style.color]="c.status === 'Standart' ? '#15803d' : (c.status === 'Geliştirme' ? '#b45309' : '#4338ca')">
-                          {{ c.status }}
-                        </span>
-                      </td>
-                      <td>{{ c.bullets.length }} madde</td>
-                      <td><small>{{ c.footerNote || '—' }}</small></td>
-                    </tr>
-                  </ng-container>
-                </ng-container>
+                <tr *ngFor="let c of modullerService.cards(); let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td><strong>{{ c.category }}</strong></td>
+                  <td>{{ c.title }}</td>
+                  <td>
+                    <span class="badge-pill" [style.background]="c.severity === 'Kritik' ? '#fee2e2' : (c.severity === 'Yüksek' ? '#ffedd5' : '#eff6ff')" [style.color]="c.severity === 'Kritik' ? '#b91c1c' : (c.severity === 'Yüksek' ? '#c2410c' : '#1d4ed8')">
+                      {{ c.severity }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge-pill" [style.background]="c.status === 'Standart' ? '#dcfce7' : (c.status === 'Geliştirme' ? '#fef3c7' : '#e0e7ff')" [style.color]="c.status === 'Standart' ? '#15803d' : (c.status === 'Geliştirme' ? '#b45309' : '#4338ca')">
+                      {{ c.status }}
+                    </span>
+                  </td>
+                  <td>{{ c.bullets.length }} madde</td>
+                  <td><small>{{ c.footerNote || '—' }}</small></td>
+                </tr>
               </tbody>
             </table>
           </div>

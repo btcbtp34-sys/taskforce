@@ -384,7 +384,7 @@ export class DataImportService {
     if (colBullets === -1) colBullets = 4;
     if (colFooter === -1) colFooter = 5;
 
-    const cardsToImport: { category: string; card: ModuleCard }[] = [];
+    const cardsToImport: ModuleCard[] = [];
 
     for (let r = headerRowIdx + 1; r < rawData.length; r++) {
       const row = rawData[r];
@@ -408,6 +408,7 @@ export class DataImportService {
 
       const card: ModuleCard = {
         id: 'card-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        category,
         title,
         severity,
         status,
@@ -415,7 +416,7 @@ export class DataImportService {
         footerNote: footerNote || undefined
       };
 
-      cardsToImport.push({ category, card });
+      cardsToImport.push(card);
     }
 
     if (cardsToImport.length > 0) {
@@ -433,84 +434,72 @@ export class DataImportService {
   }
 
   loadSampleModulesData(): void {
-    const sampleCards: { category: string; card: ModuleCard }[] = [
+    const sampleCards: ModuleCard[] = [
       {
+        id: 'card-sample-1',
         category: 'Genel Bulgular',
-        card: {
-          id: 'card-sample-1',
-          title: 'Business Partner Dönüşümü',
-          severity: 'Kritik',
-          status: 'Standart',
-          bullets: [
-            "MM ve FI'daki tüm satıcı/müşteri ana veri entegrasyonları (Z programları) S/4HANA'nın zorunlu Business Partner modeline göre yeniden tasarlanmalı."
-          ],
-          footerNote: 'Tahmini Süre: 4 Ay'
-        }
+        title: 'Business Partner Dönüşümü',
+        severity: 'Kritik',
+        status: 'Standart',
+        bullets: [
+          "MM ve FI'daki tüm satıcı/müşteri ana veri entegrasyonları (Z programları) S/4HANA'nın zorunlu Business Partner modeline göre yeniden tasarlanmalı."
+        ],
+        footerNote: 'Tahmini Süre: 4 Ay'
       },
       {
+        id: 'card-sample-2',
         category: 'Genel Bulgular',
-        card: {
-          id: 'card-sample-2',
-          title: 'Ana Veri Kalitesi (CO Ağırlıklı)',
-          severity: 'Kritik',
-          status: 'Uygun Değil',
-          bullets: [
-            'Kâr merkezi, masraf çeşidi ve iç sipariş ana verisinde tutarsızlıklar var; go-live öncesi kapsamlı temizlik gerekiyor.'
-          ]
-        }
+        title: 'Ana Veri Kalitesi (CO Ağırlıklı)',
+        severity: 'Kritik',
+        status: 'Uygun Değil',
+        bullets: [
+          'Kâr merkezi, masraf çeşidi ve iç sipariş ana verisinde tutarsızlıklar var; go-live öncesi kapsamlı temizlik gerekiyor.'
+        ]
       },
       {
+        id: 'card-sample-3',
         category: 'MM Modülü',
-        card: {
-          id: 'card-sample-3',
-          title: 'Satıcı Ana Veri — BP Entegrasyonu',
-          severity: 'Kritik',
-          status: 'Geliştirme',
-          bullets: [
-            'ZSD_CREATE/CHANGE/BLOKE_VENDOR programları klasik satıcı yapısına göre kurgulanmış.',
-            'Business Partner modeline uyumlu hale getirilecek.'
-          ],
-          footerNote: 'Tahmini Süre: 2 Ay'
-        }
+        title: 'Satıcı Ana Veri — BP Entegrasyonu',
+        severity: 'Kritik',
+        status: 'Geliştirme',
+        bullets: [
+          'ZSD_CREATE/CHANGE/BLOKE_VENDOR programları klasik satıcı yapısına göre kurgulanmış.',
+          'Business Partner modeline uyumlu hale getirilecek.'
+        ],
+        footerNote: 'Tahmini Süre: 2 Ay'
       },
       {
+        id: 'card-sample-4',
         category: 'MM Modülü',
-        card: {
-          id: 'card-sample-4',
-          title: 'SAS Onay Workflow',
-          severity: 'Orta',
-          status: 'Önerilen',
-          bullets: [
-            "S/4HANA'nın Esnek İş Akışı (Flexible Workflow) yapısıyla revize edilmesi önerilir."
-          ]
-        }
+        title: 'SAS Onay Workflow',
+        severity: 'Orta',
+        status: 'Önerilen',
+        bullets: [
+          "S/4HANA'nın Esnek İş Akışı (Flexible Workflow) yapısıyla revize edilmesi önerilir."
+        ]
       },
       {
+        id: 'card-sample-5',
         category: 'FI Modülü',
-        card: {
-          id: 'card-sample-5',
-          title: 'Paralel Para Birimleri',
-          severity: 'Orta',
-          status: 'Fırsat',
-          bullets: [
-            'UPB2/UPB3 para birimleri USD ve EUR için devreye alınmalı.',
-            'Dövizli muavin/mizan raporlaması mümkün olacak.'
-          ],
-          footerNote: 'Düşük Efor'
-        }
+        title: 'Paralel Para Birimleri',
+        severity: 'Orta',
+        status: 'Fırsat',
+        bullets: [
+          'UPB2/UPB3 para birimleri USD ve EUR için devreye alınmalı.',
+          'Dövizli muavin/mizan raporlaması mümkün olacak.'
+        ],
+        footerNote: 'Düşük Efor'
       },
       {
+        id: 'card-sample-6',
         category: 'CO Modülü',
-        card: {
-          id: 'card-sample-6',
-          title: 'Kâr Merkezi Ana Verisi',
-          severity: 'Kritik',
-          status: 'Uygun Değil',
-          bullets: [
-            "CO kayıtlarının yapay veya 999 kâr merkezine düşüşü engellenmeli.",
-            'Türetim kuralları yeniden tasarlanmalı.'
-          ]
-        }
+        title: 'Kâr Merkezi Ana Verisi',
+        severity: 'Kritik',
+        status: 'Uygun Değil',
+        bullets: [
+          "CO kayıtlarının yapay veya 999 kâr merkezine düşüşü engellenmeli.",
+          'Türetim kuralları yeniden tasarlanmalı.'
+        ]
       }
     ];
 
