@@ -1,7 +1,8 @@
-import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewInit, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { CustomerService } from '../../core/services/customer.service';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -16,6 +17,26 @@ export interface TcoExpenseItem {
   y2029: number;
   isCustom?: boolean;
 }
+
+const DEFAULT_YEARS: string[] = ['2025', '2026', '2027', '2028', '2029'];
+
+const DEFAULT_ASIS_ITEMS: TcoExpenseItem[] = [
+  { id: 'a1', name: 'Existing Maintenance', y2025: 80000, y2026: 80000, y2027: 80000, y2028: 80000, y2029: 80000 },
+  { id: 'a2', name: 'Additional License (S/4 Transformation)', y2025: 0, y2026: 10000, y2027: 0, y2028: 0, y2029: 0 },
+  { id: 'a3', name: 'Additional Maintenance', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
+  { id: 'a4', name: 'Infra/Hosting', y2025: 36000, y2026: 36000, y2027: 36000, y2028: 36000, y2029: 36000 },
+  { id: 'a5', name: 'Infra Extensions', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
+  { id: 'a6', name: 'Disaster Recovery', y2025: 10000, y2026: 10000, y2027: 10000, y2028: 10000, y2029: 10000 },
+  { id: 'a7', name: 'Security', y2025: 2000, y2026: 2000, y2027: 2000, y2028: 2000, y2029: 2000 },
+  { id: 'a8', name: 'Basis/Upgrade', y2025: 36000, y2026: 136000, y2027: 36000, y2028: 36000, y2029: 36000 },
+  { id: 'a9', name: 'Innovation Cost (AI, Sustainability, LowCode etc..)', y2025: 50000, y2026: 50000, y2027: 50000, y2028: 50000, y2029: 50000 }
+];
+
+const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
+  { id: 'r1', name: 'RISE Fee', y2025: 500000, y2026: 400000, y2027: 400000, y2028: 400000, y2029: 400000 },
+  { id: 'r2', name: 'RISE Fund', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
+  { id: 'r3', name: 'Project / Implementation', y2025: 200000, y2026: 0, y2027: 0, y2028: 0, y2029: 0 }
+];
 
 @Component({
   selector: 'app-business-case',
@@ -35,6 +56,14 @@ export interface TcoExpenseItem {
         </div>
 
         <div class="header-actions">
+          <!-- Quick Year Selector -->
+          <div class="year-selector-box" title="Yılları 1 yıl ileri/geri kaydırın veya tablodaki yıl başlıklarına tıklayıp doğrudan düzenleyin">
+            <span class="ys-label">Yıllar:</span>
+            <button type="button" class="btn-year-nav" (click)="shiftYears(-1)" title="1 Yıl Geri">◀</button>
+            <span class="ys-range">{{ years()[0] }} — {{ years()[4] }}</span>
+            <button type="button" class="btn-year-nav" (click)="shiftYears(1)" title="1 Yıl İleri">▶</button>
+          </div>
+
           <button type="button" class="btn btn-secondary" (click)="resetToDefaults()">
             <app-icon name="refresh" [size]="15"></app-icon>
             <span>Örnek Değerlere Sıfırla</span>
@@ -98,11 +127,21 @@ export interface TcoExpenseItem {
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">Gider Kalemi (Cost Item)</th>
-                <th class="col-year">2025</th>
-                <th class="col-year">2026</th>
-                <th class="col-year">2027</th>
-                <th class="col-year">2028</th>
-                <th class="col-year">2029</th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
+                </th>
                 <th class="col-total">Toplam (5 Yıl)</th>
                 <th class="col-action"></th>
               </tr>
@@ -145,7 +184,7 @@ export interface TcoExpenseItem {
                 <td class="cell-val font-bold">{{ asisSum2028() | number:'1.2-2' }}</td>
                 <td class="cell-val font-bold">{{ asisSum2029() | number:'1.2-2' }}</td>
                 <td class="cell-row-total font-bold">—</td>
-                <td></td>
+                <td class="cell-action"></td>
               </tr>
             </tbody>
           </table>
@@ -178,11 +217,21 @@ export interface TcoExpenseItem {
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">RISE Maliyet Kalemi (Cost Item)</th>
-                <th class="col-year">2025</th>
-                <th class="col-year">2026</th>
-                <th class="col-year">2027</th>
-                <th class="col-year">2028</th>
-                <th class="col-year">2029</th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
+                </th>
                 <th class="col-total">Toplam (5 Yıl)</th>
                 <th class="col-action"></th>
               </tr>
@@ -225,7 +274,7 @@ export interface TcoExpenseItem {
                 <td class="cell-val font-bold">{{ riseSum2028() | number:'1.2-2' }}</td>
                 <td class="cell-val font-bold">{{ riseSum2029() | number:'1.2-2' }}</td>
                 <td class="cell-row-total font-bold">—</td>
-                <td></td>
+                <td class="cell-action"></td>
               </tr>
             </tbody>
           </table>
@@ -254,11 +303,21 @@ export interface TcoExpenseItem {
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">Kalem</th>
-                <th class="col-year">2025</th>
-                <th class="col-year">2026</th>
-                <th class="col-year">2027</th>
-                <th class="col-year">2028</th>
-                <th class="col-year">2029</th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
+                </th>
+                <th class="col-year">
+                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
+                </th>
                 <th class="col-total">5 Yıllık Net Durum</th>
                 <th class="col-action"></th>
               </tr>
@@ -284,7 +343,7 @@ export interface TcoExpenseItem {
                 <td class="cell-row-total font-bold text-emerald">
                   {{ (asisTotal5Years() - riseTotal5Years()) | number:'1.2-2' }} €
                 </td>
-                <td></td>
+                <td class="cell-action"></td>
               </tr>
             </tbody>
           </table>
@@ -381,6 +440,54 @@ export interface TcoExpenseItem {
         align-items: center;
         gap: 0.6rem;
         flex-wrap: wrap;
+
+        .year-selector-box {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 0.35rem 0.65rem;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          margin-right: 0.35rem;
+
+          .ys-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
+          .ys-range {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #0f172a;
+            padding: 0 4px;
+          }
+
+          .btn-year-nav {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s ease;
+
+            &:hover {
+              background: #0284c7;
+              color: #ffffff;
+              border-color: #0284c7;
+            }
+          }
+        }
       }
     }
 
@@ -525,6 +632,7 @@ export interface TcoExpenseItem {
     .tco-table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
       font-size: 0.78rem;
 
       .tco-gold-header {
@@ -539,16 +647,57 @@ export interface TcoExpenseItem {
 
           &.col-name {
             text-align: left;
-            width: 320px;
+            width: auto;
+            min-width: 220px;
+          }
+
+          &.col-year {
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+            padding: 0.35rem 0.45rem;
+
+            .header-year-input {
+              width: 100%;
+              background: rgba(255, 255, 255, 0.2);
+              border: 1px dashed rgba(0, 0, 0, 0.35);
+              border-radius: 5px;
+              padding: 0.3rem 0.45rem;
+              font-size: 0.82rem;
+              font-weight: 800;
+              color: #000000;
+              text-align: right;
+              outline: none;
+              cursor: pointer;
+              transition: all 0.15s ease;
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.45);
+                border-color: rgba(0, 0, 0, 0.7);
+              }
+
+              &:focus {
+                background: #ffffff;
+                border: 1.5px solid #0284c7;
+                box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+                cursor: text;
+              }
+            }
           }
 
           &.col-total {
+            width: 150px;
+            min-width: 150px;
+            max-width: 150px;
             background: #d97706;
             color: #ffffff;
+            white-space: nowrap;
           }
 
           &.col-action {
-            width: 40px;
+            width: 36px;
+            min-width: 36px;
+            max-width: 36px;
             background: transparent;
             border: none;
           }
@@ -570,6 +719,8 @@ export interface TcoExpenseItem {
 
             &.cell-name {
               text-align: left;
+              width: auto;
+              min-width: 240px;
 
               .input-name {
                 width: 100%;
@@ -589,10 +740,14 @@ export interface TcoExpenseItem {
             }
 
             &.cell-val {
+              width: 110px;
+              min-width: 110px;
+              max-width: 110px;
               text-align: right;
+              padding: 0.35rem 0.45rem;
 
               .input-val {
-                width: 110px;
+                width: 100%;
                 text-align: right;
                 border: 1px solid #e2e8f0;
                 background: #ffffff;
@@ -611,13 +766,21 @@ export interface TcoExpenseItem {
             }
 
             &.cell-row-total {
+              width: 150px;
+              min-width: 150px;
+              max-width: 150px;
               text-align: right;
               font-weight: 800;
               color: #0f172a;
               background: #f8fafc;
+              white-space: nowrap;
+              padding: 0.45rem 0.85rem;
             }
 
             &.cell-action {
+              width: 36px;
+              min-width: 36px;
+              max-width: 36px;
               text-align: center;
               border: none;
 
@@ -759,26 +922,23 @@ export interface TcoExpenseItem {
 export class BusinessCaseComponent implements AfterViewInit {
   @ViewChild('tcoChart') tcoChartRef!: ElementRef<HTMLCanvasElement>;
   private chartInstance: Chart | null = null;
+  customerService = inject(CustomerService);
 
-  // 1. AS-IS On-Premise Items (Exact structure from user screenshot)
-  asisItems = signal<TcoExpenseItem[]>([
-    { id: 'a1', name: 'Existing Maintenance', y2025: 80000, y2026: 80000, y2027: 80000, y2028: 80000, y2029: 80000 },
-    { id: 'a2', name: 'Additional License (S/4 Transformation)', y2025: 0, y2026: 10000, y2027: 0, y2028: 0, y2029: 0 },
-    { id: 'a3', name: 'Additional Maintenance', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-    { id: 'a4', name: 'Infra/Hosting', y2025: 36000, y2026: 36000, y2027: 36000, y2028: 36000, y2029: 36000 },
-    { id: 'a5', name: 'Infra Extensions', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-    { id: 'a6', name: 'Disaster Recovery', y2025: 10000, y2026: 10000, y2027: 10000, y2028: 10000, y2029: 10000 },
-    { id: 'a7', name: 'Security', y2025: 2000, y2026: 2000, y2027: 2000, y2028: 2000, y2029: 2000 },
-    { id: 'a8', name: 'Basis/Upgrade', y2025: 36000, y2026: 136000, y2027: 36000, y2028: 36000, y2029: 36000 },
-    { id: 'a9', name: 'Innovation Cost (AI, Sustainability, LowCode etc..)', y2025: 50000, y2026: 50000, y2027: 50000, y2028: 50000, y2029: 50000 }
-  ]);
+  // Editable Years (Default 2025-2029)
+  years = signal<string[]>([...DEFAULT_YEARS]);
 
-  // 2. RISE with SAP Items (Exact structure from user screenshot)
-  riseItems = signal<TcoExpenseItem[]>([
-    { id: 'r1', name: 'RISE Fee', y2025: 500000, y2026: 400000, y2027: 400000, y2028: 400000, y2029: 400000 },
-    { id: 'r2', name: 'RISE Fund', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-    { id: 'r3', name: 'Project / Implementation', y2025: 200000, y2026: 0, y2027: 0, y2028: 0, y2029: 0 }
-  ]);
+  // 1. AS-IS On-Premise Items
+  asisItems = signal<TcoExpenseItem[]>([...DEFAULT_ASIS_ITEMS]);
+
+  // 2. RISE with SAP Items
+  riseItems = signal<TcoExpenseItem[]>([...DEFAULT_RISE_ITEMS]);
+
+  constructor() {
+    effect(() => {
+      const custId = this.customerService.activeCustomerId();
+      this.loadForCustomer(custId);
+    });
+  }
 
   // Computed Sums for AS-IS
   asisSum2025 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2025) || 0), 0));
@@ -806,9 +966,91 @@ export class BusinessCaseComponent implements AfterViewInit {
     }, 100);
   }
 
+  private loadForCustomer(custId: string): void {
+    if (!custId) return;
+    try {
+      const savedYears = localStorage.getItem(`taskforce_tco_years_${custId}`);
+      if (savedYears) {
+        const parsed = JSON.parse(savedYears);
+        if (Array.isArray(parsed) && parsed.length === 5) {
+          this.years.set(parsed);
+        }
+      } else {
+        this.years.set([...DEFAULT_YEARS]);
+      }
+
+      const savedAsis = localStorage.getItem(`taskforce_tco_asis_${custId}`);
+      if (savedAsis) {
+        this.asisItems.set(JSON.parse(savedAsis));
+      } else {
+        this.asisItems.set([...DEFAULT_ASIS_ITEMS]);
+      }
+
+      const savedRise = localStorage.getItem(`taskforce_tco_rise_${custId}`);
+      if (savedRise) {
+        this.riseItems.set(JSON.parse(savedRise));
+      } else {
+        this.riseItems.set([...DEFAULT_RISE_ITEMS]);
+      }
+
+      this.updateChart();
+    } catch (e) {
+      console.warn('Failed to load TCO data from storage', e);
+    }
+  }
+
+  private saveData(): void {
+    try {
+      const custId = this.customerService.activeCustomerId();
+      if (custId) {
+        localStorage.setItem(`taskforce_tco_years_${custId}`, JSON.stringify(this.years()));
+        localStorage.setItem(`taskforce_tco_asis_${custId}`, JSON.stringify(this.asisItems()));
+        localStorage.setItem(`taskforce_tco_rise_${custId}`, JSON.stringify(this.riseItems()));
+      }
+    } catch (e) {
+      console.warn('Failed to save TCO data', e);
+    }
+  }
+
+  updateYear(index: number, newYear: string): void {
+    const arr = [...this.years()];
+    arr[index] = newYear;
+
+    // Smart auto-fill: If changing the 1st year (index 0) with a 4-digit number (e.g. 2026),
+    // automatically shift the subsequent years
+    if (index === 0 && /^\d{4}$/.test(newYear.trim())) {
+      const startNum = parseInt(newYear.trim(), 10);
+      for (let i = 1; i < 5; i++) {
+        arr[i] = String(startNum + i);
+      }
+    }
+
+    this.years.set(arr);
+    this.saveData();
+    this.updateChart();
+  }
+
+  shiftYears(delta: number): void {
+    const firstYearNum = parseInt(this.years()[0], 10);
+    if (!isNaN(firstYearNum)) {
+      const newStart = firstYearNum + delta;
+      const newYears = [
+        String(newStart),
+        String(newStart + 1),
+        String(newStart + 2),
+        String(newStart + 3),
+        String(newStart + 4)
+      ];
+      this.years.set(newYears);
+      this.saveData();
+      this.updateChart();
+    }
+  }
+
   onDataChanged(): void {
     this.asisItems.update(v => [...v]);
     this.riseItems.update(v => [...v]);
+    this.saveData();
     this.updateChart();
   }
 
@@ -824,11 +1066,13 @@ export class BusinessCaseComponent implements AfterViewInit {
       isCustom: true
     };
     this.asisItems.update(v => [...v, newItem]);
+    this.saveData();
     this.updateChart();
   }
 
   removeAsisRow(idx: number): void {
     this.asisItems.update(v => v.filter((_, i) => i !== idx));
+    this.saveData();
     this.updateChart();
   }
 
@@ -844,33 +1088,21 @@ export class BusinessCaseComponent implements AfterViewInit {
       isCustom: true
     };
     this.riseItems.update(v => [...v, newItem]);
+    this.saveData();
     this.updateChart();
   }
 
   removeRiseRow(idx: number): void {
     this.riseItems.update(v => v.filter((_, i) => i !== idx));
+    this.saveData();
     this.updateChart();
   }
 
   resetToDefaults(): void {
-    this.asisItems.set([
-      { id: 'a1', name: 'Existing Maintenance', y2025: 80000, y2026: 80000, y2027: 80000, y2028: 80000, y2029: 80000 },
-      { id: 'a2', name: 'Additional License (S/4 Transformation)', y2025: 0, y2026: 10000, y2027: 0, y2028: 0, y2029: 0 },
-      { id: 'a3', name: 'Additional Maintenance', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-      { id: 'a4', name: 'Infra/Hosting', y2025: 36000, y2026: 36000, y2027: 36000, y2028: 36000, y2029: 36000 },
-      { id: 'a5', name: 'Infra Extensions', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-      { id: 'a6', name: 'Disaster Recovery', y2025: 10000, y2026: 10000, y2027: 10000, y2028: 10000, y2029: 10000 },
-      { id: 'a7', name: 'Security', y2025: 2000, y2026: 2000, y2027: 2000, y2028: 2000, y2029: 2000 },
-      { id: 'a8', name: 'Basis/Upgrade', y2025: 36000, y2026: 136000, y2027: 36000, y2028: 36000, y2029: 36000 },
-      { id: 'a9', name: 'Innovation Cost (AI, Sustainability, LowCode etc..)', y2025: 50000, y2026: 50000, y2027: 50000, y2028: 50000, y2029: 50000 }
-    ]);
-
-    this.riseItems.set([
-      { id: 'r1', name: 'RISE Fee', y2025: 500000, y2026: 400000, y2027: 400000, y2028: 400000, y2029: 400000 },
-      { id: 'r2', name: 'RISE Fund', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-      { id: 'r3', name: 'Project / Implementation', y2025: 200000, y2026: 0, y2027: 0, y2028: 0, y2029: 0 }
-    ]);
-
+    this.years.set([...DEFAULT_YEARS]);
+    this.asisItems.set([...DEFAULT_ASIS_ITEMS]);
+    this.riseItems.set([...DEFAULT_RISE_ITEMS]);
+    this.saveData();
     this.updateChart();
   }
 
@@ -896,7 +1128,7 @@ export class BusinessCaseComponent implements AfterViewInit {
     this.chartInstance = new Chart(this.tcoChartRef.nativeElement, {
       type: 'line',
       data: {
-        labels: ['2025', '2026', '2027', '2028', '2029'],
+        labels: [...this.years()],
         datasets: [
           {
             label: 'AS-IS On-Premise Kümülatif (€)',
@@ -955,13 +1187,15 @@ export class BusinessCaseComponent implements AfterViewInit {
       this.riseTotal5Years()
     ];
 
+    this.chartInstance.data.labels = [...this.years()];
     this.chartInstance.data.datasets[0].data = asisCum;
     this.chartInstance.data.datasets[1].data = riseCum;
     this.chartInstance.update();
   }
 
   exportToCSV(): void {
-    let csv = 'Kategori;Gider Kalemi;2025;2026;2027;2028;2029;Toplam\n';
+    const y = this.years();
+    let csv = `Kategori;Gider Kalemi;${y[0]};${y[1]};${y[2]};${y[3]};${y[4]};Toplam\n`;
     this.asisItems().forEach(i => {
       const tot = i.y2025 + i.y2026 + i.y2027 + i.y2028 + i.y2029;
       csv += `AS-IS;${i.name};${i.y2025};${i.y2026};${i.y2027};${i.y2028};${i.y2029};${tot}\n`;
@@ -977,7 +1211,7 @@ export class BusinessCaseComponent implements AfterViewInit {
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'ABC_Holding_TCO_Model.csv';
+    link.download = `${this.customerService.activeCustomer().name}_TCO_Model.csv`;
     link.click();
   }
 

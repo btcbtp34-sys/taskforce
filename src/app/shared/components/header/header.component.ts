@@ -535,6 +535,12 @@ export class HeaderComponent {
       this.basisService.clearUploadedData();
       this.importService.clearUploadedPoData();
       this.modullerService.clearCustomerModules();
+      const activeId = this.customerService.activeCustomerId();
+      if (activeId) {
+        localStorage.removeItem(`taskforce_tco_years_${activeId}`);
+        localStorage.removeItem(`taskforce_tco_asis_${activeId}`);
+        localStorage.removeItem(`taskforce_tco_rise_${activeId}`);
+      }
     }
   }
 }
