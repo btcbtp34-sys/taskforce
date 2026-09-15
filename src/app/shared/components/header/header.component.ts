@@ -5,6 +5,7 @@ import { CustomerService } from '../../../core/services/customer.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { BasisSizingService } from '../../../core/services/basis-sizing.service';
 import { DataImportService } from '../../../core/services/data-import.service';
+import { ModullerService } from '../../../core/services/moduller.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -498,6 +499,7 @@ export class HeaderComponent {
   authService = inject(AuthService);
   basisService = inject(BasisSizingService);
   importService = inject(DataImportService);
+  modullerService = inject(ModullerService);
   showNotifications = false;
   showCustomerDropdown = false;
 
@@ -528,6 +530,7 @@ export class HeaderComponent {
   resetCurrentCustomerData(): void {
     this.basisService.clearUploadedData();
     this.importService.clearUploadedPoData();
+    this.modullerService.clearCustomerModules();
   }
 }
 

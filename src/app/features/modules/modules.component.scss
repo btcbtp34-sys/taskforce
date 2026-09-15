@@ -96,6 +96,32 @@
   gap: 4px;
 }
 
+.customer-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 3px 10px;
+  width: fit-content;
+  margin-bottom: 4px;
+}
+
+.customer-badge-pill .cust-prefix {
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.customer-badge-pill .cust-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #166534;
+}
+
 .slide-tag {
   font-size: 12px;
   font-weight: 800;
@@ -394,6 +420,7 @@
 .card-actions {
   display: flex;
   align-items: center;
+  gap: 6px;
   opacity: 0.6;
   transition: opacity 0.2s;
 }
@@ -406,17 +433,23 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 5px;
   border-radius: 6px;
   color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
 }
 
 .action-btn:hover {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.action-btn.delete-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .action-btn svg {

@@ -1,8 +1,9 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ModullerService, ModuleItem, ModuleSlide, ModuleCard, CardSeverity } from '../../core/services/moduller.service';
+import { CustomerService } from '../../core/services/customer.service';
 
 @Component({
   selector: 'app-modules',
@@ -14,6 +15,7 @@ import { ModullerService, ModuleItem, ModuleSlide, ModuleCard, CardSeverity } fr
 })
 export class ModulesComponent implements OnInit {
   modullerService = inject(ModullerService);
+  customerService = inject(CustomerService);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
 
@@ -46,6 +48,15 @@ export class ModulesComponent implements OnInit {
     'KISMEN UYGUN',
     'ÖNERİLEN'
   ];
+
+  constructor() {
+    // Re-render whenever modules change or customer switches
+    effect(() => {
+      this.moduleList = this.modullerService.modules();
+      this.updateView();
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit() {
     this.moduleList = this.modullerService.modules();
@@ -205,14 +216,15 @@ export class ModulesComponent implements OnInit {
       .filter(b => b.length > 0);
 
     if (this.editingCardId) {
-      const card = this.currentSlide.cards.find(c => c.id === this.editingCardId);
-      if (card) {
-        card.title = this.formTitle.trim();
-        card.severity = this.formSeverity;
-        card.bullets = bullets;
-        card.footerNote = this.formFooterNote.trim() || undefined;
-        card.isFullWidth = this.formIsFullWidth;
-      }
+      const updatedCard: ModuleCard = {
+        id: this.editingCardId,
+        title: this.formTitle.trim(),
+        severity: this.formSeverity,
+        bullets: bullets,
+        footerNote: this.formFooterNote.trim() || undefined,
+        isFullWidth: this.formIsFullWidth
+      };
+      this.modullerService.updateCard(this.selectedModuleKey, this.currentSlide.id, updatedCard);
     } else {
       const newCard: ModuleCard = {
         id: 'card-' + Date.now(),
@@ -227,5 +239,15 @@ export class ModulesComponent implements OnInit {
 
     this.updateView();
     this.closeModal();
+  }
+
+  deleteCard(cardId: string) {
+    if (!this.currentSlide) return;
+    const confirmDelete = window.confirm('Bu değerlendirme kartını silmek istediğinize emin misiniz?');
+    if (!confirmDelete) return;
+
+    this.modullerService.deleteCard(this.selectedModuleKey, this.currentSlide.id, cardId);
+    this.updateView();
+    this.cdr.markForCheck();
   }
 }
