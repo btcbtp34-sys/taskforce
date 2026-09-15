@@ -1,5 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import * as XLSX from 'xlsx';
+import { CustomerService } from './customer.service';
 import {
   BasisSizingPackage,
   FueClassificationItem,
@@ -57,7 +58,7 @@ const SAP_TABLE_DICTIONARY: Record<string, { desc: string; module: string; rec: 
   providedIn: 'root'
 })
 export class BasisSizingService {
-  private readonly STORAGE_KEY = 'taskforce_dynamic_sizing_v2';
+  private customerService = inject(CustomerService);
 
   // Upload State - Default FALSE, no pre-filled data!
   hasUploadedData = signal<boolean>(false);
@@ -65,30 +66,47 @@ export class BasisSizingService {
 
   constructor() {
     try {
-      // Purge any legacy demo/dummy package from browser storage
       localStorage.removeItem('taskforce_basis_sizing_package');
     } catch (e) {}
-    this.loadFromStorage();
+
+    effect(() => {
+      const activeId = this.customerService.activeCustomerId();
+      this.loadForCustomer(activeId);
+    });
   }
 
-  private loadFromStorage(): void {
+  private loadForCustomer(customerId: string): void {
     try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
+      const key = `taskforce_sizing_pkg_${customerId}`;
+      let saved = localStorage.getItem(key);
+      if (!saved && customerId === 'cust-2') {
+        const legacy = localStorage.getItem('taskforce_dynamic_sizing_v2');
+        if (legacy) {
+          saved = legacy;
+          localStorage.setItem(key, legacy);
+          localStorage.removeItem('taskforce_dynamic_sizing_v2');
+        }
+      }
       if (saved) {
         const pkg = JSON.parse(saved) as BasisSizingPackage;
         if (pkg && pkg.fileName && pkg.isUploaded) {
           this.basisPackage.set(pkg);
           this.hasUploadedData.set(true);
+          return;
         }
       }
     } catch (e) {
-      console.error('Failed to load basis package from storage', e);
+      console.error('Failed to load basis package for customer', customerId, e);
     }
+    this.basisPackage.set(null);
+    this.hasUploadedData.set(false);
   }
 
   private saveToStorage(pkg: BasisSizingPackage): void {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(pkg));
+      const activeId = this.customerService.activeCustomerId();
+      const key = `taskforce_sizing_pkg_${activeId}`;
+      localStorage.setItem(key, JSON.stringify(pkg));
     } catch (e) {
       console.error('Failed to save basis package to storage', e);
     }
@@ -544,7 +562,8 @@ export class BasisSizingService {
     this.basisPackage.set(null);
     this.hasUploadedData.set(false);
     try {
-      localStorage.removeItem(this.STORAGE_KEY);
+      const activeId = this.customerService.activeCustomerId();
+      localStorage.removeItem(`taskforce_sizing_pkg_${activeId}`);
     } catch (e) {}
   }
 }

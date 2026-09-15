@@ -55,7 +55,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
           <div class="c-info">
             <span class="label">MÜŞTERİ / ŞİRKET</span>
             <h2 class="c-name">{{ customerService.activeCustomer().name }}</h2>
-            <span class="c-sub">{{ customerService.activeCustomer().sector }} • {{ customerService.activeCustomer().contactPerson }}</span>
+            <span class="c-sub">{{ customerService.activeCustomer().sector ? customerService.activeCustomer().sector + ' • ' : '' }}{{ customerService.activeCustomer().contactPerson }}</span>
           </div>
 
           <div class="c-status">

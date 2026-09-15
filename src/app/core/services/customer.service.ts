@@ -2,12 +2,15 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Customer } from '../models/customer.model';
 import { MOCK_CUSTOMERS } from '../data/mock-customers';
 
+const CUSTOMERS_STORAGE_KEY = 'taskforce_customers_list';
+const ACTIVE_CUSTOMER_KEY = 'taskforce_active_customer';
+
 @Injectable({
   providedIn: 'root'
 })
 export class CustomerService {
-  private customersSignal = signal<Customer[]>(MOCK_CUSTOMERS);
-  private activeCustomerIdSignal = signal<string>('cust-2');
+  private customersSignal = signal<Customer[]>(this.getInitialCustomers());
+  private activeCustomerIdSignal = signal<string>(this.getInitialActiveCustomerId());
 
   readonly customers = this.customersSignal.asReadonly();
   readonly activeCustomerId = this.activeCustomerIdSignal.asReadonly();
@@ -30,39 +33,98 @@ export class CustomerService {
     this.customersSignal().reduce((sum, c) => sum + c.activeOpportunityCount, 0)
   );
 
+  private getInitialCustomers(): Customer[] {
+    try {
+      const saved = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Customer[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Sync any mock customer updates (e.g. F*****R) while preserving user-added customers
+          const mockMap = new Map(MOCK_CUSTOMERS.map(c => [c.id, c]));
+          const merged = parsed.map(c => {
+            const mock = mockMap.get(c.id);
+            if (mock) {
+              return { ...c, name: mock.name, sector: mock.sector, code: mock.code };
+            }
+            return c;
+          });
+          // Ensure all mock customers exist
+          MOCK_CUSTOMERS.forEach(m => {
+            if (!merged.some(c => c.id === m.id)) {
+              merged.push(m);
+            }
+          });
+          return merged;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load customers from storage', e);
+    }
+    return MOCK_CUSTOMERS;
+  }
+
+  private getInitialActiveCustomerId(): string {
+    try {
+      const savedId = localStorage.getItem(ACTIVE_CUSTOMER_KEY);
+      if (savedId) {
+        return savedId;
+      }
+    } catch (e) {}
+    return 'cust-2';
+  }
+
+  private saveCustomers(list: Customer[]): void {
+    try {
+      localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {
+      console.error('Failed to save customers to storage', e);
+    }
+  }
+
   selectCustomer(id: string): void {
     if (this.customersSignal().some(c => c.id === id)) {
       this.activeCustomerIdSignal.set(id);
+      try {
+        localStorage.setItem(ACTIVE_CUSTOMER_KEY, id);
+      } catch (e) {}
     }
   }
 
   updateCustomerDataFromBasis(basisUserCount: number, fueValue: number, products: any[]): void {
-    this.customersSignal.update(list => 
-      list.map(c => {
+    this.customersSignal.update(list => {
+      const updated = list.map(c => {
         if (c.id === this.activeCustomerIdSignal()) {
           return {
             ...c,
             sapUserCount: basisUserCount,
             activeUserCount: basisUserCount,
             totalLicenseCost: Math.round(fueValue * 2200),
-            taskForceStatus: 'Analysis',
+            taskForceStatus: 'Analysis' as const,
             progressPercentage: 50,
             lastAnalysisDate: new Date().toLocaleDateString('tr-TR')
           };
         }
         return c;
-      })
-    );
+      });
+      this.saveCustomers(updated);
+      return updated;
+    });
   }
 
   updateCustomerStatus(id: string, status: Customer['taskForceStatus'], progress: number): void {
-    this.customersSignal.update(list => 
-      list.map(c => c.id === id ? { ...c, taskForceStatus: status, progressPercentage: progress } : c)
-    );
+    this.customersSignal.update(list => {
+      const updated = list.map(c => c.id === id ? { ...c, taskForceStatus: status, progressPercentage: progress } : c);
+      this.saveCustomers(updated);
+      return updated;
+    });
   }
 
   addCustomer(customer: Customer): void {
-    this.customersSignal.update(list => [customer, ...list]);
-    this.activeCustomerIdSignal.set(customer.id);
+    this.customersSignal.update(list => {
+      const updated = [customer, ...list];
+      this.saveCustomers(updated);
+      return updated;
+    });
+    this.selectCustomer(customer.id);
   }
 }

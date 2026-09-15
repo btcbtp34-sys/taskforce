@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DataImportService, ExcelImportCategory } from '../../core/services/data-import.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
+import { CustomerService } from '../../core/services/customer.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -19,11 +20,11 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <app-icon name="upload" [size]="24" color="#0284c7"></app-icon>
             Excel / CSV Veri Yükleme & Otomatik Harita Oluşturma
           </h1>
-          <p class="page-subtitle">Yüklemek İstediğiniz Excel Kategorisini Seçin ve Anında Mimari Haritayı Çizin</p>
+          <p class="page-subtitle">Seçili Müşteri: <strong style="color: #0284c7; font-weight: 700;">{{ customerService.activeCustomer().name }}</strong> • Bu müşteriye ait Excel kategorisini seçip dosyanızı yükleyin</p>
         </div>
         <button class="btn btn-sample" (click)="loadSampleData()">
           <app-icon name="file-spreadsheet" [size]="16" color="#0284c7"></app-icon>
-          <span>{{ selectedCategory() === 'po' ? 'Örnek PO Entegrasyon Verisi Yükle (109 Servis)' : 'Örnek SAP Basis Verisi Yükle (ABC Holding)' }}</span>
+          <span>{{ selectedCategory() === 'po' ? 'Örnek PO Entegrasyon Verisi Yükle (109 Servis)' : ('Örnek SAP Basis Verisi Yükle (' + customerService.activeCustomer().name + ')') }}</span>
         </button>
       </div>
 
@@ -1070,6 +1071,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 export class DataImportComponent {
   importService = inject(DataImportService);
   basisService = inject(BasisSizingService);
+  customerService = inject(CustomerService);
   router = inject(Router);
 
   activeTab = signal<'mapping' | 'preview'>('preview');

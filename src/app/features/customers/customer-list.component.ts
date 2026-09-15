@@ -75,7 +75,8 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                   </div>
                 </td>
                 <td>
-                  <span class="sector-tag">{{ cust.sector }}</span>
+                  <span class="sector-tag" *ngIf="cust.sector">{{ cust.sector }}</span>
+                  <span class="text-muted" *ngIf="!cust.sector">—</span>
                 </td>
                 <td>
                   <div class="users-info">
@@ -122,7 +123,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           <div class="modal-body">
             <div class="form-group">
               <label>Müşteri / Şirket Adı</label>
-              <input type="text" #cName placeholder="Örn: GHI Lojistik A.Ş." class="form-input" />
+              <input type="text" #cName placeholder="Örn: F*****R A.Ş." class="form-input" />
             </div>
             <div class="form-group">
               <label>Sektör</label>
@@ -463,7 +464,7 @@ export class CustomerListComponent {
     const sec = this.selectedSector();
 
     return this.customerService.customers().filter(c => {
-      const matchQuery = c.name.toLowerCase().includes(q) || c.sector.toLowerCase().includes(q);
+      const matchQuery = c.name.toLowerCase().includes(q) || (c.sector ? c.sector.toLowerCase().includes(q) : false);
       const matchSector = sec === 'All' || c.sector === sec;
       return matchQuery && matchSector;
     });

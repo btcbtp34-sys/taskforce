@@ -3814,8 +3814,9 @@ export class ArchitectureMapComponent {
       }
     });
 
-    // Reactive Effect: Automatically draws diagram when an Excel file is uploaded!
+    // Reactive Effect: Automatically draws diagram when an Excel file is uploaded or customer changes!
     effect(() => {
+      const activeCust = this.customerService.activeCustomerId();
       if (this.importService.hasUploadedPoData()) {
         const customNodes = this.importService.poDiagramNodes();
         const customEdges = this.importService.poDiagramEdges();
@@ -3827,13 +3828,18 @@ export class ArchitectureMapComponent {
           }
         }
       } else {
-        const recs = this.importService.records();
-        if (recs && recs.length > 0) {
-          const custom = this.importService.getDiagramFromUploadedExcel();
-          if (custom.nodes && custom.nodes.length > 0) {
-            this.nodes.set(custom.nodes);
-            this.currentEdges.set(custom.edges);
-            this.excelImportSuccess.set(true);
+        if (this.architectureMode() === 'po') {
+          this.nodes.set([]);
+          this.currentEdges.set([]);
+        } else {
+          const recs = this.importService.records();
+          if (recs && recs.length > 0) {
+            const custom = this.importService.getDiagramFromUploadedExcel();
+            if (custom.nodes && custom.nodes.length > 0) {
+              this.nodes.set(custom.nodes);
+              this.currentEdges.set(custom.edges);
+              this.excelImportSuccess.set(true);
+            }
           }
         }
       }

@@ -91,9 +91,9 @@ export const MOCK_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-3',
-    name: 'GHI Lojistik Grubu',
+    name: 'F*****R',
     code: 'GHI-2026',
-    sector: 'Logistics & Retail',
+    sector: '',
     sapUserCount: 2100,
     activeUserCount: 1850,
     lowUsageUserCount: 250,
@@ -114,7 +114,7 @@ export const MOCK_CUSTOMERS: Customer[] = [
       'Kullanılmayan Professional Lisanslar'
     ],
     contactPerson: 'Caner Kaya (COO)',
-    email: 'caner.kaya@ghilogistics.com',
+    email: 'caner.kaya@f-holding.com',
     phone: '+90 312 333 0911',
     logo: 'truck',
     lastAnalysisDate: '2026-08-30'

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { ColumnMapping, DataImportSummary, PoInterfaceItem } from '../models/sap-data.model';
 import { ArchitectureNode, ArchitectureEdge } from '../../features/architecture-map/architecture-map.component';
 import { BasisSizingService } from './basis-sizing.service';
@@ -46,6 +46,73 @@ export class DataImportService {
   poDiagramNodes = signal<ArchitectureNode[]>([]);
   poDiagramEdges = signal<ArchitectureEdge[]>([]);
   poSummary = signal<{ totalInterfaces: number; uniqueSenders: number; uniqueReceivers: number; totalServers: number } | null>(null);
+
+  constructor() {
+    effect(() => {
+      const activeId = this.customerService.activeCustomerId();
+      this.loadForCustomer(activeId);
+    });
+  }
+
+  private loadForCustomer(customerId: string): void {
+    try {
+      const key = `taskforce_po_pkg_${customerId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data) {
+          this.poInterfaces.set(data.poInterfaces || []);
+          this.hasUploadedPoData.set(data.hasUploadedPoData || false);
+          this.poDiagramNodes.set(data.poDiagramNodes || []);
+          this.poDiagramEdges.set(data.poDiagramEdges || []);
+          this.poSummary.set(data.poSummary || null);
+          this.records.set(data.records || []);
+          this.columnMappings.set(data.columnMappings || []);
+          this.summary.set(data.summary || null);
+          this.uploadedFileName.set(data.uploadedFileName || '');
+          this.importCategory.set(data.importCategory || 'asis');
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load PO data for customer', customerId, e);
+    }
+    this.clearInMemoryData();
+  }
+
+  private clearInMemoryData(): void {
+    this.poInterfaces.set([]);
+    this.hasUploadedPoData.set(false);
+    this.poDiagramNodes.set([]);
+    this.poDiagramEdges.set([]);
+    this.poSummary.set(null);
+    this.records.set([]);
+    this.columnMappings.set([]);
+    this.summary.set(null);
+    this.uploadedFileName.set('');
+  }
+
+  saveForCustomer(): void {
+    try {
+      const activeId = this.customerService.activeCustomerId();
+      const key = `taskforce_po_pkg_${activeId}`;
+      const data = {
+        poInterfaces: this.poInterfaces(),
+        hasUploadedPoData: this.hasUploadedPoData(),
+        poDiagramNodes: this.poDiagramNodes(),
+        poDiagramEdges: this.poDiagramEdges(),
+        poSummary: this.poSummary(),
+        records: this.records(),
+        columnMappings: this.columnMappings(),
+        summary: this.summary(),
+        uploadedFileName: this.uploadedFileName(),
+        importCategory: this.importCategory()
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to save PO data for customer', e);
+    }
+  }
 
   readonly systemFields: SystemFieldOption[] = [
     { key: 'userName', label: 'Kullanıcı Adı', required: true },
@@ -245,11 +312,11 @@ export class DataImportService {
   }
 
   clearUploadedPoData(): void {
-    this.poInterfaces.set([]);
-    this.hasUploadedPoData.set(false);
-    this.poDiagramNodes.set([]);
-    this.poDiagramEdges.set([]);
-    this.poSummary.set(null);
+    this.clearInMemoryData();
+    try {
+      const activeId = this.customerService.activeCustomerId();
+      localStorage.removeItem(`taskforce_po_pkg_${activeId}`);
+    } catch (e) {}
   }
 
   parsePoWorkbook(workbook: XLSX.WorkBook, fileName: string, fileSize: number): void {
@@ -409,6 +476,7 @@ export class DataImportService {
       uploadDate: new Date().toLocaleDateString('tr-TR'),
       dataQualityScore: 98
     });
+    this.saveForCustomer();
   }
 
   generateDiagramFromPoInterfaces(interfaces: PoInterfaceItem[], hubName?: string): { nodes: ArchitectureNode[]; edges: ArchitectureEdge[] } {
@@ -801,6 +869,7 @@ export class DataImportService {
         uploadDate: new Date().toLocaleDateString('tr-TR'),
         dataQualityScore: 99
       });
+      this.saveForCustomer();
       return;
     }
 
@@ -844,6 +913,7 @@ export class DataImportService {
     });
 
     this.columnMappings.set(autoMappings);
+    this.saveForCustomer();
   }
 
   autoMatchColumns(): void {

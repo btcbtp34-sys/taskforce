@@ -30,7 +30,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                 <app-status-badge [text]="activeCustomer().taskForceStatus" type="stage"></app-status-badge>
               </div>
               <p class="customer-sub">
-                Sektör: <strong>{{ activeCustomer().sector }}</strong> • Kod: {{ activeCustomer().code }} • İletişim: {{ activeCustomer().contactPerson }} ({{ activeCustomer().email }})
+                <span *ngIf="activeCustomer().sector">Sektör: <strong>{{ activeCustomer().sector }}</strong> • </span>Kod: {{ activeCustomer().code }} • İletişim: {{ activeCustomer().contactPerson }} ({{ activeCustomer().email }})
               </p>
             </div>
           </div>

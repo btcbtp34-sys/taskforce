@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../../core/services/customer.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { BasisSizingService } from '../../../core/services/basis-sizing.service';
+import { DataImportService } from '../../../core/services/data-import.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -14,14 +15,36 @@ import { IconComponent } from '../icon/icon.component';
     <header class="header-container">
       <!-- Search & Active Customer Context -->
       <div class="left-section">
-        <!-- Customer Context Badge (Static, no switcher) -->
-        <div class="customer-badge-box">
+        <!-- Customer Context Badge (Interactive Switcher) -->
+        <div class="customer-badge-box interactive" (click)="toggleCustomerDropdown($event)" title="Müşteri Değiştirmek İçin Tıklayın">
           <div class="cust-icon-wrap">
             <app-icon name="database" [size]="14" color="#0284c7"></app-icon>
           </div>
           <div class="cust-text-info">
-            <span class="cust-label">MÜŞTERİ</span>
+            <span class="cust-label">AKTİF MÜŞTERİ</span>
             <strong class="cust-name-val">{{ customerService.activeCustomer().name }}</strong>
+          </div>
+          <app-icon name="chevron-down" [size]="11" color="#0284c7"></app-icon>
+
+          <!-- Customer Dropdown Menu -->
+          <div class="cust-dropdown-menu" *ngIf="showCustomerDropdown" (click)="$event.stopPropagation()">
+            <div class="cd-header">
+              <span>Müşteri Seçin</span>
+              <a routerLink="/customers" (click)="showCustomerDropdown = false" class="cd-link">Tümü ➔</a>
+            </div>
+            <div class="cd-list">
+              <div 
+                class="cd-item" 
+                *ngFor="let c of customerService.customers()"
+                [class.active]="c.id === customerService.activeCustomerId()"
+                (click)="onSelectCustomer(c.id)">
+                <div class="cd-main">
+                  <strong class="cd-name">{{ c.name }}</strong>
+                  <span class="cd-sector" *ngIf="c.sector">{{ c.sector }}</span>
+                </div>
+                <span class="cd-badge" *ngIf="hasDataForCustomer(c.id)">Excel Yüklü</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -37,10 +60,10 @@ import { IconComponent } from '../icon/icon.component';
       <div class="right-section">
         <!-- Reset Uploaded Data Button (when uploaded) -->
         <button 
-          *ngIf="basisService.hasUploadedData()" 
+          *ngIf="basisService.hasUploadedData() || importService.hasUploadedPoData()" 
           class="btn-header-reset" 
-          (click)="basisService.clearUploadedData()" 
-          title="Yüklenen Excel verilerini sıfırla ve sistemi temizle">
+          (click)="resetCurrentCustomerData()" 
+          [title]="customerService.activeCustomer().name + ' için yüklenen Excel verilerini sıfırla'">
           <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
           <span>Verileri Sıfırla</span>
         </button>
@@ -125,6 +148,100 @@ import { IconComponent } from '../icon/icon.component';
       border-radius: 6px;
       padding: 0.25rem 0.6rem;
       gap: 0.5rem;
+      position: relative;
+
+      &.interactive {
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+
+        &:hover {
+          background: #e0f2fe;
+          border-color: #7dd3fc;
+        }
+      }
+
+      .cust-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: 260px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        z-index: 1000;
+        overflow: hidden;
+
+        .cd-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.6rem 0.85rem;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #475569;
+
+          .cd-link {
+            color: #0284c7;
+            text-decoration: none;
+            font-size: 0.7rem;
+
+            &:hover { text-decoration: underline; }
+          }
+        }
+
+        .cd-list {
+          max-height: 260px;
+          overflow-y: auto;
+          padding: 0.35rem 0;
+
+          .cd-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.85rem;
+            cursor: pointer;
+            transition: background 0.12s;
+
+            &:hover {
+              background: #f1f5f9;
+            }
+
+            &.active {
+              background: #eff6ff;
+              border-left: 3px solid #0284c7;
+            }
+
+            .cd-main {
+              display: flex;
+              flex-direction: column;
+              gap: 0.1rem;
+
+              .cd-name {
+                font-size: 0.8rem;
+                color: #0f172a;
+              }
+
+              .cd-sector {
+                font-size: 0.68rem;
+                color: #64748b;
+              }
+            }
+
+            .cd-badge {
+              font-size: 0.62rem;
+              font-weight: 700;
+              background: #dcfce7;
+              color: #15803d;
+              padding: 0.15rem 0.45rem;
+              border-radius: 4px;
+            }
+          }
+        }
+      }
 
       .cust-icon-wrap {
         display: flex;
@@ -380,6 +497,37 @@ export class HeaderComponent {
   customerService = inject(CustomerService);
   authService = inject(AuthService);
   basisService = inject(BasisSizingService);
+  importService = inject(DataImportService);
   showNotifications = false;
+  showCustomerDropdown = false;
+
+  toggleCustomerDropdown(event: Event): void {
+    event.stopPropagation();
+    this.showCustomerDropdown = !this.showCustomerDropdown;
+  }
+
+  onSelectCustomer(id: string): void {
+    this.customerService.selectCustomer(id);
+    this.showCustomerDropdown = false;
+  }
+
+  hasDataForCustomer(id: string): boolean {
+    try {
+      return !!(localStorage.getItem('taskforce_sizing_pkg_' + id) || localStorage.getItem('taskforce_po_pkg_' + id));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showCustomerDropdown = false;
+    this.showNotifications = false;
+  }
+
+  resetCurrentCustomerData(): void {
+    this.basisService.clearUploadedData();
+    this.importService.clearUploadedPoData();
+  }
 }
 

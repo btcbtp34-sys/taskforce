@@ -106,7 +106,7 @@ import { Customer } from '../../core/models/customer.model';
                     (click)="selectCustomer(cust.id)">
                     <div class="opt-main">
                       <strong class="opt-name">{{ cust.name }}</strong>
-                      <span class="opt-sector">{{ cust.sector }}</span>
+                      <span class="opt-sector" *ngIf="cust.sector">{{ cust.sector }}</span>
                     </div>
                     <span class="opt-badge">{{ cust.code }}</span>
                   </div>
@@ -456,7 +456,7 @@ export class LoginComponent {
     if (!q) return list;
     return list.filter(c => 
       c.name.toLowerCase().includes(q) || 
-      c.sector.toLowerCase().includes(q) || 
+      (c.sector ? c.sector.toLowerCase().includes(q) : false) || 
       c.code.toLowerCase().includes(q)
     );
   });
@@ -485,7 +485,7 @@ export class LoginComponent {
       return 'Müşteri Seçiniz...';
     }
     const found = this.customerService.customers().find(c => c.id === id);
-    return found ? `${found.name} (${found.sector})` : 'Müşteri Seçiniz...';
+    return found ? (found.sector ? `${found.name} (${found.sector})` : found.name) : 'Müşteri Seçiniz...';
   }
 
   @HostListener('document:click')
