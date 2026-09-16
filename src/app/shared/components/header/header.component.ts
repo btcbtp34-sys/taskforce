@@ -528,24 +528,53 @@ import { IconComponent } from '../icon/icon.component';
     .btn-header-action, .btn-header-reset {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.35rem 0.65rem;
+      gap: 0.4rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+      height: 32px;
+      padding: 0 0.75rem;
       border-radius: 6px;
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
-      transition: all 0.15s;
+      border: 1px solid transparent;
+      outline: none;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 
       &.btn-export {
         background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        color: #16a34a;
+        border-color: #bbf7d0;
+        color: #15803d;
 
         &:hover {
           background: #dcfce7;
           border-color: #86efac;
+          box-shadow: 0 2px 4px rgba(22, 163, 74, 0.12);
+        }
+      }
+
+      &.btn-import {
+        background: #f0f9ff;
+        border-color: #bae6fd;
+        color: #0284c7;
+
+        &:hover {
+          background: #e0f2fe;
+          border-color: #7dd3fc;
+          box-shadow: 0 2px 4px rgba(2, 132, 199, 0.12);
+        }
+      }
+
+      &.btn-reset, &.btn-header-reset {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+
+        &:hover {
+          background: #fee2e2;
+          border-color: #fca5a5;
+          box-shadow: 0 2px 4px rgba(220, 38, 38, 0.12);
         }
       }
     }
@@ -553,47 +582,51 @@ import { IconComponent } from '../icon/icon.component';
     .backup-dropdown-container {
       position: relative;
       display: inline-flex;
-      align-items: stretch;
+      align-items: center;
 
       .btn-export {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
         border-right: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
 
         .backup-badge-name {
-          background: rgba(22, 163, 74, 0.15);
+          background: rgba(22, 163, 74, 0.12);
           color: #15803d;
           font-size: 0.65rem;
-          padding: 0.08rem 0.35rem;
-          border-radius: 4px;
           font-weight: 700;
-          max-width: 80px;
+          padding: 0.1rem 0.4rem;
+          border-radius: 4px;
+          max-width: 85px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          margin-left: 0.15rem;
         }
       }
 
       .btn-export-toggle {
-        padding: 0.35rem 0.45rem;
+        height: 32px;
+        padding: 0 0.45rem;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
         border-top-right-radius: 6px;
         border-bottom-right-radius: 6px;
         background: #f0fdf4;
         border: 1px solid #bbf7d0;
+        border-left: 1px solid rgba(22, 163, 74, 0.2);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.15s;
+        outline: none;
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 
         &:hover {
           background: #dcfce7;
           border-color: #86efac;
+          border-left-color: rgba(22, 163, 74, 0.3);
+          box-shadow: 0 2px 4px rgba(22, 163, 74, 0.12);
         }
       }
 
@@ -604,7 +637,7 @@ import { IconComponent } from '../icon/icon.component';
         width: 270px;
         background: #ffffff;
         border-radius: 8px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
         border: 1px solid #e5e7eb;
         padding: 0.4rem;
         z-index: 1000;
@@ -656,28 +689,6 @@ import { IconComponent } from '../icon/icon.component';
               white-space: nowrap;
             }
           }
-        }
-      }
-
-      &.btn-import {
-        background: #f0f9ff;
-        border: 1px solid #bae6fd;
-        color: #0284c7;
-
-        &:hover {
-          background: #e0f2fe;
-          border-color: #7dd3fc;
-        }
-      }
-
-      &.btn-reset, &.btn-header-reset {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #dc2626;
-
-        &:hover {
-          background: #fee2e2;
-          border-color: #fca5a5;
         }
       }
     }
