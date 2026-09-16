@@ -748,6 +748,7 @@ export class HeaderComponent {
         localStorage.removeItem(`taskforce_tco_rise_${activeId}`);
         localStorage.removeItem(`taskforce_recommended_method_${activeId}`);
         localStorage.removeItem(`taskforce_custom_code_${activeId}`);
+        localStorage.removeItem(`taskforce_methods_cards_${activeId}`);
       }
     }
   }
@@ -954,6 +955,8 @@ export class HeaderComponent {
                 targetKey = `taskforce_recommended_method_${activeId}`;
               } else if (key.startsWith('taskforce_custom_code_')) {
                 targetKey = `taskforce_custom_code_${activeId}`;
+              } else if (key.startsWith('taskforce_methods_cards_')) {
+                targetKey = `taskforce_methods_cards_${activeId}`;
               }
             }
 

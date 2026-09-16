@@ -5,6 +5,88 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
+export interface MethodBullet {
+  dotColor: 'green' | 'blue' | 'amber' | 'red';
+  label: string;
+  text: string;
+}
+
+export interface MethodCardData {
+  id: string;
+  badgeClass: 'recommended' | 'lift-shift' | 'partial' | 'not-suitable';
+  badgeText: string;
+  duration: string;
+  title: string;
+  subtitle: string;
+  bullets: MethodBullet[];
+  footerNote: string;
+}
+
+export function getDefaultMethodCards(): MethodCardData[] {
+  return [
+    {
+      id: 'brownfield',
+      badgeClass: 'recommended',
+      badgeText: 'ÖNERİLEN ÇÖZÜM',
+      duration: '6 Ay',
+      title: 'Brownfield (System Conversion)',
+      subtitle: 'Teknik Dönüşüm & In-Place Migration',
+      bullets: [
+        { dotColor: 'green', label: 'Geçmiş Veri Bütünlüğü:', text: 'Tüm finansal ve operasyonel geçmiş işlem verisi otomatik olarak S/4HANA\'ya taşınır.' },
+        { dotColor: 'green', label: 'Sadeleştirme & Z Kod Temizliği:', text: 'SAP Readiness Check ile uyumsuz Z programları elenir; zorunlu Simplification Item\'lar uyarlanır.' },
+        { dotColor: 'green', label: 'DVM & Arşivleme Entegrasyonu:', text: 'REGUP, ACDOCA gibi yüksek boyutlu tablolar geçiş öncesi arşivlenerek HANA bellek maliyeti minimize edilir.' },
+        { dotColor: 'green', label: 'LShift ile RISE\'a Taşınma:', text: 'Temizlenen ve dönüştürülen sistem tek adımda RISE with SAP Bulut altyapısına transfer edilir.' }
+      ],
+      footerNote: 'En düşük risk ve en hızlı canlıya geçiş modeli'
+    },
+    {
+      id: 'lift-shift',
+      badgeClass: 'lift-shift',
+      badgeText: 'ALTERNATİF',
+      duration: '3 - 6 Ay',
+      title: 'Lift & Shift (Cloud Migration)',
+      subtitle: 'Mevcut ECC Sistemi Buluta Taşıma',
+      bullets: [
+        { dotColor: 'blue', label: 'Hızlı Bulut Geçişi:', text: 'Mevcut SAP ECC sistemi hiçbir değişiklik yapılmadan Azure / AWS / GCP altyapısına taşınır.' },
+        { dotColor: 'blue', label: 'Sıfır Uygulama Değişikliği:', text: 'Z kodları, konfigürasyonlar ve süreçler aynen korunur; kullanıcıları doğrudan etkilemez.' },
+        { dotColor: 'amber', label: 'S/4HANA Geçişi Ertelenir:', text: 'ECC on-premise lisans süresi uzatılır; ancak S/4HANA dönüşümü ayrı bir proje olarak sonraya bırakılır.' },
+        { dotColor: 'amber', label: 'Kısa Vadeli Çözüm:', text: 'Altyapı maliyetlerini düşürür, esneklik kazandırır; ancak uzun vadede tekrar geçiş yatırımı gerekir.' }
+      ],
+      footerNote: 'Hızlı bulut kazanımı ama S/4HANA dönüşümü ertelenir'
+    },
+    {
+      id: 'selective',
+      badgeClass: 'partial',
+      badgeText: 'KISMEN UYGUN',
+      duration: '12 Ay',
+      title: 'Selective Data Transition',
+      subtitle: 'Shell Conversion & Seçici Veri Göçü',
+      bullets: [
+        { dotColor: 'amber', label: 'Kabuk (Shell) Sistem Oluşturma:', text: 'Teknik altyapı ve konfigürasyon kopyalanarak veri olmadan yükseltilir.' },
+        { dotColor: 'amber', label: 'Hibrit Yaklaşım:', text: 'CO ana verisi ve BP temiz kurulurken, MM/FI çekirdeği geçmiş hareketleriyle göç ettirilir.' },
+        { dotColor: 'amber', label: 'Özel Partner Araçları:', text: 'SNP, cbs veya Natuvion gibi lisanslı toollar gerektirir; danışmanlık eforu yüksektir.' },
+        { dotColor: 'amber', label: 'Maliyet & Süre Dezavantajı:', text: 'Proje süresi 12 aya uzar ve ek tool maliyeti bütçeyi artırır.' }
+      ],
+      footerNote: 'Yalnızca radikal süreç dönüşümü istenirse alternatif'
+    },
+    {
+      id: 'greenfield',
+      badgeClass: 'not-suitable',
+      badgeText: 'UYGUN DEĞİL',
+      duration: '12 - 18 Ay',
+      title: 'Greenfield (Yeniden Kurulum)',
+      subtitle: 'Sıfırdan Temiz Sayfa Kurulumu',
+      bullets: [
+        { dotColor: 'red', label: 'Geçmiş Veri Kaybı:', text: 'Sadece açılış bakiyeleri taşınır; geçmiş hareketler yeni sistemde raporlanamaz.' },
+        { dotColor: 'red', label: 'Müşteri Önceliğiyle Çelişki:', text: 'Geçmiş verinin erişilebilirliğini şart koştuğu için elenmiştir.' },
+        { dotColor: 'red', label: 'Yüksek İş Eforu & Risk:', text: 'Tüm iş birimlerinin süreçleri yeniden tasarlaması gerekir; değişim yönetimi kritik risk taşır.' },
+        { dotColor: 'red', label: 'Maksimum Bütçe Yükü:', text: 'En yüksek danışmanlık bütçesi ve en uzun canlıya geçiş takvimi.' }
+      ],
+      footerNote: 'Süreklilik gereksinimi nedeniyle önerilmemektedir'
+    }
+  ];
+}
+
 export interface PhaseStep {
   id: string;
   stepNumber: string;
@@ -185,209 +267,114 @@ export interface ThirdPartySystem {
 
       <!-- ================= TAB 1: SAP GEÇİŞ YÖNTEMLERİ ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'methods'">
-        <!-- 4 Comparison Method Cards -->
-        <div class="methods-grid methods-grid-4">
-          <!-- Method 1: Brownfield -->
-          <div class="method-card recommended">
-            <div class="card-header">
-              <div class="header-top">
-                <span class="badge-severity recommended">ÖNERİLEN ÇÖZÜM</span>
-                <span class="time-badge">6 Ay</span>
-              </div>
-              <h3>Brownfield (System Conversion)</h3>
-              <p class="method-sub">Teknik Dönüşüm & In-Place Migration</p>
-            </div>
 
-            <div class="card-body">
-              <div class="feature-item">
-                <div class="dot green"></div>
-                <div>
-                  <strong>Geçmiş Veri Bütünlüğü:</strong>
-                  <span>Tüm finansal ve operasyonel geçmiş işlem verisi otomatik olarak S/4HANA'ya taşınır.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot green"></div>
-                <div>
-                  <strong>Sadeleştirme & Z Kod Temizliği:</strong>
-                  <span>SAP Readiness Check ile uyumsuz Z programları elenir; zorunlu Simplification Item'lar uyarlanır.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot green"></div>
-                <div>
-                  <strong>DVM & Arşivleme Entegrasyonu:</strong>
-                  <span>REGUP, ACDOCA gibi yüksek boyutlu tablolar geçiş öncesi arşivlenerek HANA bellek maliyeti minimize edilir.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot green"></div>
-                <div>
-                  <strong>LShift ile RISE'a Taşınma:</strong>
-                  <span>Temizlenen ve dönüştürülen sistem tek adımda RISE with SAP Bulut altyapısına transfer edilir.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer">
-              <span class="footer-note">En düşük risk ve en hızlı canlıya geçiş modeli</span>
-            </div>
+        <!-- Toolbar -->
+        <div class="recommended-toolbar" style="margin-bottom: 1.25rem;">
+          <div class="toolbar-left">
+            <span class="status-indicator-badge" [class.customized]="methodsCustomized()">
+              <app-icon [name]="methodsCustomized() ? 'edit' : 'check-circle'" [size]="14"
+                [color]="methodsCustomized() ? '#b45309' : '#15803d'"></app-icon>
+              <span>{{ methodsCustomized() ? 'Özelleştirilmiş Kart İçerikleri' : 'Varsayılan Kart İçerikleri' }}</span>
+            </span>
+            <span *ngIf="methodsSaveMessage()" class="save-toast-pill">
+              <app-icon name="check" [size]="14" color="#15803d"></app-icon>
+              {{ methodsSaveMessage() }}
+            </span>
           </div>
-
-          <!-- Method 2: Lift and Shift -->
-          <div class="method-card lift-shift">
-            <div class="card-header">
-              <div class="header-top">
-                <span class="badge-severity lift-shift">ALTERNATİF</span>
-                <span class="time-badge">3 - 6 Ay</span>
-              </div>
-              <h3>Lift &amp; Shift (Cloud Migration)</h3>
-              <p class="method-sub">Mevcut ECC Sistemi Buluta Taşıma</p>
-            </div>
-
-            <div class="card-body">
-              <div class="feature-item">
-                <div class="dot blue"></div>
-                <div>
-                  <strong>Hızlı Bulut Geçişi:</strong>
-                  <span>Mevcut SAP ECC sistemi hiçbir değişiklik yapılmadan Azure / AWS / GCP altyapısına taşınır.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot blue"></div>
-                <div>
-                  <strong>Sıfır Uygulama Değişikliği:</strong>
-                  <span>Z kodları, konfigürasyonlar ve süreçler aynen korunur; kullanıcıları doğrudan etkilemez.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot amber"></div>
-                <div>
-                  <strong>S/4HANA Geçişi Ertelenir:</strong>
-                  <span>ECC on-premise lisans süresi uzatılır; ancak S/4HANA dönüşümü ayrı bir proje olarak sonraya bırakılır.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot amber"></div>
-                <div>
-                  <strong>Kısa Vadeli Çözüm:</strong>
-                  <span>Altyapı maliyetlerini düşürür, esneklik kazandırır; ancak uzun vadede tekrar geçiş yatırımı gerekir.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer">
-              <span class="footer-note">Hızlı bulut kazanımı ama S/4HANA dönüşümü ertelenir</span>
-            </div>
+          <div class="toolbar-actions">
+            <button *ngIf="!isEditingMethods()" type="button" class="btn-rec btn-rec-edit" (click)="startEditMethods()">
+              <app-icon name="edit" [size]="14" color="#0284c7"></app-icon>
+              <span>Kartları Düzenle</span>
+            </button>
+            <button *ngIf="!isEditingMethods() && methodsCustomized()" type="button" class="btn-rec btn-rec-reset" (click)="resetMethodCards()">
+              <app-icon name="refresh" [size]="14" color="#64748b"></app-icon>
+              <span>Varsayılana Sıfırla</span>
+            </button>
+            <button *ngIf="isEditingMethods()" type="button" class="btn-rec btn-rec-cancel" (click)="cancelEditMethods()">
+              <app-icon name="x" [size]="14" color="#475569"></app-icon>
+              <span>İptal</span>
+            </button>
+            <button *ngIf="isEditingMethods()" type="button" class="btn-rec btn-rec-save" (click)="saveMethodCards()">
+              <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+              <span>Değişiklikleri Kaydet</span>
+            </button>
           </div>
+        </div>
 
-          <!-- Method 3: Selective Data Transition -->
-          <div class="method-card partial">
+        <!-- VIEW MODE: Dynamic Cards -->
+        <div *ngIf="!isEditingMethods()" class="methods-grid methods-grid-4">
+          <div *ngFor="let card of methodCards()"
+            class="method-card"
+            [ngClass]="card.badgeClass">
             <div class="card-header">
               <div class="header-top">
-                <span class="badge-severity partial">KISMEN UYGUN</span>
-                <span class="time-badge">12 Ay</span>
+                <span class="badge-severity" [ngClass]="card.badgeClass">{{ card.badgeText }}</span>
+                <span class="time-badge">{{ card.duration }}</span>
               </div>
-              <h3>Selective Data Transition</h3>
-              <p class="method-sub">Shell Conversion & Seçici Veri Göçü</p>
+              <h3>{{ card.title }}</h3>
+              <p class="method-sub">{{ card.subtitle }}</p>
             </div>
-
             <div class="card-body">
-              <div class="feature-item">
-                <div class="dot amber"></div>
+              <div *ngFor="let b of card.bullets" class="feature-item">
+                <div class="dot" [ngClass]="b.dotColor"></div>
                 <div>
-                  <strong>Kabuk (Shell) Sistem Oluşturma:</strong>
-                  <span>Teknik altyapı ve konfigürasyon kopyalanarak veri olmadan yükseltilir.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot amber"></div>
-                <div>
-                  <strong>Hibrit Yaklaşım:</strong>
-                  <span>CO ana verisi ve BP temiz kurulurken, MM/FI çekirdeği geçmiş hareketleriyle göç ettirilir.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot amber"></div>
-                <div>
-                  <strong>Özel Partner Araçları:</strong>
-                  <span>SNP, cbs veya Natuvion gibi lisanslı toollar gerektirir; danışmanlık eforu yüksektir.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot amber"></div>
-                <div>
-                  <strong>Maliyet & Süre Dezavantajı:</strong>
-                  <span>Proje süresi 12 aya uzar ve ek tool maliyeti bütçeyi artırır.</span>
+                  <strong>{{ b.label }}</strong>
+                  <span>{{ b.text }}</span>
                 </div>
               </div>
             </div>
-
             <div class="card-footer">
-              <span class="footer-note">Yalnızca radikal süreç dönüşümü istenirse alternatif</span>
-            </div>
-          </div>
-
-          <!-- Method 4: Greenfield -->
-          <div class="method-card not-suitable">
-            <div class="card-header">
-              <div class="header-top">
-                <span class="badge-severity not-suitable">UYGUN DEĞİL</span>
-                <span class="time-badge">12 - 18 Ay</span>
-              </div>
-              <h3>Greenfield (Yeniden Kurulum)</h3>
-              <p class="method-sub">Sıfırdan Temiz Sayfa Kurulumu</p>
-            </div>
-
-            <div class="card-body">
-              <div class="feature-item">
-                <div class="dot red"></div>
-                <div>
-                  <strong>Geçmiş Veri Kaybı:</strong>
-                  <span>Sadece açılış bakiyeleri taşınır; geçmiş hareketler yeni sistemde raporlanamaz.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot red"></div>
-                <div>
-                  <strong>Müşteri Önceliğiyle Çelişki:</strong>
-                  <span>{{ customerService.activeCustomer().name }} geçmiş verinin erişilebilirliğini şart koştuğu için elenmiştir.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot red"></div>
-                <div>
-                  <strong>Yüksek İş Eforu & Risk:</strong>
-                  <span>Tüm iş birimlerinin süreçleri yeniden tasarlaması gerekir; değişim yönetimi kritik risk taşır.</span>
-                </div>
-              </div>
-
-              <div class="feature-item">
-                <div class="dot red"></div>
-                <div>
-                  <strong>Maksimum Bütçe Yükü:</strong>
-                  <span>En yüksek danışmanlık bütçesi ve en uzun canlıya geçiş takvimi.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="card-footer">
-              <span class="footer-note">Süreklilik gereksinimi nedeniyle önerilmemektedir</span>
+              <span class="footer-note">{{ card.footerNote }}</span>
             </div>
           </div>
         </div>
+
+        <!-- EDIT MODE: Card Edit Forms -->
+        <div *ngIf="isEditingMethods()" class="methods-edit-grid">
+          <div *ngFor="let card of editMethodCards; let ci = index" class="method-edit-card" [ngClass]="card.badgeClass">
+            <div class="mec-header">
+              <span class="badge-severity" [ngClass]="card.badgeClass">{{ card.badgeText }}</span>
+              <h4>{{ card.title }}</h4>
+            </div>
+            <div class="mec-body">
+              <div class="mec-field-row">
+                <div class="mec-field">
+                  <label>Badge Metni</label>
+                  <input type="text" [(ngModel)]="card.badgeText" class="mec-input" placeholder="Örn: ÖNERİLEN ÇÖZÜM" />
+                </div>
+                <div class="mec-field">
+                  <label>Süre</label>
+                  <input type="text" [(ngModel)]="card.duration" class="mec-input" placeholder="Örn: 6 Ay" />
+                </div>
+              </div>
+              <div class="mec-field">
+                <label>Başlık</label>
+                <input type="text" [(ngModel)]="card.title" class="mec-input" placeholder="Kart başlığı..." />
+              </div>
+              <div class="mec-field">
+                <label>Alt Başlık</label>
+                <input type="text" [(ngModel)]="card.subtitle" class="mec-input" placeholder="Kısa açıklama..." />
+              </div>
+              <div class="mec-bullets-section">
+                <label class="mec-section-lbl">Maddeler (4 adet)</label>
+                <div *ngFor="let b of card.bullets; let bi = index" class="mec-bullet-row">
+                  <div class="mec-bullet-dot" [ngClass]="'dot-' + b.dotColor"></div>
+                  <div class="mec-bullet-fields">
+                    <input type="text" [(ngModel)]="b.label" class="mec-input mec-label-input" placeholder="Başlık (örn: Geçmiş Veri:)" />
+                    <input type="text" [(ngModel)]="b.text" class="mec-input" placeholder="Açıklama metni..." />
+                  </div>
+                </div>
+              </div>
+              <div class="mec-field">
+                <label>Footer Notu</label>
+                <input type="text" [(ngModel)]="card.footerNote" class="mec-input" placeholder="Alt not..." />
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
+
 
       <!-- ================= TAB 2: HEDEF MİMARİ & 3RD PARTİLER ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'target-architecture'">
@@ -1221,7 +1208,120 @@ export interface ThirdPartySystem {
       border-radius: 6px;
     }
 
-    /* Timeline Section Card */
+    /* ---- Method Cards Edit Mode ---- */
+    .methods-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+
+      @media (max-width: 900px) { grid-template-columns: 1fr; }
+    }
+
+    .method-edit-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+
+      &.recommended { border-top: 3px solid #059669; }
+      &.lift-shift   { border-top: 3px solid #2563eb; }
+      &.partial      { border-top: 3px solid #d97706; }
+      &.not-suitable { border-top: 3px solid #dc2626; }
+
+      .mec-header {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.85rem 1.1rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #f1f5f9;
+
+        h4 { font-size: 0.88rem; font-weight: 800; color: #0f172a; margin: 0; }
+      }
+
+      .mec-body {
+        padding: 1rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .mec-field-row {
+        display: grid;
+        grid-template-columns: 1fr 120px;
+        gap: 0.5rem;
+      }
+
+      .mec-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        label {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+      }
+
+      .mec-input {
+        width: 100%;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.78rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        color: #0f172a;
+        background: #ffffff;
+        box-sizing: border-box;
+        transition: border-color 0.15s;
+        &:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 2px rgba(2,132,199,0.12); }
+      }
+
+      .mec-label-input { font-weight: 700; }
+
+      .mec-bullets-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+
+        .mec-section-lbl {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+      }
+
+      .mec-bullet-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+
+        .mec-bullet-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          margin-top: 7px;
+          flex-shrink: 0;
+          &.dot-green  { background: #059669; }
+          &.dot-blue   { background: #2563eb; }
+          &.dot-amber  { background: #d97706; }
+          &.dot-red    { background: #dc2626; }
+        }
+
+        .mec-bullet-fields {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+      }
+    }
+
     .timeline-section-card {
       background: #ffffff;
       border-radius: 12px;
@@ -1995,14 +2095,74 @@ export class SolutionProposalComponent implements OnInit {
   isCustomized = signal<boolean>(false);
   saveSuccessMessage = signal<string>('');
 
+  // SAP Geçiş Yöntemleri Cards State
+  methodCards = signal<MethodCardData[]>(getDefaultMethodCards());
+  isEditingMethods = signal<boolean>(false);
+  editMethodCards: MethodCardData[] = [];
+  methodsCustomized = signal<boolean>(false);
+  methodsSaveMessage = signal<string>('');
+
   constructor() {
     effect(() => {
       const custId = this.customerService.activeCustomerId();
       const cust = this.customerService.activeCustomer();
       if (custId) {
         this.loadRecommendedData(custId, cust?.name || '');
+        this.loadMethodCards(custId);
       }
     });
+  }
+
+  loadMethodCards(custId: string) {
+    try {
+      const saved = localStorage.getItem(`taskforce_methods_cards_${custId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.methodCards.set(parsed);
+        this.methodsCustomized.set(true);
+        return;
+      }
+    } catch (e) {
+      console.error('Error loading method cards:', e);
+    }
+    this.methodCards.set(getDefaultMethodCards());
+    this.methodsCustomized.set(false);
+  }
+
+  startEditMethods() {
+    this.editMethodCards = JSON.parse(JSON.stringify(this.methodCards()));
+    this.isEditingMethods.set(true);
+  }
+
+  cancelEditMethods() {
+    this.isEditingMethods.set(false);
+  }
+
+  saveMethodCards() {
+    const custId = this.customerService.activeCustomerId();
+    const data = JSON.parse(JSON.stringify(this.editMethodCards));
+    this.methodCards.set(data);
+    if (custId) {
+      localStorage.setItem(`taskforce_methods_cards_${custId}`, JSON.stringify(data));
+      this.methodsCustomized.set(true);
+    }
+    this.isEditingMethods.set(false);
+    this.methodsSaveMessage.set('Kartlar başarıyla kaydedildi!');
+    setTimeout(() => this.methodsSaveMessage.set(''), 3500);
+  }
+
+  resetMethodCards() {
+    const cust = this.customerService.activeCustomer();
+    const custId = this.customerService.activeCustomerId();
+    const confirmed = window.confirm(`"${cust.name}" için geçiş yöntemi kartları varsayılan içeriklere döndürülsün mü?`);
+    if (confirmed && custId) {
+      localStorage.removeItem(`taskforce_methods_cards_${custId}`);
+      this.methodCards.set(getDefaultMethodCards());
+      this.methodsCustomized.set(false);
+      this.isEditingMethods.set(false);
+      this.methodsSaveMessage.set('Varsayılana sıfırlandı.');
+      setTimeout(() => this.methodsSaveMessage.set(''), 3500);
+    }
   }
 
   loadRecommendedData(custId: string, custName: string) {
