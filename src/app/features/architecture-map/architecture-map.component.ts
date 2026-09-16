@@ -16,6 +16,7 @@ export interface ArchitectureNode {
   userCount: number;
   instanceCount?: number; // Red Badge Number on Slide: 3, 3, 2, 2, 1
   dbInfo?: string;
+  dbOsInfo?: string;
   osInfo?: string;
   status: 'Active' | 'Optimization Candidate' | 'Planned' | 'Under Review';
   x: number;
@@ -241,7 +242,7 @@ export interface ArchitectureEdge {
                   <div class="node-header-row">
                     <strong class="node-name">{{ node.name }}</strong>
                     <span class="instance-pill-badge" *ngIf="architectureMode() !== 'po'" title="Sunucu / Instance Adedi">{{ node.instanceCount || 1 }}x</span>
-                    <span class="eos-badge" *ngIf="node.isEosRisk">EoS 2020</span>
+                    <span class="eos-badge" *ngIf="node.isEosRisk">{{ getEosBadgeText(node.eosDate) }}</span>
                   </div>
 
                   <div class="node-footer-row">
@@ -660,7 +661,7 @@ export interface ArchitectureEdge {
 
                     <div class="c-footer-meta">
                       <span class="user-meta">{{ node.userCount }} Kullanıcı</span>
-                      <span class="eos-sub-tag" *ngIf="node.isEosRisk">EoS 2020</span>
+                      <span class="eos-sub-tag" *ngIf="node.isEosRisk">{{ getEosBadgeText(node.eosDate) }}</span>
                     </div>
                   </div>
                 </div>
@@ -973,6 +974,16 @@ export interface ArchitectureEdge {
                 <strong class="s-value">{{ node.dbInfo || 'Sybase 16 / SLES 15 SP7' }}</strong>
               </div>
 
+              <div class="spec-card" *ngIf="node.dbOsInfo">
+                <span class="s-label">Veritabanı İşletim Sistemi (DB OS)</span>
+                <strong class="s-value">{{ node.dbOsInfo }}</strong>
+              </div>
+
+              <div class="spec-card" *ngIf="node.osInfo">
+                <span class="s-label">Uygulama İşletim Sistemi (App OS)</span>
+                <strong class="s-value">{{ node.osInfo }}</strong>
+              </div>
+
               <div class="spec-card">
                 <span class="s-label">Entegrasyon Protokolü</span>
                 <strong class="s-value">{{ node.protocol || 'SAP BTP OData / RFC / JDBC' }}</strong>
@@ -1060,16 +1071,23 @@ export interface ArchitectureEdge {
                 <input type="text" [(ngModel)]="nodeForm.dbInfo" name="dbInfo" placeholder="Örn: HANA 2.0 In-Memory / Sybase ASE 16 / Oracle 19c" class="form-control" />
               </div>
               <div class="form-group">
-                <label>İşletim Sistemi / Platform</label>
-                <input type="text" [(ngModel)]="nodeForm.osInfo" name="osInfo" placeholder="Örn: SLES 15 SP7 for SAP / Windows Server 2022" class="form-control" />
+                <label>Veritabanı İşletim Sistemi (DB OS)</label>
+                <input type="text" [(ngModel)]="nodeForm.dbOsInfo" name="dbOsInfo" placeholder="Örn: SLES 15 SP7 for SAP / RHEL 8.4" class="form-control" />
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
+                <label>Uygulama İşletim Sistemi (App OS)</label>
+                <input type="text" [(ngModel)]="nodeForm.osInfo" name="osInfo" placeholder="Örn: SLES 15 SP7 for SAP / Windows Server 2022" class="form-control" />
+              </div>
+              <div class="form-group">
                 <label>Protokol / Entegrasyon Türü</label>
                 <input type="text" [(ngModel)]="nodeForm.protocol" name="protocol" placeholder="Örn: SAP BTP OData / RFC / HTTPS / JDBC" class="form-control" />
               </div>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
                 <label>Sistem Durumu</label>
                 <select [(ngModel)]="nodeForm.status" name="status" class="form-control">
@@ -3820,6 +3838,13 @@ export class ArchitectureMapComponent {
   countEosNodes(): number {
     return this.nodes().filter(n => n.isEosRisk).length;
   }
+  getEosBadgeText(date?: string): string {
+    if (!date || !date.trim()) return 'EoS Riski';
+    const trimmed = date.trim();
+    const match = trimmed.match(/\b(20\d{2})\b/);
+    if (match) return `EoS ${match[1]}`;
+    return `EoS ${trimmed}`;
+  }
 
   // Studio Interactive Canvas State
   showStudioNodeModal = signal<boolean>(false);
@@ -3830,6 +3855,7 @@ export class ArchitectureMapComponent {
     category: ArchitectureNode['category'];
     userCount: number;
     dbInfo: string;
+    dbOsInfo: string;
     osInfo: string;
     status: ArchitectureNode['status'];
     protocol: string;
@@ -3841,6 +3867,7 @@ export class ArchitectureMapComponent {
     category: 'Core',
     userCount: 50,
     dbInfo: 'HANA 2.0 In-Memory',
+    dbOsInfo: 'SLES 15 SP7 for SAP',
     osInfo: 'SLES 15 SP7 for SAP',
     status: 'Active',
     protocol: 'SAP BTP OData / RFC',
@@ -4040,6 +4067,7 @@ export class ArchitectureMapComponent {
       category: 'Core' as const,
       userCount: 50,
       dbInfo: 'HANA 2.0 In-Memory',
+      dbOsInfo: 'SLES 15 SP7 for SAP',
       osInfo: 'SLES 15 SP7 for SAP',
       status: 'Active' as const,
       protocol: 'SAP BTP OData / RFC',
@@ -4058,6 +4086,7 @@ export class ArchitectureMapComponent {
       category: node.category,
       userCount: node.userCount,
       dbInfo: node.dbInfo || '',
+      dbOsInfo: node.dbOsInfo || '',
       osInfo: node.osInfo || '',
       status: node.status,
       protocol: node.protocol || '',
@@ -4079,72 +4108,84 @@ export class ArchitectureMapComponent {
         this.nodeForm.instanceCount = 3;
         this.nodeForm.category = 'Core';
         this.nodeForm.dbInfo = 'HANA 2.0 In-Memory';
+        this.nodeForm.dbOsInfo = 'SLES 15 SP7 for SAP';
         this.nodeForm.osInfo = 'SLES 15 SP7 for SAP';
         this.nodeForm.userCount = 380;
         this.nodeForm.protocol = 'SAP BTP OData / RFC';
         this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
         break;
       case 'hana':
         this.nodeForm.name = 'HANA 2.0 In-Memory DB';
         this.nodeForm.instanceCount = 1;
         this.nodeForm.category = 'Core';
         this.nodeForm.dbInfo = '1 TB HANA Cloud DB';
+        this.nodeForm.dbOsInfo = 'SLES 15 SP7 for SAP';
         this.nodeForm.osInfo = 'SLES 15 SP7 for SAP';
         this.nodeForm.userCount = 100;
         this.nodeForm.protocol = 'HDB SQL / TLS 1.3';
         this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
         break;
       case 'po':
         this.nodeForm.name = 'SAP PO 7.5 On-Premise';
         this.nodeForm.instanceCount = 3;
         this.nodeForm.category = 'Integration';
         this.nodeForm.dbInfo = 'Sybase ASE 16';
+        this.nodeForm.dbOsInfo = 'Windows Server 2019';
         this.nodeForm.osInfo = 'Windows Server 2019';
         this.nodeForm.userCount = 15;
         this.nodeForm.protocol = 'SOAP / JDBC / RFC / REST';
         this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
         break;
       case 'fiori':
         this.nodeForm.name = 'SAP Fiori Gateway (FES)';
         this.nodeForm.instanceCount = 2;
         this.nodeForm.category = 'Legacy';
         this.nodeForm.dbInfo = 'Sybase ASE 16';
+        this.nodeForm.dbOsInfo = 'Windows Server 2019';
         this.nodeForm.osInfo = 'Windows Server 2019';
         this.nodeForm.userCount = 200;
         this.nodeForm.protocol = 'HTTPS / OData Gateway';
         this.nodeForm.isEosRisk = true;
-        this.nodeForm.eosDate = '31.12.2020';
+        this.nodeForm.eosDate = '31.12.2025';
         break;
       case 'btp':
         this.nodeForm.name = 'SAP BTP Integration Suite';
         this.nodeForm.instanceCount = 1;
         this.nodeForm.category = 'Integration';
         this.nodeForm.dbInfo = 'SAP Cloud Platform';
+        this.nodeForm.dbOsInfo = 'SAP Managed Cloud';
         this.nodeForm.osInfo = 'SAP Managed Cloud';
         this.nodeForm.userCount = 50;
         this.nodeForm.protocol = 'Cloud iFlows / REST / OData';
         this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
         break;
       case 'webdisp':
         this.nodeForm.name = 'SAP Web Dispatcher';
         this.nodeForm.instanceCount = 2;
         this.nodeForm.category = 'Integration';
         this.nodeForm.dbInfo = 'Reverse Proxy & Load Balancer';
+        this.nodeForm.dbOsInfo = 'Windows Server 2019';
         this.nodeForm.osInfo = 'Windows Server 2019';
         this.nodeForm.userCount = 5;
         this.nodeForm.protocol = 'HTTPS / TLS 1.3';
         this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
         break;
       case 'cs':
         this.nodeForm.name = 'SAP Content Server 6.5';
         this.nodeForm.instanceCount = 1;
         this.nodeForm.category = 'Legacy';
         this.nodeForm.dbInfo = 'MaxDB 7.9';
+        this.nodeForm.dbOsInfo = 'Windows Server 2016';
         this.nodeForm.osInfo = 'Windows Server 2016';
         this.nodeForm.userCount = 20;
         this.nodeForm.protocol = 'HTTP Archive Gateway';
         this.nodeForm.isEosRisk = true;
-        this.nodeForm.eosDate = '31.12.2020';
+        this.nodeForm.eosDate = '31.12.2025';
         break;
     }
   }
@@ -4163,6 +4204,7 @@ export class ArchitectureMapComponent {
             category: this.nodeForm.category,
             userCount: this.nodeForm.userCount || 0,
             dbInfo: this.nodeForm.dbInfo,
+            dbOsInfo: this.nodeForm.dbOsInfo,
             osInfo: this.nodeForm.osInfo,
             status: this.nodeForm.status,
             protocol: this.nodeForm.protocol,
@@ -4186,6 +4228,7 @@ export class ArchitectureMapComponent {
         category: this.nodeForm.category,
         userCount: this.nodeForm.userCount || 0,
         dbInfo: this.nodeForm.dbInfo,
+        dbOsInfo: this.nodeForm.dbOsInfo,
         osInfo: this.nodeForm.osInfo,
         status: this.nodeForm.status,
         x: posX,
