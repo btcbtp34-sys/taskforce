@@ -63,7 +63,7 @@ import { IconComponent } from '../icon/icon.component';
             <a 
               routerLink="/architecture-map" 
               [queryParams]="{ mode: 'asis' }" 
-              routerLinkActive="sub-active" 
+              [class.sub-active]="isLandscapeActive()" 
               class="sub-item">
               <span class="sub-dot">•</span>
               <span class="sub-text">Lanscape/Versiyon / EoS</span>
@@ -93,16 +93,6 @@ import { IconComponent } from '../icon/icon.component';
               <span class="sub-dot">•</span>
               <span class="sub-text">Largest Table (DVM)</span>
             </a>
-
-            <!-- Integration (Karara kadar Alt Yapı altında kalıyor) -->
-            <a 
-              routerLink="/architecture-map" 
-              [queryParams]="{ mode: 'po' }" 
-              routerLinkActive="sub-active" 
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">Integration</span>
-            </a>
           </div>
         </div>
 
@@ -112,11 +102,43 @@ import { IconComponent } from '../icon/icon.component';
           <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
         </a>
 
-        <!-- 6. SAP Customization (Eski Development) -->
-        <a routerLink="/development" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'SAP Customization' : ''">
-          <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">SAP Customization</span>
-        </a>
+        <!-- 6. SAP Customization (Expandable Group) -->
+        <div class="nav-group" [class.open]="customizationExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isCustomizationActive()"
+            routerLink="/development"
+            [title]="collapsed ? 'SAP Customization' : ''">
+            <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">SAP Customization</span>
+            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleCustomization()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="customizationExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Alt Kırılımlar (Sub Items) -->
+          <div class="nav-sub-list" *ngIf="customizationExpanded && !collapsed">
+            <a 
+              routerLink="/development" 
+              routerLinkActive="sub-active" 
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Custom Code (ABAP)</span>
+            </a>
+
+            <a 
+              routerLink="/architecture-map" 
+              [queryParams]="{ mode: 'po' }" 
+              [class.sub-active]="isIntegrationActive()" 
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Integration</span>
+            </a>
+          </div>
+        </div>
 
         <!-- 7. Çözüm Önerisi (Ayrı Menü Başlığı) -->
         <div class="nav-group" [class.open]="solutionExpanded">
@@ -151,6 +173,15 @@ import { IconComponent } from '../icon/icon.component';
               class="sub-item">
               <span class="sub-dot">•</span>
               <span class="sub-text">Hedef Mimari</span>
+            </a>
+
+            <a 
+              routerLink="/solution-proposal" 
+              [queryParams]="{ tab: 'recommended' }" 
+              [class.sub-active]="isSolutionTabActive('recommended')"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Önerilen Geçiş Yöntemi</span>
             </a>
           </div>
         </div>
@@ -422,6 +453,7 @@ export class SidebarComponent {
   router = inject(Router);
   basisExpanded = true;
   solutionExpanded = true;
+  customizationExpanded = true;
 
   toggleBasis(): void {
     this.basisExpanded = !this.basisExpanded;
@@ -431,9 +463,30 @@ export class SidebarComponent {
     this.solutionExpanded = !this.solutionExpanded;
   }
 
+  toggleCustomization(): void {
+    this.customizationExpanded = !this.customizationExpanded;
+  }
+
   isBasisActive(): boolean {
     const url = this.router.url;
+    const isPo = url.includes('architecture-map') && url.includes('mode=po');
+    if (isPo) return false;
     return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category')) || url.includes('source-sizing') || url.includes('largest-tables');
+  }
+
+  isLandscapeActive(): boolean {
+    const url = this.router.url;
+    return url.includes('architecture-map') && (url.includes('mode=asis') || (!url.includes('mode=po') && !url.includes('mode=rise')));
+  }
+
+  isCustomizationActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/development') || (url.includes('architecture-map') && url.includes('mode=po'));
+  }
+
+  isIntegrationActive(): boolean {
+    const url = this.router.url;
+    return url.includes('architecture-map') && url.includes('mode=po');
   }
 
   isSolutionActive(): boolean {
@@ -444,7 +497,7 @@ export class SidebarComponent {
   isSolutionTabActive(tab: string): boolean {
     if (!this.isSolutionActive()) return false;
     if (tab === 'methods') {
-      return this.router.url.includes('tab=methods') || !this.router.url.includes('tab=');
+      return this.router.url.includes('tab=methods') || (!this.router.url.includes('tab=target-architecture') && !this.router.url.includes('tab=recommended'));
     }
     return this.router.url.includes('tab=' + tab);
   }

@@ -1,9 +1,98 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+
+export interface PhaseStep {
+  id: string;
+  stepNumber: string;
+  badge: string;
+  title: string;
+  items: string[];
+  isHighlight?: boolean;
+}
+
+export interface RecommendedMethodData {
+  badge: string;
+  title: string;
+  description: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+  roadmapTitle: string;
+  phases: PhaseStep[];
+}
+
+export function getDefaultRecommendedData(customerName: string): RecommendedMethodData {
+  const name = customerName || 'Müşteri';
+  return {
+    badge: 'ÖNERİLEN GEÇİŞ YÖNTEMİ',
+    title: 'Brownfield (System Conversion) + DVM / Arşivleme',
+    description: `${name} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`,
+    stat1Value: '6 Ay',
+    stat1Label: 'Tahmini Proje Süresi',
+    stat2Value: '%100',
+    stat2Label: 'Geçmiş Veri Korunumu',
+    stat3Value: 'Optimum',
+    stat3Label: 'Bütçe / ROI Dengesi',
+    roadmapTitle: 'Önerilen Brownfield 4 Fazlı Dönüşüm Yol Haritası',
+    phases: [
+      {
+        id: 'phase-1',
+        stepNumber: '01',
+        badge: '1. - 2. Ay',
+        title: 'Hazırlık & DVM',
+        items: [
+          'SAP Readiness Check 2.0',
+          'DVM Arşivleme Projesi (REGUP/ACDOCA)',
+          'HANA Sizing Optimizasyonu'
+        ],
+        isHighlight: false
+      },
+      {
+        id: 'phase-2',
+        stepNumber: '02',
+        badge: '2. - 3. Ay',
+        title: 'Sadeleştirme & Kod',
+        items: [
+          'Business Partner (BP) Ön Dönüşümü',
+          'Malzeme Defteri Aktivasyonu',
+          'Z Kod ABAP S/4HANA Uyarlaması'
+        ],
+        isHighlight: false
+      },
+      {
+        id: 'phase-3',
+        stepNumber: '03',
+        badge: '4. - 5. Ay',
+        title: 'System Conversion',
+        items: [
+          'SUM (Software Update Manager) ile Geçiş',
+          'Sandbox & QA Dönüşüm Provaları',
+          'Finansal Veri Mutabakat Testleri'
+        ],
+        isHighlight: false
+      },
+      {
+        id: 'phase-4',
+        stepNumber: '04',
+        badge: '6. Ay',
+        title: 'RISE Canlıya Geçiş',
+        items: [
+          'Cutover & Go-Live Operasyonu',
+          'LShift ile RISE Cloud DB Geçişi',
+          'Hypercare Destek & Optimizasyon'
+        ],
+        isHighlight: true
+      }
+    ]
+  };
+}
 
 export interface ThirdPartySystem {
   id: string;
@@ -53,7 +142,7 @@ export interface ThirdPartySystem {
         </div>
       </div>
 
-      <!-- Navigation Tabs (2 Ana Kırılım) -->
+      <!-- Navigation Tabs (3 Ana Kırılım) -->
       <div class="tab-navigation-card">
         <div class="nav-tabs-bar">
           <button 
@@ -79,43 +168,23 @@ export interface ThirdPartySystem {
               <span class="tab-desc">Mevcut (Solda) vs Hedef (Sağda) + Müşteri Entegrasyon Tablosu</span>
             </div>
           </button>
+
+          <button 
+            type="button" 
+            class="tab-btn" 
+            [class.active]="activeTab() === 'recommended'"
+            (click)="selectTab('recommended')">
+            <app-icon name="sparkles" [size]="16" [color]="activeTab() === 'recommended' ? '#0284c7' : '#64748b'"></app-icon>
+            <div class="tab-label-group">
+              <span class="tab-title">Önerilen Geçiş Yöntemi</span>
+              <span class="tab-desc">Brownfield Yol Haritası, Fazlar & Süreç Modeli</span>
+            </div>
+          </button>
         </div>
       </div>
 
       <!-- ================= TAB 1: SAP GEÇİŞ YÖNTEMLERİ ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'methods'">
-        <!-- Hero Recommendation Banner -->
-        <div class="hero-recommendation-card">
-          <div class="hero-left">
-            <div class="hero-icon-box">
-              <app-icon name="check" [size]="28" color="#059669"></app-icon>
-            </div>
-            <div>
-              <span class="hero-pill">ÖNERİLEN GEÇİŞ YÖNTEMİ</span>
-              <h2>Brownfield (System Conversion) + DVM / Arşivleme</h2>
-              <p>
-                {{ customerService.activeCustomer().name }} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf 
-                <strong>Greenfield elenmiştir</strong>. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP 
-                temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.
-              </p>
-            </div>
-          </div>
-          <div class="hero-stats">
-            <div class="stat-box">
-              <span class="stat-val text-emerald">6 Ay</span>
-              <span class="stat-lbl">Tahmini Proje Süresi</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-val text-blue">%100</span>
-              <span class="stat-lbl">Geçmiş Veri Korunumu</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-val text-purple">Optimum</span>
-              <span class="stat-lbl">Bütçe / ROI Dengesi</span>
-            </div>
-          </div>
-        </div>
-
         <!-- 3 Comparison Method Cards -->
         <div class="methods-grid">
           <!-- Method 1: Brownfield -->
@@ -265,66 +334,6 @@ export interface ThirdPartySystem {
 
             <div class="card-footer">
               <span class="footer-note">Süreklilik gereksinimi nedeniyle önerilmemektedir</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Conversion Roadmap Timeline Steps -->
-        <div class="timeline-section-card">
-          <div class="section-heading">
-            <app-icon name="sparkles" [size]="18" color="#0284c7"></app-icon>
-            <h3>Önerilen Brownfield 4 Fazlı Dönüşüm Yol Haritası</h3>
-          </div>
-
-          <div class="steps-row">
-            <div class="step-box">
-              <div class="step-num">01</div>
-              <div class="step-badge">1. - 2. Ay</div>
-              <h4>Hazırlık & DVM</h4>
-              <ul>
-                <li>SAP Readiness Check 2.0</li>
-                <li>DVM Arşivleme Projesi (REGUP/ACDOCA)</li>
-                <li>HANA Sizing Optimizasyonu</li>
-              </ul>
-            </div>
-
-            <div class="step-arrow">➔</div>
-
-            <div class="step-box">
-              <div class="step-num">02</div>
-              <div class="step-badge">2. - 3. Ay</div>
-              <h4>Sadeleştirme & Kod</h4>
-              <ul>
-                <li>Business Partner (BP) Ön Dönüşümü</li>
-                <li>Malzeme Defteri Aktivasyonu</li>
-                <li>Z Kod ABAP S/4HANA Uyarlaması</li>
-              </ul>
-            </div>
-
-            <div class="step-arrow">➔</div>
-
-            <div class="step-box">
-              <div class="step-num">03</div>
-              <div class="step-badge">4. - 5. Ay</div>
-              <h4>System Conversion</h4>
-              <ul>
-                <li>SUM (Software Update Manager) ile Geçiş</li>
-                <li>Sandbox & QA Dönüşüm Provaları</li>
-                <li>Finansal Veri Mutabakat Testleri</li>
-              </ul>
-            </div>
-
-            <div class="step-arrow">➔</div>
-
-            <div class="step-box highlight">
-              <div class="step-num">04</div>
-              <div class="step-badge green">6. Ay</div>
-              <h4>RISE Canlıya Geçiş</h4>
-              <ul>
-                <li>Cutover & Go-Live Operasyonu</li>
-                <li>LShift ile RISE Cloud DB Geçişi</li>
-                <li>Hypercare Destek & Optimizasyon</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -598,6 +607,199 @@ export interface ThirdPartySystem {
           </div>
         </div>
       </div>
+
+      <!-- ================= TAB 3: ÖNERİLEN GEÇİŞ YÖNTEMİ ================= -->
+      <div class="tab-content" *ngIf="activeTab() === 'recommended'">
+        <!-- Action Toolbar -->
+        <div class="recommended-toolbar">
+          <div class="toolbar-left">
+            <span class="status-indicator-badge" [class.customized]="isCustomized()">
+              <app-icon [name]="isCustomized() ? 'edit' : 'check-circle'" [size]="14" [color]="isCustomized() ? '#b45309' : '#15803d'"></app-icon>
+              <span>{{ isCustomized() ? customerService.activeCustomer().name + ' İçin Özelleştirilmiş Geçiş Stratejisi' : 'Varsayılan Önerilen Geçiş Metodolojisi' }}</span>
+            </span>
+            <span *ngIf="saveSuccessMessage()" class="save-toast-pill">
+              <app-icon name="check" [size]="14" color="#15803d"></app-icon>
+              {{ saveSuccessMessage() }}
+            </span>
+          </div>
+
+          <div class="toolbar-actions">
+            <button *ngIf="!isEditingRecommended()" type="button" class="btn-rec btn-rec-edit" (click)="startEditRecommended()">
+              <app-icon name="edit" [size]="14" color="#0284c7"></app-icon>
+              <span>Metodoloji & Yol Haritasını Düzenle</span>
+            </button>
+
+            <button *ngIf="!isEditingRecommended() && isCustomized()" type="button" class="btn-rec btn-rec-reset" (click)="resetRecommendedToDefault()" title="Varsayılan metinlere dön">
+              <app-icon name="refresh" [size]="14" color="#64748b"></app-icon>
+              <span>Varsayılana Sıfırla</span>
+            </button>
+
+            <button *ngIf="isEditingRecommended()" type="button" class="btn-rec btn-rec-cancel" (click)="cancelEditRecommended()">
+              <app-icon name="x" [size]="14" color="#475569"></app-icon>
+              <span>İptal</span>
+            </button>
+
+            <button *ngIf="isEditingRecommended()" type="button" class="btn-rec btn-rec-save" (click)="saveRecommended()">
+              <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+              <span>Değişiklikleri Kaydet</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW MODE: Hero Recommendation Card -->
+        <div *ngIf="!isEditingRecommended()" class="hero-recommendation-card">
+          <div class="hero-left">
+            <div class="hero-icon-box">
+              <app-icon name="check" [size]="28" color="#059669"></app-icon>
+            </div>
+            <div>
+              <span class="hero-pill">{{ recommendedData().badge }}</span>
+              <h2>{{ recommendedData().title }}</h2>
+              <p>{{ recommendedData().description }}</p>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-box">
+              <span class="stat-val text-emerald">{{ recommendedData().stat1Value }}</span>
+              <span class="stat-lbl">{{ recommendedData().stat1Label }}</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val text-blue">{{ recommendedData().stat2Value }}</span>
+              <span class="stat-lbl">{{ recommendedData().stat2Label }}</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val text-purple">{{ recommendedData().stat3Value }}</span>
+              <span class="stat-lbl">{{ recommendedData().stat3Label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- EDIT MODE: Hero Edit Form Card -->
+        <div *ngIf="isEditingRecommended()" class="hero-edit-card">
+          <div class="card-edit-header">
+            <div class="ce-left">
+              <app-icon name="edit" [size]="18" color="#0284c7"></app-icon>
+              <h3>Önerilen Yöntem & KPI Metrikleri Düzenleme</h3>
+            </div>
+            <span class="edit-pill">Düzenleme Modu</span>
+          </div>
+
+          <div class="form-grid-hero">
+            <div class="form-group span-2">
+              <label>Rozet Metni (Pill)</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.badge" placeholder="Örn: ÖNERİLEN GEÇİŞ YÖNTEMİ" class="form-input" />
+            </div>
+
+            <div class="form-group span-2">
+              <label>Yöntem Ana Başlığı</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.title" placeholder="Örn: Brownfield (System Conversion)..." class="form-input" />
+            </div>
+
+            <div class="form-group span-full">
+              <label>Açıklama & Karar Gerekçesi</label>
+              <textarea [(ngModel)]="editRecommendedModel.description" rows="3" class="form-textarea" placeholder="Müşteri için önerilen geçiş yaklaşımının detaylı gerekçesi..."></textarea>
+            </div>
+
+            <div class="form-group kpi-input-box">
+              <span class="kpi-box-title">1. KPI Metriği</span>
+              <label>Değer (Süre)</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat1Value" placeholder="6 Ay" class="form-input" />
+              <label class="sub-label">Açıklama Etiketi</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat1Label" placeholder="Tahmini Proje Süresi" class="form-input" />
+            </div>
+
+            <div class="form-group kpi-input-box">
+              <span class="kpi-box-title">2. KPI Metriği</span>
+              <label>Değer (Veri)</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat2Value" placeholder="%100" class="form-input" />
+              <label class="sub-label">Açıklama Etiketi</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat2Label" placeholder="Geçmiş Veri Korunumu" class="form-input" />
+            </div>
+
+            <div class="form-group kpi-input-box">
+              <span class="kpi-box-title">3. KPI Metriği</span>
+              <label>Değer (Bütçe)</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat3Value" placeholder="Optimum" class="form-input" />
+              <label class="sub-label">Açıklama Etiketi</label>
+              <input type="text" [(ngModel)]="editRecommendedModel.stat3Label" placeholder="Bütçe / ROI Dengesi" class="form-input" />
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW MODE: 4-Phase Transformation Roadmap -->
+        <div *ngIf="!isEditingRecommended()" class="timeline-section-card">
+          <div class="section-heading">
+            <app-icon name="sparkles" [size]="18" color="#0284c7"></app-icon>
+            <h3>{{ recommendedData().roadmapTitle }}</h3>
+          </div>
+
+          <div class="steps-row">
+            <ng-container *ngFor="let phase of recommendedData().phases; let idx = index; let last = last">
+              <div class="step-box" [class.highlight]="phase.isHighlight">
+                <div class="step-num">{{ phase.stepNumber }}</div>
+                <div class="step-badge" [class.green]="phase.isHighlight">{{ phase.badge }}</div>
+                <h4>{{ phase.title }}</h4>
+                <ul>
+                  <li *ngFor="let item of phase.items">{{ item }}</li>
+                </ul>
+              </div>
+              <div *ngIf="!last" class="step-arrow">➔</div>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- EDIT MODE: 4-Phase Roadmap Edit Cards -->
+        <div *ngIf="isEditingRecommended()" class="roadmap-edit-card">
+          <div class="card-edit-header">
+            <div class="ce-left">
+              <app-icon name="layers" [size]="18" color="#0284c7"></app-icon>
+              <h3>4 Fazlı Dönüşüm Yol Haritası Kartları Düzenleme</h3>
+            </div>
+            <span class="edit-pill">Adım Detayları</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label>Yol Haritası Genel Başlığı</label>
+            <input type="text" [(ngModel)]="editRecommendedModel.roadmapTitle" class="form-input" placeholder="Örn: Önerilen Brownfield 4 Fazlı Dönüşüm Yol Haritası" />
+          </div>
+
+          <div class="phase-edit-grid">
+            <div *ngFor="let phase of editRecommendedModel.phases; let idx = index" class="phase-edit-box" [class.highlight-box]="phase.isHighlight">
+              <div class="phase-box-header">
+                <div class="phase-num-badge" [class.green-badge]="phase.isHighlight">{{ phase.stepNumber }}</div>
+                <span class="phase-header-title">Adım {{ idx + 1 }}</span>
+              </div>
+
+              <div class="form-group">
+                <label>Adım No</label>
+                <input type="text" [(ngModel)]="phase.stepNumber" class="form-input" placeholder="01" />
+              </div>
+
+              <div class="form-group">
+                <label>Zaman Dilimi / Süre</label>
+                <input type="text" [(ngModel)]="phase.badge" class="form-input" placeholder="1. - 2. Ay" />
+              </div>
+
+              <div class="form-group">
+                <label>Adım Başlığı</label>
+                <input type="text" [(ngModel)]="phase.title" class="form-input" placeholder="Adım Başlığı" />
+              </div>
+
+              <div class="form-group">
+                <label>Maddeler (Her satıra bir madde)</label>
+                <textarea [(ngModel)]="editPhaseItemsText[idx]" rows="5" class="form-textarea" placeholder="Madde 1&#10;Madde 2&#10;Madde 3"></textarea>
+              </div>
+
+              <div class="form-group-checkbox">
+                <label>
+                  <input type="checkbox" [(ngModel)]="phase.isHighlight" />
+                  <span>Yeşil Vurgulu Kart (Canlıya Geçiş / Hedef)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -708,8 +910,12 @@ export interface ThirdPartySystem {
 
       .nav-tabs-bar {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.5rem;
+
+        @media (max-width: 992px) {
+          grid-template-columns: 1fr;
+        }
       }
 
       .tab-btn {
@@ -1409,6 +1615,306 @@ export interface ThirdPartySystem {
         }
       }
     }
+
+    /* Recommended Toolbar */
+    .recommended-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.85rem 1.25rem;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        .status-indicator-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.75rem;
+          border-radius: 999px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #15803d;
+          font-size: 0.74rem;
+          font-weight: 700;
+
+          &.customized {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #b45309;
+          }
+        }
+
+        .save-toast-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.65rem;
+          border-radius: 6px;
+          background: #dcfce7;
+          border: 1px solid #86efac;
+          color: #166534;
+          font-size: 0.74rem;
+          font-weight: 600;
+        }
+      }
+
+      .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+
+        .btn-rec {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.5rem 0.95rem;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &.btn-rec-edit {
+            background: #eff6ff;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+            &:hover { background: #e0f2fe; border-color: #7dd3fc; }
+          }
+
+          &.btn-rec-reset {
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            &:hover { background: #f1f5f9; color: #334155; }
+          }
+
+          &.btn-rec-cancel {
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            &:hover { background: #f8fafc; }
+          }
+
+          &.btn-rec-save {
+            background: #16a34a;
+            color: #ffffff;
+            border: 1px solid #16a34a;
+            box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+            &:hover { background: #15803d; }
+          }
+        }
+      }
+    }
+
+    /* Edit Form Cards */
+    .hero-edit-card, .roadmap-edit-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+
+      .card-edit-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid #f1f5f9;
+
+        .ce-left {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+
+          h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+          }
+        }
+
+        .edit-pill {
+          background: #eff6ff;
+          color: #0284c7;
+          border: 1px solid #bfdbfe;
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 0.2rem 0.6rem;
+          border-radius: 6px;
+        }
+      }
+    }
+
+    .form-grid-hero {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+
+      .span-2 {
+        grid-column: span 1;
+        @media (min-width: 900px) {
+          &:first-child { grid-column: span 1; }
+          &:nth-child(2) { grid-column: span 2; }
+        }
+      }
+
+      .span-full {
+        grid-column: 1 / -1;
+      }
+
+      .kpi-input-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+
+        .kpi-box-title {
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: #0284c7;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 0.2rem;
+        }
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+
+      label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #475569;
+      }
+
+      .sub-label {
+        margin-top: 0.4rem;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        color: #1e293b;
+        background: #ffffff;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #0284c7;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+        }
+      }
+
+      .form-textarea {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        color: #1e293b;
+        background: #ffffff;
+        box-sizing: border-box;
+        font-family: inherit;
+        resize: vertical;
+        line-height: 1.45;
+        transition: border-color 0.15s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #0284c7;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+        }
+      }
+    }
+
+    .phase-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+
+      @media (max-width: 1100px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      @media (max-width: 650px) {
+        grid-template-columns: 1fr;
+      }
+
+      .phase-edit-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        &.highlight-box {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .phase-box-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding-bottom: 0.4rem;
+          border-bottom: 1px solid #e2e8f0;
+
+          .phase-num-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 800;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+
+            &.green-badge {
+              background: #dcfce7;
+              color: #15803d;
+            }
+          }
+
+          .phase-header-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #334155;
+          }
+        }
+
+        .form-group-checkbox {
+          label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            cursor: pointer;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #166534;
+            user-select: none;
+          }
+        }
+      }
+    }
   `]
 })
 export class SolutionProposalComponent implements OnInit {
@@ -1416,9 +1922,94 @@ export class SolutionProposalComponent implements OnInit {
   route = inject(ActivatedRoute);
   router = inject(Router);
 
-  activeTab = signal<'methods' | 'target-architecture'>('methods');
+  activeTab = signal<'methods' | 'target-architecture' | 'recommended'>('methods');
   searchQuery = '';
   selectedCategory = signal<string>('TÜMÜ');
+
+  // Önerilen Geçiş Yöntemi & Yol Haritası State
+  recommendedData = signal<RecommendedMethodData>(getDefaultRecommendedData(''));
+  isEditingRecommended = signal<boolean>(false);
+  editRecommendedModel: RecommendedMethodData = getDefaultRecommendedData('');
+  editPhaseItemsText: string[] = ['', '', '', ''];
+  isCustomized = signal<boolean>(false);
+  saveSuccessMessage = signal<string>('');
+
+  constructor() {
+    effect(() => {
+      const custId = this.customerService.activeCustomerId();
+      const cust = this.customerService.activeCustomer();
+      if (custId) {
+        this.loadRecommendedData(custId, cust?.name || '');
+      }
+    });
+  }
+
+  loadRecommendedData(custId: string, custName: string) {
+    try {
+      const saved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.recommendedData.set(parsed);
+        this.isCustomized.set(true);
+        return;
+      }
+    } catch (e) {
+      console.error('Error loading recommended method:', e);
+    }
+    this.recommendedData.set(getDefaultRecommendedData(custName));
+    this.isCustomized.set(false);
+  }
+
+  startEditRecommended() {
+    const current = JSON.parse(JSON.stringify(this.recommendedData()));
+    this.editRecommendedModel = current;
+    this.editPhaseItemsText = (current.phases || []).map((p: PhaseStep) => (p.items || []).join('\n'));
+    this.isEditingRecommended.set(true);
+  }
+
+  cancelEditRecommended() {
+    this.isEditingRecommended.set(false);
+  }
+
+  saveRecommended() {
+    const custId = this.customerService.activeCustomerId();
+    const model: RecommendedMethodData = JSON.parse(JSON.stringify(this.editRecommendedModel));
+    
+    // Convert textarea lines to items array
+    if (model.phases && Array.isArray(model.phases)) {
+      model.phases.forEach((p: PhaseStep, idx: number) => {
+        const text = this.editPhaseItemsText[idx] || '';
+        p.items = text
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+      });
+    }
+
+    this.recommendedData.set(model);
+    if (custId) {
+      localStorage.setItem(`taskforce_recommended_method_${custId}`, JSON.stringify(model));
+      this.isCustomized.set(true);
+    }
+    this.isEditingRecommended.set(false);
+    this.saveSuccessMessage.set('Değişiklikler başarıyla kaydedildi!');
+    setTimeout(() => this.saveSuccessMessage.set(''), 3500);
+  }
+
+  resetRecommendedToDefault() {
+    const cust = this.customerService.activeCustomer();
+    const custId = this.customerService.activeCustomerId();
+    const confirmed = window.confirm(`"${cust.name}" için önerilen geçiş yöntemi ve yol haritası varsayılan ayarlara döndürülsün mü?`);
+    if (confirmed && custId) {
+      localStorage.removeItem(`taskforce_recommended_method_${custId}`);
+      const def = getDefaultRecommendedData(cust.name);
+      this.recommendedData.set(def);
+      this.isCustomized.set(false);
+      this.isEditingRecommended.set(false);
+      this.saveSuccessMessage.set('Varsayılan ayarlara sıfırlandı.');
+      setTimeout(() => this.saveSuccessMessage.set(''), 3500);
+    }
+  }
 
   readonly thirdPartyList: ThirdPartySystem[] = [
     {
@@ -1543,13 +2134,15 @@ export class SolutionProposalComponent implements OnInit {
       const tab = params['tab'];
       if (tab === 'target-architecture' || tab === 'hedef-mimari') {
         this.activeTab.set('target-architecture');
+      } else if (tab === 'recommended' || tab === 'onerilen' || tab === 'onerilen-yontem') {
+        this.activeTab.set('recommended');
       } else if (tab === 'methods' || tab === 'gecis-yontemleri') {
         this.activeTab.set('methods');
       }
     });
   }
 
-  selectTab(tab: 'methods' | 'target-architecture') {
+  selectTab(tab: 'methods' | 'target-architecture' | 'recommended') {
     this.activeTab.set(tab);
     this.router.navigate([], {
       relativeTo: this.route,

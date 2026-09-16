@@ -746,6 +746,7 @@ export class HeaderComponent {
         localStorage.removeItem(`taskforce_tco_years_${activeId}`);
         localStorage.removeItem(`taskforce_tco_asis_${activeId}`);
         localStorage.removeItem(`taskforce_tco_rise_${activeId}`);
+        localStorage.removeItem(`taskforce_recommended_method_${activeId}`);
       }
     }
   }
@@ -948,6 +949,8 @@ export class HeaderComponent {
                 targetKey = `taskforce_tco_asis_${activeId}`;
               } else if (key.startsWith('taskforce_tco_rise_')) {
                 targetKey = `taskforce_tco_rise_${activeId}`;
+              } else if (key.startsWith('taskforce_recommended_method_')) {
+                targetKey = `taskforce_recommended_method_${activeId}`;
               }
             }
 
