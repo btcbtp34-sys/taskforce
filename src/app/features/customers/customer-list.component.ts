@@ -70,7 +70,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                     </div>
                     <div class="name-info">
                       <strong class="cust-name">{{ cust.name }}</strong>
-                      <span class="cust-code">{{ cust.code }} • {{ cust.contactPerson }}</span>
                     </div>
                   </div>
                 </td>

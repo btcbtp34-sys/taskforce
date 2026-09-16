@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { CustomerService } from './customer.service';
 
 export interface ChatMessage {
   id: string;
@@ -12,6 +13,7 @@ export interface ChatMessage {
   providedIn: 'root'
 })
 export class AiAssistantService {
+  private customerService = inject(CustomerService);
   private messagesSignal = signal<ChatMessage[]>([
     {
       id: 'msg-1',
@@ -63,9 +65,11 @@ export class AiAssistantService {
           aiText = `**Quick Win (Hızlı Kazanç) Fırsatları:**\n\n1. **Düşük Kullanımlı Professional Lisans Optimizasyonu**\n   - Düşük Efor, Yüksek Değer\n   - Tasarruf: **€35.000 / Yıl** | Güven Skoru: **%92**\n\n2. **AI Assistant & SAP Joule Akıllı Raporlama Entegrasyonu**\n   - Düşük Efor, Orta Değer\n   - Zaman Kazancı: **900 Saat / Yıl** | ROI: **%210**`;
           break;
 
-        default:
-          aiText = `Yüklenen **ABC Holding** SAP verilerine göre:\n\nSorunuzla ilgili veriler incelendi. Toplam **1.250 SAP kullanıcısı**, **€450.000 yıllık lisans maliyeti** ve **130 düşük kullanımlı lisans** tespit edilmiştir.\n\nDetaylı analiz için **Fırsatlar** ve **Business Case** sekmelerini kullanabilirsiniz.`;
+        default: {
+          const cust = this.customerService.activeCustomer();
+          aiText = `Yüklenen **${cust.name}** SAP verilerine göre:\n\nSorunuzla ilgili veriler incelendi. Toplam **${cust.sapUserCount.toLocaleString('tr-TR')} SAP kullanıcısı**, **€${cust.totalLicenseCost.toLocaleString('tr-TR')} yıllık lisans maliyeti** ve **${cust.lowUsageUserCount} düşük kullanımlı lisans** tespit edilmiştir.\n\nDetaylı analiz için **Fırsatlar** ve **Business Case** sekmelerini kullanabilirsiniz.`;
           break;
+        }
       }
 
       const aiMsg: ChatMessage = {

@@ -1021,7 +1021,7 @@ export class ReportsComponent {
   basisService = inject(BasisSizingService);
   isExporting = signal<boolean>(false);
 
-  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'DEF Kimya A.Ş.');
+  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'T***A');
 
   fueValueText = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {

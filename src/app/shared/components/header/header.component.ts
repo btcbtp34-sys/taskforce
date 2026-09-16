@@ -41,7 +41,6 @@ import { IconComponent } from '../icon/icon.component';
                 (click)="onSelectCustomer(c.id)">
                 <div class="cd-main">
                   <strong class="cd-name">{{ c.name }}</strong>
-                  <span class="cd-sector" *ngIf="c.sector">{{ c.sector }}</span>
                 </div>
                 <span class="cd-badge" *ngIf="hasDataForCustomer(c.id)">Excel Yüklü</span>
               </div>
@@ -75,7 +74,6 @@ import { IconComponent } from '../icon/icon.component';
             [title]="customerService.activeCustomer().name + ' verilerini ve analizlerini JSON olarak indirin'">
             <app-icon name="download" [size]="13" color="#16a34a"></app-icon>
             <span>Yedek Al (JSON)</span>
-            <span class="backup-badge-name">{{ customerService.activeCustomer().code || 'Müşteri' }}</span>
           </button>
           <button 
             class="btn-export-toggle"

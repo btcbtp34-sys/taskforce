@@ -10,7 +10,7 @@ export class PresentationService {
       id: 1,
       slideNumber: 1,
       section: 'MÜŞTERİ GENEL BAKIŞ',
-      title: 'ABC Holding - Müşteri Profili & SAP Genel Görünümü',
+      title: 'Müşteri Profili & SAP Genel Görünümü',
       subtitle: 'Müşteri SAP Dijital Dönüşüm & Fırsat Analiz Sunumu',
       bulletPoints: [
         'Sektör: Manufacturing (Üretim & Sanayi)',

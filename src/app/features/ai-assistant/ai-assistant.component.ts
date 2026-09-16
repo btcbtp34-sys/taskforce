@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AiAssistantService } from '../../core/services/ai-assistant.service';
+import { CustomerService } from '../../core/services/customer.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 @Component({
@@ -61,7 +62,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               <div class="bot-avatar"><app-icon name="sparkles" [size]="20" color="#0284c7"></app-icon></div>
               <div>
                 <strong>BTC AI Copilot</strong>
-                <span class="status-online">● Online • Context: ABC Holding</span>
+                <span class="status-online">● Online • Context: {{ customerService.activeCustomer().name }}</span>
               </div>
             </div>
           </div>
@@ -322,6 +323,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 })
 export class AiAssistantComponent {
   aiService = inject(AiAssistantService);
+  customerService = inject(CustomerService);
 
   sendUserMessage(text: string): void {
     if (!text) return;

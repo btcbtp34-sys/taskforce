@@ -82,6 +82,7 @@ export class CustomerService {
               merged.push(m);
             }
           });
+          this.saveCustomers(merged);
           return merged;
         }
       }
