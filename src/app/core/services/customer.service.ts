@@ -127,4 +127,21 @@ export class CustomerService {
     });
     this.selectCustomer(customer.id);
   }
+
+  mergeCustomerData(targetId: string, partial: Partial<Customer>): void {
+    this.customersSignal.update(list => {
+      const updated = list.map(c => {
+        if (c.id === targetId) {
+          const { id, name, ...rest } = partial;
+          return {
+            ...c,
+            ...rest
+          };
+        }
+        return c;
+      });
+      this.saveCustomers(updated);
+      return updated;
+    });
+  }
 }

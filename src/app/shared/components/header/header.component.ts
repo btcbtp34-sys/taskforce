@@ -67,20 +67,47 @@ import { IconComponent } from '../icon/icon.component';
           (change)="onBackupFileSelected($event)" 
           style="display: none" />
 
-        <!-- Yedek Al Butonu (Tüm verileri JSON olarak export eder) -->
-        <button 
-          class="btn-header-action btn-export" 
-          (click)="exportFullBackup()" 
-          title="Tüm müşterileri, Excel analizlerini ve mimari çizimleri JSON olarak indirin">
-          <app-icon name="download" [size]="13" color="#16a34a"></app-icon>
-          <span>Yedek Al (JSON)</span>
-        </button>
+        <!-- Yedek Al Menüsü / Butonu (Aktif müşteriye göre) -->
+        <div class="backup-dropdown-container">
+          <button 
+            class="btn-header-action btn-export" 
+            (click)="exportCustomerBackup()" 
+            [title]="customerService.activeCustomer().name + ' verilerini ve analizlerini JSON olarak indirin'">
+            <app-icon name="download" [size]="13" color="#16a34a"></app-icon>
+            <span>Yedek Al (JSON)</span>
+            <span class="backup-badge-name">{{ customerService.activeCustomer().code || 'Müşteri' }}</span>
+          </button>
+          <button 
+            class="btn-export-toggle"
+            (click)="toggleBackupMenu($event)"
+            title="Yedekleme Seçenekleri (Müşteri / Tam Sistem)">
+            <app-icon name="chevron-down" [size]="10" color="#16a34a"></app-icon>
+          </button>
 
-        <!-- Yedek Yükle Butonu (JSON yedeğini içe aktarır) -->
+          <!-- Yedekleme Seçenekleri Açılır Menüsü -->
+          <div class="backup-menu-dropdown" *ngIf="showBackupMenu" (click)="$event.stopPropagation()">
+            <div class="backup-menu-item" (click)="exportCustomerBackup(); showBackupMenu = false;">
+              <div class="menu-item-icon active-icon"><app-icon name="download" [size]="14" color="#16a34a"></app-icon></div>
+              <div class="menu-item-text">
+                <strong>Seçili Müşteriyi Yedekle</strong>
+                <span>{{ customerService.activeCustomer().name }} verileri</span>
+              </div>
+            </div>
+            <div class="backup-menu-item" (click)="exportFullBackup(); showBackupMenu = false;">
+              <div class="menu-item-icon"><app-icon name="download" [size]="14" color="#6b7280"></app-icon></div>
+              <div class="menu-item-text">
+                <strong>Tüm Sistemi Yedekle</strong>
+                <span>Tüm müşteriler ve sistem verileri</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yedek Yükle Butonu (Aktif müşteriye aktarır) -->
         <button 
           class="btn-header-action btn-import" 
           (click)="triggerImport()" 
-          title="Farklı bir bilgisayardan alınan JSON yedeğini sisteme yükleyin">
+          [title]="'Seçili müşteri (' + customerService.activeCustomer().name + ') için JSON yedeği yükleyin'">
           <app-icon name="upload" [size]="13" color="#0284c7"></app-icon>
           <span>Yedek Yükle</span>
         </button>
@@ -521,6 +548,116 @@ import { IconComponent } from '../icon/icon.component';
           border-color: #86efac;
         }
       }
+    }
+
+    .backup-dropdown-container {
+      position: relative;
+      display: inline-flex;
+      align-items: stretch;
+
+      .btn-export {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+
+        .backup-badge-name {
+          background: rgba(22, 163, 74, 0.15);
+          color: #15803d;
+          font-size: 0.65rem;
+          padding: 0.08rem 0.35rem;
+          border-radius: 4px;
+          font-weight: 700;
+          max-width: 80px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .btn-export-toggle {
+        padding: 0.35rem 0.45rem;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-top-right-radius: 6px;
+        border-bottom-right-radius: 6px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #dcfce7;
+          border-color: #86efac;
+        }
+      }
+
+      .backup-menu-dropdown {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        width: 270px;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        padding: 0.4rem;
+        z-index: 1000;
+
+        .backup-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          padding: 0.5rem 0.65rem;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.15s;
+
+          &:hover {
+            background: #f3f4f6;
+          }
+
+          .menu-item-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            flex-shrink: 0;
+
+            &.active-icon {
+              background: #ecfdf5;
+            }
+          }
+
+          .menu-item-text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+
+            strong {
+              font-size: 0.76rem;
+              color: #1f2937;
+            }
+
+            span {
+              font-size: 0.68rem;
+              color: #6b7280;
+              max-width: 190px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+        }
+      }
 
       &.btn-import {
         background: #f0f9ff;
@@ -554,10 +691,18 @@ export class HeaderComponent {
   modullerService = inject(ModullerService);
   showNotifications = false;
   showCustomerDropdown = false;
+  showBackupMenu = false;
 
   toggleCustomerDropdown(event: Event): void {
     event.stopPropagation();
     this.showCustomerDropdown = !this.showCustomerDropdown;
+    this.showBackupMenu = false;
+  }
+
+  toggleBackupMenu(event: Event): void {
+    event.stopPropagation();
+    this.showBackupMenu = !this.showBackupMenu;
+    this.showCustomerDropdown = false;
   }
 
   onSelectCustomer(id: string): void {
@@ -577,6 +722,7 @@ export class HeaderComponent {
   onDocumentClick(): void {
     this.showCustomerDropdown = false;
     this.showNotifications = false;
+    this.showBackupMenu = false;
   }
 
   resetCurrentCustomerData(): void {
@@ -595,6 +741,95 @@ export class HeaderComponent {
     }
   }
 
+  /**
+   * Aktif olarak seçili olan müşterinin tüm analizlerini, mimari çizimlerini
+   * ve profil verilerini JSON olarak yedekler.
+   */
+  exportCustomerBackup(): void {
+    try {
+      const activeCust = this.customerService.activeCustomer();
+      const activeId = this.customerService.activeCustomerId();
+      if (!activeCust || !activeId) {
+        alert('Lütfen önce bir müşteri seçin.');
+        return;
+      }
+
+      const backupData: Record<string, string> = {};
+      let count = 0;
+
+      // 1. Bu müşteriye ait tüm localStorage anahtarlarını topla
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('taskforce_')) continue;
+
+        const isCustomerKey = key.endsWith(`_${activeId}`) ||
+                              key.includes(`_${activeId}_`) ||
+                              key === `taskforce_modules_${activeId}` ||
+                              key === `taskforce_modules_cards_${activeId}` ||
+                              key === `taskforce_sizing_pkg_${activeId}` ||
+                              key === `taskforce_po_pkg_${activeId}`;
+
+        if (isCustomerKey) {
+          const val = localStorage.getItem(key);
+          if (val !== null) {
+            backupData[key] = val;
+            count++;
+          }
+        }
+      }
+
+      // 2. Müşteriye ait çizim yoksa ama fallback çizim varsa onu da ekle
+      if (!backupData[`taskforce_custom_arch_${activeId}_asis`]) {
+        const fallbackAsis = localStorage.getItem('taskforce_custom_arch_asis');
+        if (fallbackAsis) {
+          backupData[`taskforce_custom_arch_${activeId}_asis`] = fallbackAsis;
+          count++;
+        }
+      }
+      if (!backupData[`taskforce_custom_arch_${activeId}_tobe`]) {
+        const fallbackTobe = localStorage.getItem('taskforce_custom_arch_tobe');
+        if (fallbackTobe) {
+          backupData[`taskforce_custom_arch_${activeId}_tobe`] = fallbackTobe;
+          count++;
+        }
+      }
+
+      const customerProfile = this.customerService.customers().find(c => c.id === activeId) || activeCust;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const safeCustomerName = activeCust.name
+        .replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ_ -]/g, '')
+        .trim()
+        .replace(/\s+/g, '_');
+
+      const payload = {
+        appName: 'TaskForce SAP Sizing & Architecture Studio',
+        backupType: 'customer',
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        customerId: activeId,
+        customerName: activeCust.name,
+        customerCode: activeCust.code,
+        customerProfile: customerProfile,
+        itemCount: count,
+        storage: backupData
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `TaskForce_${safeCustomerName}_Yedek_${dateStr}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (e) {
+      console.error('Müşteri yedeği hatası:', e);
+      alert('Müşteri yedeği dosyası oluşturulurken bir hata oluştu.');
+    }
+  }
+
+  /**
+   * Tüm müşterilerin ve sistem verilerinin tam yedeğini alır.
+   */
   exportFullBackup(): void {
     try {
       const backupData: Record<string, string> = {};
@@ -615,10 +850,10 @@ export class HeaderComponent {
         return;
       }
 
-      const activeCust = this.customerService.activeCustomer().name || 'Genel';
       const dateStr = new Date().toISOString().slice(0, 10);
       const payload = {
         appName: 'TaskForce SAP Sizing & Architecture Studio',
+        backupType: 'full',
         version: '2.0',
         exportedAt: new Date().toISOString(),
         itemCount: count,
@@ -663,26 +898,83 @@ export class HeaderComponent {
           return;
         }
 
-        const keys = Object.keys(storageObj);
-        const validKeys = keys.filter(k => k.startsWith('taskforce_'));
+        const isCustomerBackup = parsed.backupType === 'customer' || !!parsed.customerId || !!parsed.customerProfile;
+        const activeCustomer = this.customerService.activeCustomer();
+        const activeId = this.customerService.activeCustomerId();
 
-        if (validKeys.length === 0) {
-          alert('Yedek dosyasında TaskForce sistemine ait herhangi bir veri bulunamadı.');
-          return;
-        }
+        if (isCustomerBackup) {
+          const sourceCustomerName = parsed.customerName || parsed.customerProfile?.name || 'Müşteri';
+          const sourceCustomerId = parsed.customerId;
 
-        const confirmed = window.confirm(
-          `Yedek dosyasında ${validKeys.length} adet veri kaydı tespit edildi.\n\n` +
-          `Mevcut tarayıcı verileriniz bu yedek ile güncellenecektir. Devam etmek istiyor musunuz?`
-        );
+          const confirmed = window.confirm(
+            `"${sourceCustomerName}" müşterisine ait yedek dosyası tespit edildi.\n\n` +
+            `Bu veriler şu anda seçili olan "${activeCustomer.name}" müşterisine aktarılacaktır.\n\n` +
+            `"${activeCustomer.name}" için mevcut analiz ve çizim verilerinin üzerine yazılsın mı?`
+          );
 
-        if (confirmed) {
-          validKeys.forEach(k => {
-            localStorage.setItem(k, storageObj[k]);
+          if (!confirmed) return;
+
+          // Kaynak müşteri ID'sini o an seçili aktif müşterinin ID'sine eşleştir
+          Object.entries(storageObj).forEach(([key, val]) => {
+            if (typeof val !== 'string') return;
+            let targetKey = key;
+            if (sourceCustomerId && key.includes(sourceCustomerId)) {
+              targetKey = key.split(sourceCustomerId).join(activeId);
+            } else if (!key.includes(activeId)) {
+              if (key.startsWith('taskforce_sizing_pkg_')) {
+                targetKey = `taskforce_sizing_pkg_${activeId}`;
+              } else if (key.startsWith('taskforce_po_pkg_')) {
+                targetKey = `taskforce_po_pkg_${activeId}`;
+              } else if (key.startsWith('taskforce_modules_cards_')) {
+                targetKey = `taskforce_modules_cards_${activeId}`;
+              } else if (key.startsWith('taskforce_modules_')) {
+                targetKey = `taskforce_modules_${activeId}`;
+              } else if (key.startsWith('taskforce_custom_arch_') && key.endsWith('_asis')) {
+                targetKey = `taskforce_custom_arch_${activeId}_asis`;
+              } else if (key.startsWith('taskforce_custom_arch_') && key.endsWith('_tobe')) {
+                targetKey = `taskforce_custom_arch_${activeId}_tobe`;
+              } else if (key.startsWith('taskforce_tco_years_')) {
+                targetKey = `taskforce_tco_years_${activeId}`;
+              } else if (key.startsWith('taskforce_tco_asis_')) {
+                targetKey = `taskforce_tco_asis_${activeId}`;
+              } else if (key.startsWith('taskforce_tco_rise_')) {
+                targetKey = `taskforce_tco_rise_${activeId}`;
+              }
+            }
+
+            localStorage.setItem(targetKey, val);
           });
 
-          alert('Yedek başarıyla içe aktarıldı! Sayfa şimdi yeni verilerle yenileniyor.');
+          // Profil metriklerini güncelle
+          if (parsed.customerProfile) {
+            this.customerService.mergeCustomerData(activeId, parsed.customerProfile);
+          }
+
+          alert(`"${activeCustomer.name}" müşterisine ait yedek başarıyla yüklendi! Sayfa yeni verilerle yenileniyor.`);
           window.location.reload();
+        } else {
+          // Sistem geneli tam yedek (tüm müşteriler)
+          const keys = Object.keys(storageObj);
+          const validKeys = keys.filter(k => k.startsWith('taskforce_'));
+
+          if (validKeys.length === 0) {
+            alert('Yedek dosyasında TaskForce sistemine ait herhangi bir veri bulunamadı.');
+            return;
+          }
+
+          const confirmed = window.confirm(
+            `Bu dosya TÜM MÜŞTERİLERİN sistem yedeğini içermektedir (${validKeys.length} adet veri kaydı).\n\n` +
+            `Tüm sistem verileriniz bu yedek ile güncellenecektir. Devam etmek istiyor musunuz?`
+          );
+
+          if (confirmed) {
+            validKeys.forEach(k => {
+              localStorage.setItem(k, storageObj[k]);
+            });
+
+            alert('Tüm sistem verileri başarıyla içe aktarıldı! Sayfa şimdi yeni verilerle yenileniyor.');
+            window.location.reload();
+          }
         }
       } catch (err) {
         console.error('İçe aktarma hatası:', err);

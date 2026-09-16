@@ -8,7 +8,7 @@ export type IconName =
   | 'chart' | 'layers' | 'sparkles' | 'bolt' | 'check' | 'alert' 
   | 'info' | 'dollar' | 'sliders' | 'file-text' | 'file-spreadsheet' 
   | 'arrow-right' | 'plus' | 'trash' | 'edit' | 'download' | 'play' 
-  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'message' | 'link'
+  | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'chevron-down' | 'message' | 'link'
   | 'shuffle' | 'server';
 
 @Component({
