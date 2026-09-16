@@ -185,8 +185,8 @@ export interface ThirdPartySystem {
 
       <!-- ================= TAB 1: SAP GEÇİŞ YÖNTEMLERİ ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'methods'">
-        <!-- 3 Comparison Method Cards -->
-        <div class="methods-grid">
+        <!-- 4 Comparison Method Cards -->
+        <div class="methods-grid methods-grid-4">
           <!-- Method 1: Brownfield -->
           <div class="method-card recommended">
             <div class="card-header">
@@ -237,7 +237,57 @@ export interface ThirdPartySystem {
             </div>
           </div>
 
-          <!-- Method 2: Selective Data Transition -->
+          <!-- Method 2: Lift and Shift -->
+          <div class="method-card lift-shift">
+            <div class="card-header">
+              <div class="header-top">
+                <span class="badge-severity lift-shift">ALTERNATİF</span>
+                <span class="time-badge">3 - 6 Ay</span>
+              </div>
+              <h3>Lift &amp; Shift (Cloud Migration)</h3>
+              <p class="method-sub">Mevcut ECC Sistemi Buluta Taşıma</p>
+            </div>
+
+            <div class="card-body">
+              <div class="feature-item">
+                <div class="dot blue"></div>
+                <div>
+                  <strong>Hızlı Bulut Geçişi:</strong>
+                  <span>Mevcut SAP ECC sistemi hiçbir değişiklik yapılmadan Azure / AWS / GCP altyapısına taşınır.</span>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="dot blue"></div>
+                <div>
+                  <strong>Sıfır Uygulama Değişikliği:</strong>
+                  <span>Z kodları, konfigürasyonlar ve süreçler aynen korunur; kullanıcıları doğrudan etkilemez.</span>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="dot amber"></div>
+                <div>
+                  <strong>S/4HANA Geçişi Ertelenir:</strong>
+                  <span>ECC on-premise lisans süresi uzatılır; ancak S/4HANA dönüşümü ayrı bir proje olarak sonraya bırakılır.</span>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="dot amber"></div>
+                <div>
+                  <strong>Kısa Vadeli Çözüm:</strong>
+                  <span>Altyapı maliyetlerini düşürür, esneklik kazandırır; ancak uzun vadede tekrar geçiş yatırımı gerekir.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <span class="footer-note">Hızlı bulut kazanımı ama S/4HANA dönüşümü ertelenir</span>
+            </div>
+          </div>
+
+          <!-- Method 3: Selective Data Transition -->
           <div class="method-card partial">
             <div class="card-header">
               <div class="header-top">
@@ -287,7 +337,7 @@ export interface ThirdPartySystem {
             </div>
           </div>
 
-          <!-- Method 3: Greenfield -->
+          <!-- Method 4: Greenfield -->
           <div class="method-card not-suitable">
             <div class="card-header">
               <div class="header-top">
@@ -1032,11 +1082,15 @@ export interface ThirdPartySystem {
       }
     }
 
-    /* 3 Methods Grid */
+    /* Methods Grid */
     .methods-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 1.25rem;
+
+      &.methods-grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+      }
     }
 
     .method-card {
@@ -1057,6 +1111,11 @@ export interface ThirdPartySystem {
       &.recommended {
         border: 2px solid #059669;
         .card-header { background: #f0fdf4; border-bottom: 1px solid #dcfce7; }
+      }
+
+      &.lift-shift {
+        border-top: 3px solid #2563eb;
+        .card-header { background: #eff6ff; border-bottom: 1px solid #dbeafe; }
       }
 
       &.partial {
@@ -1114,6 +1173,7 @@ export interface ThirdPartySystem {
             &.green { background: #059669; }
             &.amber { background: #d97706; }
             &.red { background: #dc2626; }
+            &.blue { background: #2563eb; }
           }
 
           strong {
@@ -1147,6 +1207,7 @@ export interface ThirdPartySystem {
       border-radius: 999px;
 
       &.recommended { background: #dcfce7; color: #059669; }
+      &.lift-shift { background: #dbeafe; color: #1d4ed8; }
       &.partial { background: #fef3c7; color: #d97706; }
       &.not-suitable { background: #fee2e2; color: #dc2626; }
     }

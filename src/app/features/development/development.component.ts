@@ -260,20 +260,7 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
         </div>
       </div>
 
-      <!-- Clean Core Strategy Alert Callout -->
-      <div class="clean-core-callout">
-        <div class="callout-icon">
-          <app-icon name="sparkles" [size]="22" color="#0284c7"></app-icon>
-        </div>
-        <div class="callout-content">
-          <h4>SAP Clean Core & Modernizasyon Stratejisi</h4>
-          <p>
-            Envanterdeki <strong>{{ highCount().toLocaleString('tr-TR') }} adet Yüksek Kritiklik</strong> taşıyan nesne, 
-            özellikle <strong>Repair (15)</strong>, <strong>BTE (12)</strong> ve <strong>User-Exit (198)</strong> blokları S/4HANA çekirdeğine doğrudan temas etmektedir. 
-            Bu nesnelerin standart SAP Fiori süreçlerine dönüştürülmesi veya <strong>SAP BTP Developer Extensibility / Cloud BAdI</strong> mimarisi ile çekirdek dışına (Decoupled) alınması önerilmektedir.
-          </p>
-        </div>
-      </div>
+
 
       <!-- Toolbar: Filters, Search & View Switcher -->
       <div class="toolbar-card">
@@ -370,7 +357,7 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
           <div class="card-header">
             <div class="ch-left">
               <div class="obj-icon-box" [ngClass]="item.level.toLowerCase()">
-                <app-icon [name]="getObjIcon(item.name)" [size]="18"></app-icon>
+                <app-icon [name]="getObjIcon(item.name)" [size]="14"></app-icon>
               </div>
               <div>
                 <h3 class="obj-name">{{ item.name }}</h3>
@@ -421,15 +408,6 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
                 [style.width.%]="getProgressWidth(item.count)">
               </div>
             </div>
-
-            <p class="obj-desc">{{ item.description }}</p>
-          </div>
-
-          <div class="card-footer">
-            <div class="s4-recommendation-box">
-              <app-icon name="sparkles" [size]="13" color="#64748b"></app-icon>
-              <span class="rec-text"><strong>S/4HANA:</strong> {{ item.s4Recommendation }}</span>
-            </div>
           </div>
         </div>
       </div>
@@ -445,7 +423,6 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
               <th style="width: 140px; text-align: right;">Sayı (Adet)</th>
               <th style="width: 90px; text-align: right;">Genel Pay</th>
               <th style="width: 130px; text-align: center;">Kritiklik / Seviye</th>
-              <th>Açıklama & S/4HANA Dönüşüm Stratejisi</th>
             </tr>
           </thead>
           <tbody>
@@ -485,12 +462,6 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
                   <option value="Düşük">Düşük</option>
                 </select>
               </td>
-              <td>
-                <div class="tbl-desc-group">
-                  <span class="desc-main">{{ item.description }}</span>
-                  <span class="rec-sub"><strong>Hedef:</strong> {{ item.s4Recommendation }}</span>
-                </div>
-              </td>
             </tr>
           </tbody>
           <tfoot>
@@ -498,7 +469,7 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
               <td colspan="3"><strong>TOPLAM ENVANTER</strong></td>
               <td style="text-align: right;"><strong>{{ totalObjectsCount().toLocaleString('tr-TR') }}</strong></td>
               <td style="text-align: right;"><strong>%100</strong></td>
-              <td colspan="2">
+              <td colspan="1">
                 <span class="tfoot-breakdown">
                   Yüksek: <strong>{{ highCount() }}</strong> | Orta: <strong>{{ mediumCount() }}</strong> | Düşük: <strong>{{ lowCount() }}</strong>
                 </span>
@@ -988,14 +959,18 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
     /* Grid View Cards */
     .custom-code-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.85rem;
 
-      @media (max-width: 1100px) {
+      @media (max-width: 1200px) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      @media (max-width: 800px) {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      @media (max-width: 700px) {
+      @media (max-width: 500px) {
         grid-template-columns: 1fr;
       }
     }
@@ -1003,17 +978,17 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
     .object-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1.25rem;
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+      gap: 0.45rem;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
       transition: all 0.18s ease;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
       }
 
       &.card-high {
@@ -1037,12 +1012,12 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
         .ch-left {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.5rem;
 
           .obj-icon-box {
-            width: 38px;
-            height: 38px;
-            border-radius: 8px;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1054,14 +1029,14 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
           }
 
           .obj-name {
-            font-size: 1rem;
+            font-size: 0.82rem;
             font-weight: 800;
             color: #0f172a;
             margin: 0;
           }
 
           .obj-tag {
-            font-size: 0.68rem;
+            font-size: 0.63rem;
             color: #64748b;
             font-weight: 600;
           }
@@ -1071,7 +1046,7 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
       .card-body {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.4rem;
 
         .count-display-row {
           display: flex;
@@ -1079,7 +1054,7 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
           justify-content: space-between;
 
           .count-val {
-            font-size: 1.85rem;
+            font-size: 1.45rem;
             font-weight: 800;
             line-height: 1;
 
@@ -1088,10 +1063,10 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
             &.level-low { color: #16a34a; }
 
             .unit-lbl {
-              font-size: 0.75rem;
+              font-size: 0.67rem;
               color: #94a3b8;
               font-weight: 600;
-              margin-left: 0.2rem;
+              margin-left: 0.15rem;
             }
           }
 
@@ -1146,38 +1121,6 @@ export const DEFAULT_CUSTOM_CODE_ITEMS: CustomCodeItem[] = [
             &.level-high { background: #dc2626; }
             &.level-medium { background: #d97706; }
             &.level-low { background: #16a34a; }
-          }
-        }
-
-        .obj-desc {
-          font-size: 0.76rem;
-          color: #475569;
-          line-height: 1.4;
-          margin: 0.4rem 0 0 0;
-          min-height: 32px;
-        }
-      }
-
-      .card-footer {
-        padding-top: 0.65rem;
-        border-top: 1px solid #f1f5f9;
-
-        .s4-recommendation-box {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          padding: 0.5rem 0.65rem;
-          display: flex;
-          align-items: flex-start;
-          gap: 0.45rem;
-
-          app-icon { flex-shrink: 0; margin-top: 2px; }
-
-          .rec-text {
-            font-size: 0.7rem;
-            color: #334155;
-            line-height: 1.35;
-            strong { color: #0284c7; }
           }
         }
       }
