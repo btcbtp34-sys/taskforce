@@ -33,18 +33,46 @@ export class CustomerService {
     this.customersSignal().reduce((sum, c) => sum + c.activeOpportunityCount, 0)
   );
 
+  constructor() {
+    try {
+      // Eski global ortak mimari çizim anahtarlarını temizle ve müşterileri birbirinden tamamen izole et
+      ['taskforce_custom_arch_asis', 'taskforce_custom_arch_tobe', 'taskforce_custom_arch_rise'].forEach(k => {
+        const val = localStorage.getItem(k);
+        if (val) {
+          // Eğer cust-1'in henüz özel kaydı yoksa bu çizimi sadece cust-1'e ata
+          if (!localStorage.getItem('taskforce_custom_arch_cust-1_asis') && k === 'taskforce_custom_arch_asis') {
+            localStorage.setItem('taskforce_custom_arch_cust-1_asis', val);
+          }
+          localStorage.removeItem(k);
+        }
+      });
+    } catch (e) {}
+  }
+
   private getInitialCustomers(): Customer[] {
     try {
       const saved = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as Customer[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Sync any mock customer updates (e.g. F*****R) while preserving user-added customers
+          // Sync any mock customer updates while preserving user-added customers
           const mockMap = new Map(MOCK_CUSTOMERS.map(c => [c.id, c]));
           const merged = parsed.map(c => {
             const mock = mockMap.get(c.id);
             if (mock) {
-              return { ...c, name: mock.name, sector: mock.sector, code: mock.code };
+              return {
+                ...mock,
+                ...c,
+                name: mock.name,
+                sector: mock.sector,
+                code: mock.code,
+                contactPerson: mock.contactPerson,
+                email: mock.email,
+                phone: mock.phone,
+                logo: mock.logo,
+                sapProducts: (c.sapProducts && c.sapProducts.length > 0) ? c.sapProducts : mock.sapProducts,
+                coreProblems: (c.coreProblems && c.coreProblems.length > 0) ? c.coreProblems : mock.coreProblems
+              };
             }
             return c;
           });

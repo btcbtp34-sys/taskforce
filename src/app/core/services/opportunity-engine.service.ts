@@ -18,17 +18,21 @@ export class OpportunityEngineService {
     const customer = this.customerService.activeCustomer();
     const overrides = this.manualStatusOverrides();
 
-    // Calculate real metrics from Excel sheet
+    // Calculate real metrics from Excel sheet or customer profile
     const lowUsageUsers = recs.filter(r => r.monthlyTransactions < 100 && (r.licenseType === 'Professional' || r.licenseType === 'Developer'));
-    const lowUsageCount = lowUsageUsers.length > 0 ? lowUsageUsers.length : 15;
+    const defaultLowUsage = customer.lowUsageUserCount !== undefined && customer.lowUsageUserCount > 0 
+      ? customer.lowUsageUserCount 
+      : (customer.id === 'cust-sigorta' ? 70 : customer.id === 'cust-3' ? 250 : 130);
+    const lowUsageCount = lowUsageUsers.length > 0 ? lowUsageUsers.length : (customer.sapUserCount === 0 ? 0 : defaultLowUsage);
     const licenseSavings = lowUsageCount * 2250; // €2,250 savings per downgraded license
 
     const totalManualHours = recs.reduce((sum, r) => sum + (r.manualWorkHours || 0), 0);
-    const manualHoursCount = totalManualHours > 0 ? totalManualHours : 1200;
+    const defaultManualHours = customer.id === 'cust-sigorta' ? 850 : customer.id === 'cust-3' ? 1800 : (customer.sapUserCount === 0 ? 0 : 1200);
+    const manualHoursCount = totalManualHours > 0 ? totalManualHours : defaultManualHours;
     const automationSavings = Math.round(manualHoursCount * 33.3); // €33.3 per manual hour saved
 
     const activeModules = Array.from(new Set(recs.map(r => r.sapModule).filter(Boolean)));
-    const moduleSavings = activeModules.length > 3 ? 45000 : 30000;
+    const moduleSavings = activeModules.length > 3 ? 45000 : (customer.sapProducts?.length > 3 ? 40000 : 25000);
 
     const baseList: Opportunity[] = [
       {

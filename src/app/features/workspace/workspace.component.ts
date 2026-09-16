@@ -73,7 +73,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
 
           <div class="action-list">
-            @for (act of tfService.actions(); track act.id) {
+            @for (act of tfService.customerActions(); track act.id) {
               <div class="action-item" [class.done]="act.status === 'Done'">
                 <button class="check-btn" (click)="tfService.toggleActionStatus(act.id)">
                   <app-icon name="check" [size]="14" *ngIf="act.status === 'Done'"></app-icon>
@@ -87,6 +87,10 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                   </div>
                 </div>
                 <app-status-badge [text]="act.status" type="status"></app-status-badge>
+              </div>
+            } @empty {
+              <div class="empty-state" style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.82rem;">
+                Bu müşteri için henüz tanımlı görev bulunmamaktadır. "+ Görev Ekle" ile yeni aksiyon ekleyebilirsiniz.
               </div>
             }
           </div>

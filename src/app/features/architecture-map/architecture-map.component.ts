@@ -3987,11 +3987,7 @@ export class ArchitectureMapComponent {
 
   loadDiagramForMode(mode: 'asis' | 'po' | 'rise'): boolean {
     const key = this.getStorageKey(mode);
-    const fallbackKey = 'taskforce_custom_arch_' + mode;
-    let saved = localStorage.getItem(key);
-    if (!saved) {
-      saved = localStorage.getItem(fallbackKey);
-    }
+    const saved = localStorage.getItem(key);
 
     if (saved) {
       try {
@@ -4324,7 +4320,6 @@ export class ArchitectureMapComponent {
     const mode = this.architectureMode();
     const custId = this.customerService.activeCustomerId();
     const key = this.getStorageKey(mode);
-    const fallbackKey = 'taskforce_custom_arch_' + mode;
     const data = {
       nodes: this.nodes(),
       edges: this.currentEdges(),
@@ -4334,7 +4329,6 @@ export class ArchitectureMapComponent {
     };
     try {
       localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem(fallbackKey, JSON.stringify(data));
       const count = this.nodes().length;
       const edgeCount = this.currentEdges().length;
       const modeTitle = mode === 'asis' ? 'Mevcut Durum (AS-IS)' : (mode === 'rise' ? 'RISE with SAP' : 'PO Entegrasyon');
@@ -4359,7 +4353,6 @@ export class ArchitectureMapComponent {
         mode
       };
       localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem('taskforce_custom_arch_' + mode, JSON.stringify(data));
     } catch (e) {
       console.error('autoSave error', e);
     }
@@ -4370,11 +4363,10 @@ export class ArchitectureMapComponent {
       this.nodes.set([]);
       this.currentEdges.set([]);
       this.selectedNode.set(null);
-      // localStorage kaydını da sil - yeniden yüklemede de boş kalsın
+      // Sadece bu müşterinin kaydını sil
       const mode = this.architectureMode();
       const key = this.getStorageKey(mode);
       localStorage.removeItem(key);
-      localStorage.removeItem('taskforce_custom_arch_' + mode);
       this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
     }
   }
@@ -4416,7 +4408,6 @@ export class ArchitectureMapComponent {
     if (confirm('Kayıtlı çizimi sıfırlamak istiyor musunuz? Kaydedilen veriler silinecektir.')) {
       const key = this.getStorageKey(mode);
       localStorage.removeItem(key);
-      localStorage.removeItem('taskforce_custom_arch_' + mode);
       this.nodes.set([]);
       this.currentEdges.set([]);
       this.selectedNode.set(null);

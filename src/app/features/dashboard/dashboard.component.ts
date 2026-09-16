@@ -698,7 +698,7 @@ export class DashboardComponent implements AfterViewInit {
   // 1. Server Inventory (Checks LocalStorage saved architecture or Basis Sizing Matrix)
   serverInventoryVal = computed(() => {
     const custId = this.customerService.activeCustomerId();
-    const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`) || localStorage.getItem('taskforce_custom_arch_asis');
+    const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -824,7 +824,7 @@ export class DashboardComponent implements AfterViewInit {
     // 1. Infrastructure Chart (Only initialized if real server data or saved diagram exists)
     if (this.infraChartRef?.nativeElement && this.serverInventoryVal() !== '—') {
       const custId = this.customerService.activeCustomerId();
-      const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`) || localStorage.getItem('taskforce_custom_arch_asis');
+      const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`);
       let labels: string[] = [];
       let data: number[] = [];
 
