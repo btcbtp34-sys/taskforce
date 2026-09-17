@@ -118,5 +118,26 @@ export const MOCK_CUSTOMERS: Customer[] = [
     phone: '',
     logo: 'truck',
     lastAnalysisDate: '2026-08-30'
+  },
+  {
+    id: 'cust-4',
+    name: 'H* P*****R',
+    code: 'H* P*****R',
+    sector: '',
+    sapUserCount: 0,
+    activeUserCount: 0,
+    lowUsageUserCount: 0,
+    totalLicenseCost: 0,
+    estimatedOpportunityValue: 0,
+    activeOpportunityCount: 0,
+    taskForceStatus: 'Data Collection',
+    progressPercentage: 10,
+    sapProducts: [],
+    coreProblems: [],
+    contactPerson: '',
+    email: '',
+    phone: '',
+    logo: 'building',
+    lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
   }
 ];
