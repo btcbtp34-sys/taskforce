@@ -377,270 +377,154 @@ export interface ThirdPartySystem {
 
 
       <!-- ================= TAB 2: HEDEF MİMARİ & 3RD PARTİLER ================= -->
+      <!-- ================= TAB 2: HEDEF MİMARİ GÖRSEL YÜKLEME ALANI ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'target-architecture'">
-        <!-- Split View: Sol Mevcut Mimari vs Sağ Hedef Mimari -->
+        <!-- Toast Notification -->
+        <div class="img-toast-bar" *ngIf="imageToastMessage()">
+          <app-icon name="check-circle" [size]="16" color="#16a34a"></app-icon>
+          <span>{{ imageToastMessage() }}</span>
+        </div>
+
+        <!-- 2 Sütunlu Mimari Görsel Yükleme Grid -->
         <div class="split-architecture-grid">
-          <!-- SOL PANEL: MEVCUT MİMARİ (AS-IS) -->
+          <!-- 1. SOL PANEL: MEVCUT MİMARİ (AS-IS) GÖRSELİ -->
           <div class="arch-panel as-is-panel">
             <div class="panel-header">
               <div class="p-title-group">
                 <span class="panel-tag tag-warning">MEVCUT MİMARİ (AS-IS)</span>
-                <h3>On-Premise & Dağınık Altyapı</h3>
+                <h3>Mevcut Altyapı & Mimari Diyagramı</h3>
               </div>
-              <span class="metric-pill red">11 Ayrı Sunucu</span>
+              <div class="header-actions-right" *ngIf="asisArchImage()">
+                <button type="button" class="btn-img-action" (click)="openLightbox(asisArchImage()!, 'Mevcut Mimari (AS-IS)')" title="Tam Ekran İncele">
+                  <app-icon name="search" [size]="13"></app-icon>
+                  <span>Büyüt</span>
+                </button>
+                <button type="button" class="btn-img-action" (click)="asisFileInput.click()" title="Görseli Değiştir">
+                  <app-icon name="edit" [size]="13"></app-icon>
+                  <span>Değiştir</span>
+                </button>
+                <button type="button" class="btn-img-action danger" (click)="removeArchImage('asis')" title="Görseli Kaldır">
+                  <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
+                  <span>Kaldır</span>
+                </button>
+              </div>
             </div>
 
-            <div class="arch-card-list">
-              <div class="arch-card">
-                <div class="card-icon-area bg-amber">
-                  <app-icon name="database" [size]="18" color="#d97706"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>ERP Çekirdeği: SAP ECC 6.0 EHP7</strong>
-                  <p>Klasik AnyDB / Oracle veritabanı. S/4HANA standart tabloları ve Clean Core mimarisi eksik.</p>
-                  <span class="status-risk">EoS (Destek Sonu) Yaklaşıyor</span>
+            <!-- Upload Area / Image Container -->
+            <div class="arch-image-card">
+              <input 
+                type="file" 
+                #asisFileInput 
+                (change)="onImageSelected($event, 'asis')" 
+                accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml" 
+                style="display: none;" />
+
+              <!-- Uploading / Processing Spinner Overlay -->
+              <div *ngIf="isUploadingAsis()" class="upload-loading-overlay asis">
+                <div class="spinner-ring asis"></div>
+                <strong class="loading-title">Görsel İşleniyor...</strong>
+                <span class="loading-sub">Çözünürlük optimize ediliyor ve sisteme kaydediliyor</span>
+              </div>
+
+              <div *ngIf="!asisArchImage() && !isUploadingAsis()" class="upload-dropzone asis" (click)="asisFileInput.click()">
+                <div class="dropzone-inner">
+                  <div class="upload-icon-circle asis">
+                    <app-icon name="cloud" [size]="28" color="#d97706"></app-icon>
+                  </div>
+                  <h4>Mevcut Mimari (AS-IS) Görseli Yükleyin</h4>
+                  <p class="dropzone-hint">PNG, JPG, SVG veya WebP formatında mimari şeması, sunucu topolojisi veya ekran görüntüsü yükleyebilirsiniz.</p>
+                  <button type="button" class="btn-upload-trigger asis">
+                    <app-icon name="file-text" [size]="14"></app-icon>
+                    <span>Bilgisayardan Görsel Seç</span>
+                  </button>
                 </div>
               </div>
 
-              <div class="arch-card">
-                <div class="card-icon-area bg-amber">
-                  <app-icon name="server" [size]="18" color="#d97706"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>11 Dağınık Sunucu Mimarisi</strong>
-                  <p>Dev, Test, Canlı, PO, BI, Arşiv, Fiori ve Web sunucuları ayrı donanımlarda barınıyor.</p>
-                  <span class="status-risk">Yüksek Donanım & Lisans Bakım Maliyeti</span>
-                </div>
-              </div>
-
-              <div class="arch-card">
-                <div class="card-icon-area bg-amber">
-                  <app-icon name="link" [size]="18" color="#d97706"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>SAP PO 7.5 & Noktadan Noktaya Entegrasyonlar</strong>
-                  <p>109 canlı servis (83 Verici, 26 Alıcı). Çoğunluğu klasik RFC, SOAP ve dosya transferi (FTP) tabanlı.</p>
-                  <span class="status-risk">2027 PO Destek Sonu Riski</span>
-                </div>
-              </div>
-
-              <div class="arch-card">
-                <div class="card-icon-area bg-amber">
-                  <app-icon name="cpu" [size]="18" color="#d97706"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>Yoğun Z Geliştirmeleri & Kirlilik</strong>
-                  <p>Klasik satıcı/müşteri yapısına bağlı ZSD programları ve 22.000+ tanımlı atıl masraf çeşidi.</p>
-                  <span class="status-risk">Business Partner Uyumsuzluğu</span>
+              <div *ngIf="asisArchImage() && !isUploadingAsis()" class="image-preview-wrapper" (click)="openLightbox(asisArchImage()!, 'Mevcut Mimari (AS-IS)')">
+                <img [src]="asisArchImage()" alt="Mevcut Mimari (AS-IS)" class="arch-preview-img" />
+                <div class="preview-overlay">
+                  <span class="overlay-badge">🔍 Büyütmek için tıklayın</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SAĞ PANEL: HEDEF MİMARİ (TO-BE / RISE WITH SAP) -->
+          <!-- 2. SAĞ PANEL: HEDEF MİMARİ (TO-BE) GÖRSELİ -->
           <div class="arch-panel to-be-panel">
             <div class="panel-header">
               <div class="p-title-group">
                 <span class="panel-tag tag-success">HEDEF MİMARİ (TO-BE)</span>
-                <h3>RISE with SAP S/4HANA Cloud</h3>
+                <h3>RISE with SAP & Bulut Hedef Mimarisi</h3>
               </div>
-              <span class="metric-pill green">1 Konsolide Bulut DB</span>
+              <div class="header-actions-right" *ngIf="tobeArchImage()">
+                <button type="button" class="btn-img-action" (click)="openLightbox(tobeArchImage()!, 'Hedef Mimari (TO-BE)')" title="Tam Ekran İncele">
+                  <app-icon name="search" [size]="13"></app-icon>
+                  <span>Büyüt</span>
+                </button>
+                <button type="button" class="btn-img-action" (click)="tobeFileInput.click()" title="Görseli Değiştir">
+                  <app-icon name="edit" [size]="13"></app-icon>
+                  <span>Değiştir</span>
+                </button>
+                <button type="button" class="btn-img-action danger" (click)="removeArchImage('tobe')" title="Görseli Kaldır">
+                  <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
+                  <span>Kaldır</span>
+                </button>
+              </div>
             </div>
 
-            <div class="arch-card-list">
-              <div class="arch-card highlight-rise">
-                <div class="card-icon-area bg-emerald">
-                  <app-icon name="sparkles" [size]="18" color="#059669"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>ERP Çekirdeği: S/4HANA Private Cloud Edition</strong>
-                  <p>En güncel sürüm, yerleşik Yapay Zekâ (Joule), Fiori modern kullanıcı arayüzü ve Clean Core standardı.</p>
-                  <span class="status-success">Tam SLA & Otomatik Güncelleme</span>
+            <!-- Upload Area / Image Container -->
+            <div class="arch-image-card">
+              <input 
+                type="file" 
+                #tobeFileInput 
+                (change)="onImageSelected($event, 'tobe')" 
+                accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml" 
+                style="display: none;" />
+
+              <!-- Uploading / Processing Spinner Overlay -->
+              <div *ngIf="isUploadingTobe()" class="upload-loading-overlay tobe">
+                <div class="spinner-ring tobe"></div>
+                <strong class="loading-title">Görsel İşleniyor...</strong>
+                <span class="loading-sub">Çözünürlük optimize ediliyor ve sisteme kaydediliyor</span>
+              </div>
+
+              <div *ngIf="!tobeArchImage() && !isUploadingTobe()" class="upload-dropzone tobe" (click)="tobeFileInput.click()">
+                <div class="dropzone-inner">
+                  <div class="upload-icon-circle tobe">
+                    <app-icon name="sparkles" [size]="28" color="#059669"></app-icon>
+                  </div>
+                  <h4>Hedef Mimari (TO-BE) Görseli Yükleyin</h4>
+                  <p class="dropzone-hint">S/4HANA Private Cloud, BTP Integration Suite ve hedef bulut topolojisi şemanızı yükleyin.</p>
+                  <button type="button" class="btn-upload-trigger tobe">
+                    <app-icon name="sparkles" [size]="14"></app-icon>
+                    <span>Bilgisayardan Görsel Seç</span>
+                  </button>
                 </div>
               </div>
 
-              <div class="arch-card highlight-rise">
-                <div class="card-icon-area bg-emerald">
-                  <app-icon name="database" [size]="18" color="#059669"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>Konsolide HANA 2.0 In-Memory DB</strong>
-                  <p>11 dağınık sunucudan tek bir güvenli, yüksek hızlı kurumsal bulut veritabanına geçiş (%91 konsolidasyon).</p>
-                  <span class="status-success">1.311 GiB RAM Optimize Boyut</span>
-                </div>
-              </div>
-
-              <div class="arch-card highlight-rise">
-                <div class="card-icon-area bg-emerald">
-                  <app-icon name="bolt" [size]="18" color="#059669"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>SAP BTP Integration Suite</strong>
-                  <p>Cloud Integration, Open Connectors ve Event Mesh ile tüm dış dünya ve 3rd partilerle gerçek zamanlı REST API haberleşmesi.</p>
-                  <span class="status-success">Modern API Gateway & Güvenlik</span>
-                </div>
-              </div>
-
-              <div class="arch-card highlight-rise">
-                <div class="card-icon-area bg-emerald">
-                  <app-icon name="users" [size]="18" color="#059669"></app-icon>
-                </div>
-                <div class="card-info">
-                  <strong>Business Partner & Optimize FUE Lisanslama</strong>
-                  <p>Tekleştirilmiş müşteri/satıcı ana verisi. 83 aktif kullanıcı ➔ 70 FUE paketi ile optimum lisanslama maliyeti.</p>
-                  <span class="status-success">Clean Core & Düşük TCO</span>
+              <div *ngIf="tobeArchImage() && !isUploadingTobe()" class="image-preview-wrapper" (click)="openLightbox(tobeArchImage()!, 'Hedef Mimari (TO-BE)')">
+                <img [src]="tobeArchImage()" alt="Hedef Mimari (TO-BE)" class="arch-preview-img" />
+                <div class="preview-overlay">
+                  <span class="overlay-badge green">🔍 Büyütmek için tıklayın</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- ================= ALPEREN'İN TABLOSU: 3RD PARTİLER ================= -->
-        <div class="third-party-table-card">
-          <div class="table-header-box">
-            <div>
-              <div class="tb-badge-row">
-                <span class="tb-badge">MÜŞTERİ BAZLI ENTEGRASYON MATRİSİ</span>
-                <span class="count-pill">{{ filteredSystems().length }} Entegre 3rd Parti Sistem</span>
-              </div>
-              <h2 class="table-title">3rd Party Sistemler ve Hedef Mimari Geçiş Haritası</h2>
-              <p class="table-subtitle">
-                {{ customerService.activeCustomer().name }} bünyesindeki aktif 3. parti sistemlerin protokolleri, hedef BTP dönüşüm stratejileri ve kritiklik düzeyleri
-              </p>
+      <!-- Lightbox Modal (Full Screen Image Viewer) -->
+      <div class="img-lightbox-backdrop" *ngIf="lightboxImage() as lb" (click)="closeLightbox()">
+        <div class="lightbox-dialog" (click)="$event.stopPropagation()">
+          <div class="lightbox-header">
+            <div class="lb-title">
+              <app-icon name="image" [size]="16" color="#0284c7"></app-icon>
+              <span>{{ lb.title }} — {{ customerService.activeCustomer().name }}</span>
             </div>
-
-            <!-- Table Actions / Filter Toolbar -->
-            <div class="table-controls">
-              <div class="search-box">
-                <app-icon name="search" [size]="14" color="#9ca3af"></app-icon>
-                <input 
-                  type="text" 
-                  placeholder="3rd party sistem veya protokol ara..." 
-                  [(ngModel)]="searchQuery" />
-              </div>
-
-              <div class="filter-pills">
-                <button 
-                  class="f-pill" 
-                  [class.active]="selectedCategory() === 'TÜMÜ'" 
-                  (click)="selectedCategory.set('TÜMÜ')">
-                  Tümü ({{ thirdPartyList.length }})
-                </button>
-                <button 
-                  class="f-pill" 
-                  [class.active]="selectedCategory() === 'Finans & Banka'" 
-                  (click)="selectedCategory.set('Finans & Banka')">
-                  Finans & Banka
-                </button>
-                <button 
-                  class="f-pill" 
-                  [class.active]="selectedCategory() === 'Yasal & e-Dönüşüm'" 
-                  (click)="selectedCategory.set('Yasal & e-Dönüşüm')">
-                  Yasal & Uyum
-                </button>
-                <button 
-                  class="f-pill" 
-                  [class.active]="selectedCategory() === 'Satış & CRM'" 
-                  (click)="selectedCategory.set('Satış & CRM')">
-                  Satış & CRM
-                </button>
-                <button 
-                  class="f-pill" 
-                  [class.active]="selectedCategory() === 'Lojistik & WMS'" 
-                  (click)="selectedCategory.set('Lojistik & WMS')">
-                  Lojistik
-                </button>
-              </div>
-            </div>
+            <button type="button" class="lb-close-btn" (click)="closeLightbox()">✕ Kapat</button>
           </div>
-
-          <!-- Data Table -->
-          <div class="table-responsive">
-            <table class="systems-table">
-              <thead>
-                <tr>
-                  <th>3. PARTİ SİSTEM / SERVİS</th>
-                  <th>KATEGORİ</th>
-                  <th>ENTEGRASYON AMACI & İŞ SÜRECİ</th>
-                  <th>MEVCUT PROTOKOL (AS-IS)</th>
-                  <th>HEDEF BULUT PROTOKOLÜ (TO-BE)</th>
-                  <th>DÖNÜŞÜM STRATEJİSİ</th>
-                  <th>KRİTİKLİK</th>
-                  <th>DURUM</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of filteredSystems()">
-                  <!-- 1. System Name -->
-                  <td>
-                    <div class="sys-name-cell">
-                      <span class="sys-icon-box">
-                        <app-icon name="server" [size]="14" color="#0284c7"></app-icon>
-                      </span>
-                      <div>
-                        <strong>{{ item.name }}</strong>
-                        <span class="sys-note-sub">{{ item.notes }}</span>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- 2. Category -->
-                  <td>
-                    <span class="cat-pill">{{ item.category }}</span>
-                  </td>
-
-                  <!-- 3. Purpose -->
-                  <td>
-                    <span class="purpose-text">{{ item.purpose }}</span>
-                  </td>
-
-                  <!-- 4. Current Protocol -->
-                  <td>
-                    <div class="proto-cell as-is">
-                      <span class="proto-tag red">{{ item.currentProtocol }}</span>
-                    </div>
-                  </td>
-
-                  <!-- 5. Target Protocol -->
-                  <td>
-                    <div class="proto-cell to-be">
-                      <span class="proto-tag green">{{ item.targetProtocol }}</span>
-                    </div>
-                  </td>
-
-                  <!-- 6. Strategy -->
-                  <td>
-                    <span class="strategy-badge" [ngClass]="getStrategyClass(item.strategy)">
-                      {{ item.strategy }}
-                    </span>
-                  </td>
-
-                  <!-- 7. Criticality -->
-                  <td>
-                    <span class="crit-badge" [ngClass]="item.criticality.toLowerCase()">
-                      {{ item.criticality }}
-                    </span>
-                  </td>
-
-                  <!-- 8. Status -->
-                  <td>
-                    <span class="status-pill" [ngClass]="getStatusClass(item.status)">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="table-footer-info">
-            <div class="tf-left">
-              <span class="dot-live"></span>
-              <span>Tüm 3rd party entegrasyonlar SAP Clean Core ilkelerine uygun BTP Cloud Integration üzerinden yönetilecektir.</span>
-            </div>
-            <div class="tf-right">
-              <span>* Alperen entegrasyon veri matrisi referansı ile eşlenmiştir</span>
-            </div>
+          <div class="lightbox-body">
+            <img [src]="lb.url" [alt]="lb.title" class="lightbox-full-img" />
           </div>
         </div>
       </div>
@@ -1462,317 +1346,337 @@ export interface ThirdPartySystem {
         }
       }
 
-      .arch-card-list {
+      .header-actions-right {
         display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
+        align-items: center;
+        gap: 0.45rem;
+
+        .btn-img-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.3rem 0.65rem;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          font-size: 0.72rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+          }
+
+          &.danger {
+            color: #dc2626;
+            border-color: #fecaca;
+            background: #fef2f2;
+            &:hover {
+              background: #fee2e2;
+            }
+          }
+        }
       }
 
-      .arch-card {
+      .arch-image-card {
+        min-height: 380px;
         display: flex;
-        align-items: flex-start;
-        gap: 0.85rem;
-        padding: 0.95rem;
-        border-radius: 10px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        flex-direction: column;
+        justify-content: center;
+      }
 
-        &.highlight-rise {
-          background: #ffffff;
-          border-color: #bbf7d0;
-          box-shadow: 0 2px 6px rgba(5, 150, 105, 0.04);
+      .upload-dropzone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 360px;
+
+        &:hover {
+          border-color: #d97706;
+          background: #fffbeb;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(217, 119, 6, 0.08);
         }
 
-        .card-icon-area {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
+        &.tobe {
+          &:hover {
+            border-color: #059669;
+            background: #f0fdf4;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
+          }
+        }
+
+        .dropzone-inner {
+          max-width: 380px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.6rem;
+        }
+
+        .upload-icon-circle {
+          width: 58px;
+          height: 58px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
-          &.bg-amber { background: #fef3c7; }
-          &.bg-emerald { background: #dcfce7; }
-        }
+          margin-bottom: 0.4rem;
 
-        .card-info {
-          flex: 1;
-
-          strong {
-            font-size: 0.84rem;
-            color: #0f172a;
-            display: block;
-            margin-bottom: 0.2rem;
+          &.asis {
+            background: #fef3c7;
+            border: 2px solid #fde68a;
           }
-
-          p {
-            font-size: 0.74rem;
-            color: #64748b;
-            margin: 0 0 0.35rem 0;
-            line-height: 1.4;
-          }
-
-          .status-risk {
-            font-size: 0.67rem;
-            color: #dc2626;
-            font-weight: 700;
-            background: #fee2e2;
-            padding: 0.1rem 0.4rem;
-            border-radius: 4px;
-          }
-
-          .status-success {
-            font-size: 0.67rem;
-            color: #059669;
-            font-weight: 700;
+          &.tobe {
             background: #dcfce7;
-            padding: 0.1rem 0.4rem;
-            border-radius: 4px;
-          }
-        }
-      }
-    }
-
-    /* Third Party Integration Table Card (Alperen'in Tablosu) */
-    .third-party-table-card {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
-
-      .table-header-box {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1.5rem;
-        margin-bottom: 1.25rem;
-        padding-bottom: 1.25rem;
-        border-bottom: 1px solid #f1f5f9;
-
-        .tb-badge-row {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.35rem;
-
-          .tb-badge {
-            font-size: 0.67rem;
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            color: #0284c7;
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            padding: 0.1rem 0.5rem;
-            border-radius: 4px;
-          }
-
-          .count-pill {
-            font-size: 0.68rem;
-            color: #475569;
-            background: #f1f5f9;
-            padding: 0.1rem 0.5rem;
-            border-radius: 999px;
-            font-weight: 600;
+            border: 2px solid #bbf7d0;
           }
         }
 
-        .table-title {
-          font-size: 1.25rem;
+        h4 {
+          font-size: 0.95rem;
           font-weight: 800;
           color: #0f172a;
           margin: 0;
         }
 
-        .table-subtitle {
-          font-size: 0.78rem;
+        .dropzone-hint {
+          font-size: 0.74rem;
           color: #64748b;
-          margin: 0.25rem 0 0 0;
+          line-height: 1.45;
+          margin: 0;
         }
 
-        .table-controls {
-          display: flex;
-          flex-direction: column;
-          gap: 0.6rem;
-          align-items: flex-end;
+        .btn-upload-trigger {
+          margin-top: 0.6rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.55rem 1.15rem;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: all 0.15s ease;
 
-          .search-box {
+          &.asis {
+            background: #f59e0b;
+            color: #ffffff;
+            &:hover { background: #d97706; }
+          }
+
+          &.tobe {
+            background: #059669;
+            color: #ffffff;
+            &:hover { background: #047857; }
+          }
+        }
+      }
+
+      .upload-loading-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 360px;
+        background: #f8fafc;
+        border: 2px dashed #94a3b8;
+        border-radius: 12px;
+        padding: 2.5rem 1.5rem;
+        gap: 0.75rem;
+        text-align: center;
+        animation: fadeIn 0.2s ease;
+
+        &.asis {
+          border-color: #f59e0b;
+          background: #fffbeb;
+        }
+
+        &.tobe {
+          border-color: #10b981;
+          background: #f0fdf4;
+        }
+
+        .spinner-ring {
+          width: 46px;
+          height: 46px;
+          border-radius: 50%;
+          border: 4px solid #e2e8f0;
+          border-top-color: #0284c7;
+          animation: spin 0.8s linear infinite;
+
+          &.asis {
+            border-top-color: #d97706;
+          }
+          &.tobe {
+            border-top-color: #059669;
+          }
+        }
+
+        .loading-title {
+          font-size: 0.92rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .loading-sub {
+          font-size: 0.74rem;
+          color: #64748b;
+        }
+      }
+
+      .image-preview-wrapper {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        background: #0f172a;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 360px;
+        max-height: 540px;
+
+        .arch-preview-img {
+          width: 100%;
+          height: 100%;
+          max-height: 520px;
+          object-fit: contain;
+          display: block;
+          transition: transform 0.2s ease;
+        }
+
+        &:hover .arch-preview-img {
+          transform: scale(1.015);
+        }
+
+        .preview-overlay {
+          position: absolute;
+          bottom: 12px;
+          right: 12px;
+          opacity: 0.9;
+          transition: opacity 0.15s ease;
+
+          .overlay-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #ffffff;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+
+            &.green {
+              background: rgba(5, 150, 105, 0.88);
+            }
+          }
+        }
+      }
+    }
+
+    /* Toast Notification Bar */
+    .img-toast-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    /* Lightbox Modal */
+    .img-lightbox-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+
+      .lightbox-dialog {
+        background: #ffffff;
+        border-radius: 14px;
+        width: 95vw;
+        max-width: 1400px;
+        max-height: 92vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+        .lightbox-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.85rem 1.25rem;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+
+          .lb-title {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: #f8fafc;
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
+
+          .lb-close-btn {
+            background: #ffffff;
             border: 1px solid #cbd5e1;
             padding: 0.35rem 0.75rem;
             border-radius: 6px;
-            width: 260px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
 
-            input {
-              border: none;
-              background: transparent;
-              outline: none;
-              font-size: 0.78rem;
-              color: #1e293b;
-              width: 100%;
-            }
-          }
-
-          .filter-pills {
-            display: flex;
-            gap: 0.35rem;
-
-            .f-pill {
-              background: #f1f5f9;
-              border: 1px solid transparent;
-              color: #64748b;
-              font-size: 0.68rem;
-              font-weight: 600;
-              padding: 0.2rem 0.55rem;
-              border-radius: 6px;
-              cursor: pointer;
-              transition: all 0.15s ease;
-
-              &:hover { background: #e2e8f0; color: #1e293b; }
-              &.active { background: #0284c7; color: #ffffff; }
+            &:hover {
+              background: #fee2e2;
+              border-color: #fca5a5;
+              color: #dc2626;
             }
           }
         }
-      }
 
-      .table-responsive {
-        overflow-x: auto;
-      }
-
-      .systems-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.76rem;
-
-        th {
-          background: #f8fafc;
-          color: #475569;
-          font-weight: 700;
-          padding: 0.7rem 0.85rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-          font-size: 0.68rem;
-          letter-spacing: 0.04em;
-          white-space: nowrap;
-        }
-
-        td {
-          padding: 0.75rem 0.85rem;
-          border-bottom: 1px solid #f1f5f9;
-          color: #334155;
-          vertical-align: middle;
-        }
-
-        tr:hover td {
-          background: #f8fafc;
-        }
-      }
-
-      .sys-name-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-
-        .sys-icon-box {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
+        .lightbox-body {
+          flex: 1;
+          background: #090d16;
+          overflow: auto;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
-        }
+          padding: 1.5rem;
 
-        strong { font-size: 0.82rem; color: #0f172a; display: block; }
-        .sys-note-sub { font-size: 0.68rem; color: #64748b; }
-      }
-
-      .cat-pill {
-        background: #f1f5f9;
-        color: #475569;
-        font-size: 0.68rem;
-        font-weight: 600;
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-        white-space: nowrap;
-      }
-
-      .purpose-text {
-        font-size: 0.73rem;
-        color: #475569;
-        max-width: 220px;
-        display: block;
-        line-height: 1.35;
-      }
-
-      .proto-tag {
-        font-size: 0.7rem;
-        font-weight: 700;
-        padding: 0.15rem 0.45rem;
-        border-radius: 4px;
-        white-space: nowrap;
-
-        &.red { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-        &.green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-      }
-
-      .strategy-badge {
-        font-size: 0.68rem;
-        font-weight: 700;
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-        white-space: nowrap;
-
-        &.strat-modernize { background: #eff6ff; color: #1d4ed8; }
-        &.strat-wrapper { background: #f5f3ff; color: #6d28d9; }
-        &.strat-rehost { background: #f0fdf4; color: #15803d; }
-        &.strat-standard { background: #fefce8; color: #a16207; }
-        &.strat-retire { background: #fef2f2; color: #b91c1c; }
-      }
-
-      .crit-badge {
-        font-size: 0.66rem;
-        font-weight: 800;
-        padding: 0.12rem 0.45rem;
-        border-radius: 999px;
-
-        &.kritik { background: #fee2e2; color: #b91c1c; }
-        &.yüksek { background: #fef3c7; color: #b45309; }
-        &.orta { background: #f1f5f9; color: #475569; }
-      }
-
-      .status-pill {
-        font-size: 0.68rem;
-        font-weight: 600;
-        padding: 0.12rem 0.45rem;
-        border-radius: 4px;
-
-        &.st-ready { background: #dcfce7; color: #15803d; }
-        &.st-designed { background: #eff6ff; color: #1d4ed8; }
-        &.st-analyzed { background: #fef9c3; color: #854d0e; }
-        &.st-pending { background: #f1f5f9; color: #475569; }
-      }
-
-      .table-footer-info {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 1rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #f1f5f9;
-        font-size: 0.72rem;
-        color: #64748b;
-
-        .tf-left {
-          display: flex;
-          align-items: center;
-          gap: 0.45rem;
-          .dot-live { width: 7px; height: 7px; border-radius: 50%; background: #059669; }
+          .lightbox-full-img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+          }
         }
       }
     }
@@ -2102,6 +2006,14 @@ export class SolutionProposalComponent implements OnInit {
   methodsCustomized = signal<boolean>(false);
   methodsSaveMessage = signal<string>('');
 
+  // Target Architecture Visual Upload State
+  asisArchImage = signal<string | null>(null);
+  tobeArchImage = signal<string | null>(null);
+  isUploadingAsis = signal<boolean>(false);
+  isUploadingTobe = signal<boolean>(false);
+  lightboxImage = signal<{ url: string; title: string } | null>(null);
+  imageToastMessage = signal<string>('');
+
   constructor() {
     effect(() => {
       const custId = this.customerService.activeCustomerId();
@@ -2109,8 +2021,111 @@ export class SolutionProposalComponent implements OnInit {
       if (custId) {
         this.loadRecommendedData(custId, cust?.name || '');
         this.loadMethodCards(custId);
+        this.loadArchImages(custId);
       }
     });
+  }
+
+  loadArchImages(custId: string) {
+    try {
+      const asisImg = localStorage.getItem(`taskforce_target_arch_asis_img_${custId}`);
+      this.asisArchImage.set(asisImg || null);
+      const tobeImg = localStorage.getItem(`taskforce_target_arch_tobe_img_${custId}`);
+      this.tobeArchImage.set(tobeImg || null);
+    } catch (e) {
+      console.error('Error loading architecture images:', e);
+    }
+  }
+
+  onImageSelected(event: Event, type: 'asis' | 'tobe') {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    if (type === 'asis') {
+      this.isUploadingAsis.set(true);
+    } else {
+      this.isUploadingTobe.set(true);
+    }
+    // Small timeout to allow UI spinner to render smoothly
+    setTimeout(() => {
+      this.compressAndSaveImage(file, type);
+      input.value = '';
+    }, 60);
+  }
+
+  compressAndSaveImage(file: File, type: 'asis' | 'tobe') {
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1920;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            const custId = this.customerService.activeCustomerId();
+            if (type === 'asis') {
+              this.asisArchImage.set(dataUrl);
+              if (custId) localStorage.setItem(`taskforce_target_arch_asis_img_${custId}`, dataUrl);
+            } else {
+              this.tobeArchImage.set(dataUrl);
+              if (custId) localStorage.setItem(`taskforce_target_arch_tobe_img_${custId}`, dataUrl);
+            }
+            this.imageToastMessage.set(type === 'asis' ? 'Mevcut mimari (AS-IS) görseli başarıyla yüklendi!' : 'Hedef mimari (TO-BE) görseli başarıyla yüklendi!');
+            setTimeout(() => this.imageToastMessage.set(''), 3000);
+          }
+        } finally {
+          if (type === 'asis') this.isUploadingAsis.set(false);
+          else this.isUploadingTobe.set(false);
+        }
+      };
+      img.onerror = () => {
+        if (type === 'asis') this.isUploadingAsis.set(false);
+        else this.isUploadingTobe.set(false);
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = () => {
+      if (type === 'asis') this.isUploadingAsis.set(false);
+      else this.isUploadingTobe.set(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeArchImage(type: 'asis' | 'tobe') {
+    const custId = this.customerService.activeCustomerId();
+    if (type === 'asis') {
+      this.asisArchImage.set(null);
+      if (custId) localStorage.removeItem(`taskforce_target_arch_asis_img_${custId}`);
+    } else {
+      this.tobeArchImage.set(null);
+      if (custId) localStorage.removeItem(`taskforce_target_arch_tobe_img_${custId}`);
+    }
+    this.imageToastMessage.set(type === 'asis' ? 'Mevcut mimari görseli kaldırıldı.' : 'Hedef mimari görseli kaldırıldı.');
+    setTimeout(() => this.imageToastMessage.set(''), 3000);
+  }
+
+  openLightbox(url: string, title: string) {
+    this.lightboxImage.set({ url, title });
+  }
+
+  closeLightbox() {
+    this.lightboxImage.set(null);
   }
 
   loadMethodCards(custId: string) {

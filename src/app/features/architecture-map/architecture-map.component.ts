@@ -340,13 +340,18 @@ export interface ArchitectureEdge {
             </div>
           </div>
 
-          <!-- Interactive SVG Drawing Canvas spreading downwards full screen -->
+          <!-- Interactive Infinite Pan & Zoom Canvas (Figma / Miro style) -->
           <div 
             class="visual-canvas" 
-            #canvasRef>
+            #canvasRef
+            [class.is-panning]="isPanning()"
+            [style.background-position]="panX() + 'px ' + panY() + 'px'"
+            [style.background-size]="(24 * zoom()) + 'px ' + (24 * zoom()) + 'px'"
+            (mousedown)="onCanvasMouseDown($event)"
+            (wheel)="onCanvasWheel($event)">
 
-            <!-- Floating Connecting Mode Banner -->
-            <div class="canvas-floating-banner connecting-banner" *ngIf="isConnectingMode()">
+            <!-- Floating Connecting Mode Banner (Fixed in Viewport) -->
+            <div class="canvas-floating-banner connecting-banner" *ngIf="isConnectingMode()" (mousedown)="$event.stopPropagation()">
               <div class="banner-inner">
                 <app-icon name="link" [size]="16" color="#ffffff"></app-icon>
                 <span class="banner-prompt">
@@ -360,16 +365,22 @@ export interface ArchitectureEdge {
               </div>
             </div>
 
-            <!-- Floating Studio Toast Notification -->
+            <!-- Floating Studio Toast Notification (Fixed in Viewport) -->
             <div class="canvas-floating-toast" *ngIf="studioToastMessage()">
               <app-icon name="check" [size]="15" color="#ffffff"></app-icon>
               <span>{{ studioToastMessage() }}</span>
             </div>
-            
-            <!-- SVG Connection Lines with Directional Arrow Markers & Animated Data Flow -->
-            <svg class="connections-svg" width="100%" height="100%">
-              <defs>
-                <!-- Blue Directional Arrowhead Marker -->
+
+            <!-- Infinite Pan & Zoom Transformed World Layer -->
+            <div 
+              class="canvas-world" 
+              [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'"
+              [style.transform-origin]="'0 0'">
+              
+              <!-- SVG Connection Lines with Directional Arrow Markers & Animated Data Flow -->
+              <svg class="connections-svg" width="6000" height="6000">
+                <defs>
+                  <!-- Blue Directional Arrowhead Marker -->
                 <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#0284c7" />
                 </marker>
@@ -451,29 +462,6 @@ export interface ArchitectureEdge {
                 }
               }
             </svg>
-
-            <!-- Canvas Empty State (when user hasn't added any components yet) -->
-            <div class="canvas-empty-state" *ngIf="nodes().length === 0">
-              <div class="empty-icon-circle">
-                <app-icon [name]="architectureMode() === 'rise' ? 'sparkles' : 'map'" [size]="36" [color]="architectureMode() === 'rise' ? '#059669' : '#0284c7'"></app-icon>
-              </div>
-              <h3>{{ architectureMode() === 'rise' ? 'RISE with SAP Çizim Alanı Boş' : 'Mevcut Durum (AS-IS) Çizim Alanı Boş' }}</h3>
-              <p>
-                {{ architectureMode() === 'rise' 
-                  ? 'Hedef RISE with SAP bulut mimarinizi tasarlamak için "+ Bileşen Ekle" ile başlayabilir, BTP servisleri veya S/4HANA çekirdek düğümlerini ekleyip aralarında bağlantı kurabilirsiniz.' 
-                  : 'Mevcut AS-IS altyapı mimarinizi çizmek için "+ Bileşen Ekle" butonuna tıklayarak sunucuları ekleyebilir, sürükleyip "Bağlantı Kur" ile veri akışlarını belirleyebilirsiniz.' }}
-              </p>
-              <div class="empty-actions">
-                <button class="btn btn-studio-add" (click)="openCreateNodeModal()">
-                  <app-icon name="plus" [size]="14" color="#ffffff"></app-icon>
-                  <span>+ İlk Bileşeni Ekle</span>
-                </button>
-                <button class="btn btn-secondary" (click)="loadSampleTemplate()">
-                  <app-icon name="refresh" [size]="14"></app-icon>
-                  <span>Örnek Şablonu Yükle</span>
-                </button>
-              </div>
-            </div>
 
             <!-- Rendered System Nodes on Canvas matching Slide Layout -->
             @for (node of nodes(); track node.id) {
@@ -667,22 +655,33 @@ export interface ArchitectureEdge {
                 </div>
               }
             }
+          </div> <!-- Close .canvas-world -->
 
-            <!-- RISE with SAP Sizing & Capacity Card Widget on Right Side -->
-            <div class="rise-side-table-panel" *ngIf="architectureMode() === 'rise'">
-              <div class="panel-header">
-                <div class="panel-title-area">
-                  <div class="panel-icon">
-                    <app-icon name="database" [size]="15" color="#0284c7"></app-icon>
-                  </div>
-                  <div>
-                    <h4 class="panel-title">S/4HANA Boyutlandırma & Kapasite</h4>
-                    <span class="panel-sub">HANA DB & Uygulama Sunucu Özeti</span>
-                  </div>
+          <!-- RISE with SAP Sizing & Capacity Floating Panel (Fixed in Top-Right Viewport) -->
+          <div 
+            class="rise-side-table-panel" 
+            *ngIf="architectureMode() === 'rise'" 
+            (mousedown)="$event.stopPropagation()"
+            (wheel)="$event.stopPropagation()">
+            <div class="panel-header" (click)="isRiseSizingPanelCollapsed.set(!isRiseSizingPanelCollapsed())">
+              <div class="panel-title-area">
+                <div class="panel-icon">
+                  <app-icon name="database" [size]="15" color="#0284c7"></app-icon>
                 </div>
-                <span class="spec-tag">RISE Spec</span>
+                <div>
+                  <h4 class="panel-title">S/4HANA Boyutlandırma (Source-Target)</h4>
+                  <span class="panel-sub">HANA DB & Uygulama Sunucu Özeti</span>
+                </div>
               </div>
+              <div class="panel-header-right">
+                <span class="spec-tag">RISE Spec</span>
+                <button class="btn-panel-toggle" title="Genişlet / Daralt">
+                  {{ isRiseSizingPanelCollapsed() ? '▼' : '▲' }}
+                </button>
+              </div>
+            </div>
 
+            <div class="panel-body" *ngIf="!isRiseSizingPanelCollapsed()">
               <!-- Dynamic data from Source-Target Excel sheet -->
               <ng-container *ngIf="basisService.sizingMatrix().length > 0; else noSizingData">
                 <div class="table-container">
@@ -727,6 +726,90 @@ export interface ArchitectureEdge {
               </ng-template>
             </div>
           </div>
+
+          <!-- Premium Canvas Empty State (Centered in Viewport) -->
+          <div class="canvas-empty-state" *ngIf="nodes().length === 0" (mousedown)="$event.stopPropagation()">
+            <div class="empty-badge">
+              <span class="empty-badge-dot"></span>
+              <span>{{ architectureMode() === 'rise' ? 'RISE with SAP Hedef Çizim Konsolu' : 'İnteraktif Mimari Çizim Alanı' }}</span>
+            </div>
+
+            <div class="empty-icon-wrapper">
+              <div class="empty-icon-glow"></div>
+              <div class="empty-icon-circle">
+                <app-icon [name]="architectureMode() === 'rise' ? 'sparkles' : 'map'" [size]="32" [color]="architectureMode() === 'rise' ? '#059669' : '#0284c7'"></app-icon>
+              </div>
+            </div>
+
+            <h3 class="empty-title">
+              {{ architectureMode() === 'rise' ? 'RISE with SAP Çizim Alanı Hazır' : 'Mevcut Durum (AS-IS) Çizim Alanı Hazır' }}
+            </h3>
+
+            <p class="empty-desc">
+              {{ architectureMode() === 'rise' 
+                ? 'Hedef bulut mimarinizi tasarlamak için yeni bileşenler ekleyebilir veya hazır referans şablonu yükleyerek hemen özelleştirmeye başlayabilirsiniz.' 
+                : 'Mevcut sunucu ve sistemlerinizi ekleyerek veri akışlarını çizebilir veya hazır örnek şablonla hemen başlayabilirsiniz.' }}
+            </p>
+
+            <div class="empty-actions-row">
+              <button class="btn btn-empty-primary" (click)="openCreateNodeModal()">
+                <app-icon name="plus" [size]="16" color="#ffffff"></app-icon>
+                <span>+ İlk Bileşeni Ekle</span>
+              </button>
+              
+              <button class="btn btn-empty-secondary" (click)="loadSampleTemplate()">
+                <app-icon name="refresh" [size]="15" color="#0284c7"></app-icon>
+                <span>Örnek Şablonu Yükle</span>
+              </button>
+            </div>
+
+            <div class="empty-steps-hint">
+              <div class="step-item">
+                <span class="step-num">1</span>
+                <span>Bileşen Ekle</span>
+              </div>
+              <span class="step-arrow">➔</span>
+              <div class="step-item">
+                <span class="step-num">2</span>
+                <span>Sürükle & Yerleştir</span>
+              </div>
+              <span class="step-arrow">➔</span>
+              <div class="step-item">
+                <span class="step-num">3</span>
+                <span>Bağlantı Kur</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Infinite Canvas Navigation Controls Bar (Fixed Viewport Level) -->
+          <div class="canvas-nav-controls" (mousedown)="$event.stopPropagation()">
+            <div class="canvas-hint-pill">
+              <span class="hint-icon">🖐️</span>
+              <span class="hint-text">Tuvali sürükleyerek kaydırın • Tekerlekle yakınlaştırın</span>
+            </div>
+
+            <div class="canvas-zoom-toolbar">
+              <button class="zoom-btn" (click)="zoomOut()" title="Uzaklaştır (Zoom Out)">
+                <app-icon name="minus" [size]="13"></app-icon>
+              </button>
+              <button class="zoom-btn zoom-level" (click)="resetZoom()" title="Yakınlaştırmayı %100 Yap">
+                {{ (zoom() * 100) | number:'1.0-0' }}%
+              </button>
+              <button class="zoom-btn" (click)="zoomIn()" title="Yakınlaştır (Zoom In)">
+                <app-icon name="plus" [size]="13"></app-icon>
+              </button>
+              <div class="zoom-divider"></div>
+              <button class="zoom-btn action-btn" (click)="fitToContent()" title="Tüm Çizimi Ekrana Ortala ve Sığdır">
+                <app-icon name="maximize" [size]="13"></app-icon>
+                <span>Sığdır</span>
+              </button>
+              <button class="zoom-btn action-btn" (click)="resetView()" title="Görünüm ve Konumu Sıfırla">
+                <app-icon name="refresh" [size]="13"></app-icon>
+                <span>Sıfırla</span>
+              </button>
+            </div>
+          </div>
+        </div> <!-- Close .visual-canvas -->
 
           <!-- Selected Node Details Drawer Bar -->
           <div class="node-detail-bar" *ngIf="selectedNode() as sn">
@@ -1693,77 +1776,318 @@ export interface ArchitectureEdge {
     .visual-canvas {
       flex: 1;
       position: relative;
-      background: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
-      background-size: 22px 22px;
+      background-color: #f8fafc;
+      background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+      background-repeat: repeat;
       border-radius: 8px;
-      overflow: hidden;
-      min-height: 1040px;
-      height: 1040px;
+      overflow: hidden; /* Scrollbar yok, sonsuz pan & zoom tuvali */
+      min-height: 850px;
+      height: 850px;
       user-select: none;
+      cursor: grab;
+
+      &.is-panning {
+        cursor: grabbing !important;
+      }
+
+      .canvas-world {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        will-change: transform;
+
+        > * {
+          pointer-events: auto;
+        }
+      }
 
       .canvas-empty-state {
         position: absolute;
-        top: 40%;
+        top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        border: 2px dashed #94a3b8;
-        border-radius: 16px;
-        padding: 2.75rem 2.5rem;
-        max-width: 540px;
-        box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(203, 213, 225, 0.8);
+        border-radius: 20px;
+        padding: 2.25rem 2.5rem;
+        width: 520px;
+        max-width: 92%;
+        box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.9);
         z-index: 10;
         pointer-events: auto;
+        user-select: none;
 
-        .empty-icon-circle {
-          width: 70px;
-          height: 70px;
-          border-radius: 50%;
-          background: #f0f9ff;
-          border: 2px solid #bae6fd;
-          display: flex;
+        .empty-badge {
+          display: inline-flex;
           align-items: center;
-          justify-content: center;
-          margin-bottom: 1.25rem;
-          box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
-        }
-
-        h3 {
-          font-size: 1.25rem;
+          gap: 0.45rem;
+          padding: 0.35rem 0.85rem;
+          border-radius: 20px;
+          font-size: 0.72rem;
           font-weight: 700;
+          color: #0369a1;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          margin-bottom: 1.15rem;
+
+          .empty-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #0284c7;
+            animation: pulse 2s infinite;
+          }
+        }
+
+        .empty-icon-wrapper {
+          position: relative;
+          margin-bottom: 1.15rem;
+
+          .empty-icon-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 76px;
+            height: 76px;
+            background: radial-gradient(circle, rgba(2, 132, 199, 0.22) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(8px);
+          }
+
+          .empty-icon-circle {
+            width: 62px;
+            height: 62px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 18px -4px rgba(2, 132, 199, 0.18);
+            position: relative;
+          }
+        }
+
+        .empty-title {
+          font-size: 1.22rem;
+          font-weight: 800;
           color: #0f172a;
-          margin: 0 0 0.5rem 0;
+          margin: 0 0 0.55rem 0;
+          letter-spacing: -0.01em;
         }
 
-        p {
-          font-size: 0.9rem;
+        .empty-desc {
+          font-size: 0.85rem;
           color: #64748b;
-          line-height: 1.55;
+          line-height: 1.58;
           margin: 0 0 1.5rem 0;
+          max-width: 440px;
         }
 
-        .empty-actions {
+        .empty-actions-row {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.75rem;
-          flex-wrap: wrap;
+          gap: 0.85rem;
+          width: 100%;
+          margin-bottom: 1.5rem;
+
+          .btn-empty-primary {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            padding: 0.65rem 1.3rem;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: all 0.2s ease-in-out;
+
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 6px 18px rgba(2, 132, 199, 0.4);
+              background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            }
+          }
+
+          .btn-empty-secondary {
+            background: #ffffff;
+            color: #0369a1;
+            border: 1px solid #cbd5e1;
+            padding: 0.65rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: all 0.2s ease-in-out;
+
+            &:hover {
+              background: #f0f9ff;
+              border-color: #bae6fd;
+              color: #0284c7;
+              transform: translateY(-1px);
+            }
+          }
+        }
+
+        .empty-steps-hint {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.65rem;
+          padding-top: 1.15rem;
+          border-top: 1px solid #f1f5f9;
+          width: 100%;
+
+          .step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748b;
+
+            .step-num {
+              width: 18px;
+              height: 18px;
+              border-radius: 50%;
+              background: #f1f5f9;
+              color: #0284c7;
+              border: 1px solid #e2e8f0;
+              font-size: 0.68rem;
+              font-weight: 800;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+            }
+          }
+
+          .step-arrow {
+            color: #cbd5e1;
+            font-size: 0.72rem;
+          }
         }
       }
     }
 
     .connections-svg {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
       pointer-events: none;
-      width: 100%;
-      height: 100%;
+      width: 6000px;
+      height: 6000px;
       z-index: 1;
+    }
+
+    /* Floating Infinite Canvas Navigation Controls Bar */
+    .canvas-nav-controls {
+      position: absolute;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      z-index: 20;
+      pointer-events: auto;
+      user-select: none;
+
+      .canvas-hint-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(8px);
+        border: 1px solid #e2e8f0;
+        padding: 0.45rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #475569;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+
+        .hint-icon {
+          font-size: 0.9rem;
+        }
+      }
+
+      .canvas-zoom-toolbar {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 0.25rem;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+        gap: 0.2rem;
+
+        .zoom-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.35rem;
+          height: 32px;
+          min-width: 32px;
+          padding: 0 0.55rem;
+          border: none;
+          background: transparent;
+          color: #334155;
+          border-radius: 6px;
+          font-size: 0.76rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease-in-out;
+
+          &:hover {
+            background: #f1f5f9;
+            color: #0284c7;
+          }
+
+          &.zoom-level {
+            font-variant-numeric: tabular-nums;
+            font-size: 0.76rem;
+            color: #0f172a;
+            padding: 0 0.4rem;
+            &:hover {
+              background: #e0f2fe;
+              color: #0284c7;
+            }
+          }
+
+          &.action-btn {
+            color: #475569;
+            font-weight: 600;
+            &:hover {
+              background: #e0f2fe;
+              color: #0284c7;
+            }
+          }
+        }
+
+        .zoom-divider {
+          width: 1px;
+          height: 18px;
+          background: #e2e8f0;
+          margin: 0 0.2rem;
+        }
+      }
     }
 
     .connection-group {
@@ -2189,28 +2513,37 @@ export interface ArchitectureEdge {
       }
     }
 
-    /* BEAUTIFIED TASK FORCE SAAS SIZING & CAPACITY PANEL (RIGHT SIDE) */
+    /* BEAUTIFIED TASK FORCE SAAS SIZING & CAPACITY PANEL (FLOATING TOP-RIGHT) */
     .rise-side-table-panel {
       position: absolute;
-      top: 25px;
-      right: 25px;
+      top: 1.15rem;
+      right: 1.15rem;
       width: 440px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      max-width: calc(100% - 2.3rem);
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(14px);
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
       overflow: hidden;
-      z-index: 40;
+      z-index: 25;
       display: flex;
       flex-direction: column;
+      user-select: none;
 
       .panel-header {
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
-        padding: 0.75rem 1rem;
+        padding: 0.65rem 0.95rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover {
+          background: #f1f5f9;
+        }
 
         .panel-title-area {
           display: flex;
@@ -2218,8 +2551,8 @@ export interface ArchitectureEdge {
           gap: 0.5rem;
 
           .panel-icon {
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             background: #f0f9ff;
             border: 1px solid #bae6fd;
             border-radius: 6px;
@@ -2230,27 +2563,50 @@ export interface ArchitectureEdge {
 
           .panel-title {
             margin: 0;
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             font-weight: 800;
             color: #0f172a;
           }
 
           .panel-sub {
-            font-size: 0.68rem;
+            font-size: 0.66rem;
             color: #64748b;
             font-weight: 500;
           }
         }
 
-        .spec-tag {
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: #0284c7;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          padding: 0.15rem 0.45rem;
-          border-radius: 4px;
+        .panel-header-right {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+
+          .spec-tag {
+            font-size: 0.64rem;
+            font-weight: 800;
+            color: #0284c7;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+          }
+
+          .btn-panel-toggle {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 0.72rem;
+            cursor: pointer;
+            padding: 0.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
         }
+      }
+
+      .panel-body {
+        display: flex;
+        flex-direction: column;
       }
 
       .table-container {
@@ -3827,6 +4183,17 @@ export class ArchitectureMapComponent {
   edges = signal<ArchitectureEdge[]>([]);
   selectedNode = signal<ArchitectureNode | null>(null);
 
+  // Infinite Canvas Pan & Zoom State (Figma / Miro style)
+  panX = signal<number>(0);
+  panY = signal<number>(0);
+  zoom = signal<number>(1.0);
+  isPanning = signal<boolean>(false);
+  isRiseSizingPanelCollapsed = signal<boolean>(false);
+  private panStartX = 0;
+  private panStartY = 0;
+  private dragNodeOffsetX = 0;
+  private dragNodeOffsetY = 0;
+
   // Smooth Window-Level Dragging State
   draggingNodeId: string | null = null;
   currentEdges = signal<ArchitectureEdge[]>([]);
@@ -4470,37 +4837,158 @@ export class ArchitectureMapComponent {
     this.selectedNode.set(node);
   }
 
+  /* --- Infinite Pan & Zoom Engine --- */
+  onCanvasMouseDown(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Don't start panning if clicking on interactive elements
+    if (target.closest('.canvas-node, .rise-s4p-card, .rise-service-card, .po-node-card, .canvas-floating-banner, .canvas-floating-toast, .canvas-nav-controls, .canvas-empty-state button, .rise-side-table-panel, .connection-group, .qa-btn, .btn, .node-detail-bar')) {
+      return;
+    }
+    // Left or middle mouse click initiates canvas panning
+    if (event.button === 0 || event.button === 1) {
+      this.isPanning.set(true);
+      this.panStartX = event.clientX - this.panX();
+      this.panStartY = event.clientY - this.panY();
+    }
+  }
+
+  onCanvasWheel(event: WheelEvent): void {
+    event.preventDefault();
+    if (!this.canvasRef) return;
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+    const currentZoom = this.zoom();
+    const nextZoom = Math.min(Math.max(currentZoom * zoomFactor, 0.3), 2.5);
+
+    if (Math.abs(nextZoom - currentZoom) < 0.001) return;
+
+    // Zoom anchored at mouse pointer location
+    const scaleChange = nextZoom / currentZoom;
+    const newPanX = mouseX - (mouseX - this.panX()) * scaleChange;
+    const newPanY = mouseY - (mouseY - this.panY()) * scaleChange;
+
+    this.panX.set(Math.round(newPanX * 10) / 10);
+    this.panY.set(Math.round(newPanY * 10) / 10);
+    this.zoom.set(Math.round(nextZoom * 100) / 100);
+  }
+
+  zoomIn(): void {
+    const currentZoom = this.zoom();
+    const nextZoom = Math.min(Math.round((currentZoom + 0.15) * 100) / 100, 2.5);
+    this.setZoomCentered(nextZoom);
+  }
+
+  zoomOut(): void {
+    const currentZoom = this.zoom();
+    const nextZoom = Math.max(Math.round((currentZoom - 0.15) * 100) / 100, 0.3);
+    this.setZoomCentered(nextZoom);
+  }
+
+  resetZoom(): void {
+    this.setZoomCentered(1.0);
+  }
+
+  setZoomCentered(nextZoom: number): void {
+    if (!this.canvasRef) {
+      this.zoom.set(nextZoom);
+      return;
+    }
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const scaleChange = nextZoom / this.zoom();
+    this.panX.set(Math.round((centerX - (centerX - this.panX()) * scaleChange) * 10) / 10);
+    this.panY.set(Math.round((centerY - (centerY - this.panY()) * scaleChange) * 10) / 10);
+    this.zoom.set(nextZoom);
+  }
+
+  resetView(): void {
+    this.panX.set(0);
+    this.panY.set(0);
+    this.zoom.set(1.0);
+    this.showToast('Tuval görünümü sıfırlandı.');
+  }
+
+  fitToContent(): void {
+    const currentNodes = this.nodes();
+    if (currentNodes.length === 0 || !this.canvasRef) {
+      this.resetView();
+      return;
+    }
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    const padding = 90;
+    const xs = currentNodes.map(n => n.x);
+    const ys = currentNodes.map(n => n.y);
+    const minX = Math.min(...xs) - 130;
+    const maxX = Math.max(...xs) + 130;
+    const minY = Math.min(...ys) - 70;
+    const maxY = Math.max(...ys) + 70;
+
+    const contentWidth = Math.max(maxX - minX, 300);
+    const contentHeight = Math.max(maxY - minY, 200);
+
+    const scaleX = (rect.width - padding * 2) / contentWidth;
+    const scaleY = (rect.height - padding * 2) / contentHeight;
+    const fitZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.35), 1.15);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    this.zoom.set(Math.round(fitZoom * 100) / 100);
+    this.panX.set(Math.round(rect.width / 2 - centerX * fitZoom));
+    this.panY.set(Math.round(rect.height / 2 - centerY * fitZoom));
+    this.showToast('Çizim ekrana ortalandı ve sığdırıldı.');
+  }
+
   startDrag(node: ArchitectureNode, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
     this.selectedNode.set(node);
     this.draggingNodeId = node.id;
+    if (this.canvasRef) {
+      const canvasRect = this.canvasRef.nativeElement.getBoundingClientRect();
+      const mouseScreenX = event.clientX - canvasRect.left;
+      const mouseScreenY = event.clientY - canvasRect.top;
+      const worldX = (mouseScreenX - this.panX()) / this.zoom();
+      const worldY = (mouseScreenY - this.panY()) / this.zoom();
+      this.dragNodeOffsetX = worldX - node.x;
+      this.dragNodeOffsetY = worldY - node.y;
+    }
   }
 
   @HostListener('window:mousemove', ['$event'])
   onWindowMouseMove(event: MouseEvent): void {
-    if (!this.draggingNodeId || !this.canvasRef) return;
-    const canvasRect = this.canvasRef.nativeElement.getBoundingClientRect();
-    
-    let newX = event.clientX - canvasRect.left;
-    let newY = event.clientY - canvasRect.top;
+    if (this.draggingNodeId && this.canvasRef) {
+      const canvasRect = this.canvasRef.nativeElement.getBoundingClientRect();
+      const mouseScreenX = event.clientX - canvasRect.left;
+      const mouseScreenY = event.clientY - canvasRect.top;
+      const worldX = (mouseScreenX - this.panX()) / this.zoom() - this.dragNodeOffsetX;
+      const worldY = (mouseScreenY - this.panY()) / this.zoom() - this.dragNodeOffsetY;
 
-    // Smooth clamping within canvas limits
-    newX = Math.max(120, Math.min(canvasRect.width - 120, newX));
-    newY = Math.max(50, Math.min(canvasRect.height - 50, newY));
+      this.nodes.update(list =>
+        list.map(n => n.id === this.draggingNodeId ? { ...n, x: Math.round(worldX), y: Math.round(worldY) } : n)
+      );
 
-    this.nodes.update(list =>
-      list.map(n => n.id === this.draggingNodeId ? { ...n, x: newX, y: newY } : n)
-    );
-
-    if (this.draggingNodeId === 'node-core') {
-      this.coreNode = { x: newX, y: newY };
+      if (this.draggingNodeId === 'node-core') {
+        this.coreNode = { x: Math.round(worldX), y: Math.round(worldY) };
+      }
+    } else if (this.isPanning()) {
+      this.panX.set(Math.round((event.clientX - this.panStartX) * 10) / 10);
+      this.panY.set(Math.round((event.clientY - this.panStartY) * 10) / 10);
     }
   }
 
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
-    this.draggingNodeId = null;
+    if (this.draggingNodeId) {
+      this.draggingNodeId = null;
+    }
+    if (this.isPanning()) {
+      this.isPanning.set(false);
+    }
   }
 
   removeNode(id: string): void {
