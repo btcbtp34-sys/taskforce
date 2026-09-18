@@ -139,5 +139,35 @@ export const MOCK_CUSTOMERS: Customer[] = [
     phone: '',
     logo: 'building',
     lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
+  },
+  {
+    id: 'cust-test',
+    name: 'TEST USER',
+    code: 'TEST USER',
+    sector: 'Test & Deneme Ortamı',
+    sapUserCount: 250,
+    activeUserCount: 210,
+    lowUsageUserCount: 40,
+    totalLicenseCost: 150000,
+    estimatedOpportunityValue: 55000,
+    activeOpportunityCount: 4,
+    taskForceStatus: 'Analysis',
+    progressPercentage: 40,
+    sapProducts: [
+      { id: 'p-test-1', name: 'SAP S/4HANA (Sandbox/Test)', category: 'ERP Core', status: 'Active', licenseCount: 180, monthlyCost: 12000, icon: 'database' },
+      { id: 'p-test-2', name: 'SAP BTP Integration Suite (Trial)', category: 'Platform & Integration', status: 'Active', licenseCount: 20, monthlyCost: 2500, icon: 'layers' },
+      { id: 'p-test-3', name: 'SAP Analytics Cloud (Demo)', category: 'Analytics', status: 'Planned', licenseCount: 15, monthlyCost: 1200, icon: 'bar-chart' },
+      { id: 'p-test-4', name: 'SAP Build Work Zone', category: 'User Experience', status: 'Active', licenseCount: 50, monthlyCost: 1800, icon: 'layout' }
+    ],
+    coreProblems: [
+      'Test & Simülasyon Çalışmaları',
+      'Yedekleme ve İçe Aktarma Denemeleri',
+      'Mimari ve Sizing Senaryoları'
+    ],
+    contactPerson: 'Test Yöneticisi',
+    email: 'test.user@taskforce.local',
+    phone: '+90 555 000 0000',
+    logo: 'flask-conical',
+    lastAnalysisDate: '2026-09-18'
   }
 ];

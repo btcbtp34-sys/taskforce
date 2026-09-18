@@ -156,6 +156,28 @@ export class TaskForceService {
       dueDate: '2026-09-23',
       status: 'To Do',
       priority: 'High'
+    },
+
+    // TEST USER (cust-test)
+    {
+      id: 'act-test-1',
+      customerId: 'cust-test',
+      title: 'Test senaryoları ve Excel veri yükleme provası',
+      description: 'Yeni mimari çizim ve sizing verilerini simüle edin.',
+      assignedTo: this.teamMembers[0],
+      dueDate: '2026-09-30',
+      status: 'In Progress',
+      priority: 'Medium'
+    },
+    {
+      id: 'act-test-2',
+      customerId: 'cust-test',
+      title: 'Yedek alma ve geri yükleme testi',
+      description: 'Tek müşteri JSON yedeği ve tam sistem yedeğini doğrulayın.',
+      assignedTo: this.teamMembers[1],
+      dueDate: '2026-10-02',
+      status: 'To Do',
+      priority: 'Low'
     }
   ]);
 
