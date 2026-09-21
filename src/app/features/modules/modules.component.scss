@@ -921,21 +921,19 @@
 
   /* Color Themes */
   &.kpi-all {
-    background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
-    border-color: #cbd5e1;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+    border-color: #bfdbfe;
 
-    .kpi-badge-title { color: #1e293b; }
-    .kpi-main-number { color: #0f172a; }
-    .kpi-icon-wrap { background: #e2e8f0; stroke: #1e293b; }
-    .kpi-click-hint { color: #475569; }
+    .kpi-badge-title { color: #034694; }
+    .kpi-main-number { color: #034694; }
+    .kpi-icon-wrap { background: #dbeafe; stroke: #034694; color: #034694; }
+    .kpi-click-hint { color: #034694; }
 
     &.active {
       border-color: #034694;
-      box-shadow: 0 0 0 2px #034694, 0 8px 20px rgba(3, 70, 148, 0.18);
-      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-      .kpi-badge-title { color: #034694; }
-      .kpi-main-number { color: #034694; }
-      .kpi-click-hint { color: #034694; }
+      box-shadow: 0 0 0 2px #034694, 0 8px 20px rgba(3, 70, 148, 0.22);
+      .kpi-badge-title { color: #022f64; font-weight: 900; }
+      .kpi-click-hint { color: #022f64; font-weight: 800; }
     }
   }
 
