@@ -96,11 +96,44 @@ import { IconComponent } from '../icon/icon.component';
           </div>
         </div>
 
-        <!-- 5. SAP Uygulamaları -->
-        <a routerLink="/modules" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'SAP Uygulamaları' : ''">
-          <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
-        </a>
+        <!-- 5. SAP Uygulamaları (Expandable Group) -->
+        <div class="nav-group" [class.open]="modulesExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isModulesActive()"
+            routerLink="/modules"
+            [queryParams]="{ tab: 'summary' }"
+            [title]="collapsed ? 'SAP Uygulamaları' : ''">
+            <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
+            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleModules()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="modulesExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Alt Kırılımlar: Özet & Detay -->
+          <div class="nav-sub-list" *ngIf="modulesExpanded && !collapsed">
+            <a 
+              routerLink="/modules" 
+              [queryParams]="{ tab: 'summary' }"
+              [class.sub-active]="isModulesSummaryActive()"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Özet</span>
+            </a>
+
+            <a 
+              routerLink="/modules" 
+              [queryParams]="{ tab: 'detail' }"
+              [class.sub-active]="isModulesDetailActive()"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Detay</span>
+            </a>
+          </div>
+        </div>
 
         <!-- 6. SAP Customization (Expandable Group) -->
         <div class="nav-group" [class.open]="customizationExpanded">
@@ -452,11 +485,16 @@ export class SidebarComponent {
 
   router = inject(Router);
   basisExpanded = true;
+  modulesExpanded = true;
   solutionExpanded = true;
   customizationExpanded = true;
 
   toggleBasis(): void {
     this.basisExpanded = !this.basisExpanded;
+  }
+
+  toggleModules(): void {
+    this.modulesExpanded = !this.modulesExpanded;
   }
 
   toggleSolution(): void {
@@ -465,6 +503,21 @@ export class SidebarComponent {
 
   toggleCustomization(): void {
     this.customizationExpanded = !this.customizationExpanded;
+  }
+
+  isModulesActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/modules') || url.includes('/moduller') || url.includes('/sap-uygulamalari');
+  }
+
+  isModulesSummaryActive(): boolean {
+    if (!this.isModulesActive()) return false;
+    return this.router.url.includes('tab=summary') || (!this.router.url.includes('tab=detail'));
+  }
+
+  isModulesDetailActive(): boolean {
+    if (!this.isModulesActive()) return false;
+    return this.router.url.includes('tab=detail');
   }
 
   isBasisActive(): boolean {

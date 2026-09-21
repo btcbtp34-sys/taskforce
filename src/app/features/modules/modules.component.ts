@@ -1,7 +1,8 @@
-import { Component, inject, ChangeDetectionStrategy, computed, signal } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, computed, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { 
   ModullerService, 
   ModuleCard, 
@@ -9,7 +10,7 @@ import {
   CardStatus, 
   VALID_SEVERITIES, 
   VALID_STATUSES, 
-  COMMON_CATEGORIES,
+  COMMON_CATEGORIES, 
   downloadModulesTemplate
 } from '../../core/services/moduller.service';
 import { CustomerService } from '../../core/services/customer.service';
@@ -27,11 +28,21 @@ export interface CategoryGroup {
   styleUrl: './modules.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ModulesComponent {
+export class ModulesComponent implements OnInit, OnDestroy {
   modullerService = inject(ModullerService);
   customerService = inject(CustomerService);
+  route = inject(ActivatedRoute);
+  router = inject(Router);
 
-  // Filters State
+  private querySub?: Subscription;
+
+  // Active View Tab: 'summary' (Özet) or 'detail' (Detay)
+  activeTab = signal<'summary' | 'detail'>('summary');
+
+  // Summary View Severity Filter: 'TÜMÜ' | 'Kritik' | 'Yüksek' | 'Orta' | 'Düşük'
+  summarySeverityFilter = signal<string>('TÜMÜ');
+
+  // Filters State for Detail View
   searchFilter = signal<string>('');
   selectedCategoryFilter = signal<string>('TÜMÜ');
   selectedSeverityFilter = signal<string>('TÜMÜ');
@@ -51,6 +62,95 @@ export class ModulesComponent {
   readonly severityOptions = VALID_SEVERITIES;
   readonly statusOptions = VALID_STATUSES;
   readonly commonCategories = COMMON_CATEGORIES;
+
+  // Severity Counts for Dashboard Cards (Özet)
+  readonly severityCounts = computed(() => {
+    const cards = this.modullerService.cards();
+    const counts: Record<string, number> = {
+      'Kritik': 0,
+      'Yüksek': 0,
+      'Orta': 0,
+      'Düşük': 0,
+      'TÜMÜ': cards.length
+    };
+
+    for (const card of cards) {
+      if (counts[card.severity] !== undefined) {
+        counts[card.severity]++;
+      } else {
+        counts['Orta']++;
+      }
+    }
+
+    return counts;
+  });
+
+  // Category Breakdown for Summary View
+  readonly categoryBreakdown = computed(() => {
+    const cards = this.modullerService.cards();
+    const activeSev = this.summarySeverityFilter();
+    const cats = this.modullerService.existingCategories();
+
+    const list = cats.map(catName => {
+      const catCards = cards.filter(c => (c.category || '').trim().toLowerCase() === catName.trim().toLowerCase());
+      
+      const kritik = catCards.filter(c => c.severity === 'Kritik');
+      const yuksek = catCards.filter(c => c.severity === 'Yüksek');
+      const orta = catCards.filter(c => c.severity === 'Orta');
+      const dusuk = catCards.filter(c => c.severity === 'Düşük');
+
+      let filteredCount = catCards.length;
+      let filteredCards = catCards;
+      let sentence = `${catName} modülünde toplam ${catCards.length} değerlendirme maddesi mevcut`;
+
+      if (activeSev !== 'TÜMÜ') {
+        filteredCards = catCards.filter(c => c.severity === activeSev);
+        filteredCount = filteredCards.length;
+        if (filteredCount > 0) {
+          sentence = `${catName} modülünde ${filteredCount} madde ${activeSev.toLowerCase()}`;
+        } else {
+          sentence = `${catName} modülünde ${activeSev.toLowerCase()} seviyesinde madde bulunmuyor`;
+        }
+      }
+
+      return {
+        name: catName,
+        total: catCards.length,
+        kritikCount: kritik.length,
+        yuksekCount: yuksek.length,
+        ortaCount: orta.length,
+        dusukCount: dusuk.length,
+        filteredCount,
+        filteredCards,
+        sentence
+      };
+    });
+
+    // If a specific severity is selected, only show categories that HAVE that severity (count > 0)
+    if (activeSev !== 'TÜMÜ') {
+      return list.filter(item => item.filteredCount > 0);
+    }
+
+    return list;
+  });
+
+  // All categories breakdown for the full matrix table
+  readonly allCategoryBreakdown = computed(() => {
+    const cards = this.modullerService.cards();
+    const cats = this.modullerService.existingCategories();
+
+    return cats.map(catName => {
+      const catCards = cards.filter(c => (c.category || '').trim().toLowerCase() === catName.trim().toLowerCase());
+      return {
+        name: catName,
+        total: catCards.length,
+        kritikCount: catCards.filter(c => c.severity === 'Kritik').length,
+        yuksekCount: catCards.filter(c => c.severity === 'Yüksek').length,
+        ortaCount: catCards.filter(c => c.severity === 'Orta').length,
+        dusukCount: catCards.filter(c => c.severity === 'Düşük').length
+      };
+    });
+  });
 
   // Categories currently in data
   readonly dynamicCategories = computed(() => {
@@ -115,9 +215,53 @@ export class ModulesComponent {
     return this.groupedCategories().reduce((sum, g) => sum + g.cards.length, 0);
   });
 
+  ngOnInit(): void {
+    this.querySub = this.route.queryParams.subscribe(params => {
+      const tab = params['tab'];
+      if (tab === 'detail') {
+        this.activeTab.set('detail');
+      } else if (tab === 'summary') {
+        this.activeTab.set('summary');
+      }
+      if (params['severity']) {
+        this.selectedSeverityFilter.set(params['severity']);
+      }
+      if (params['category']) {
+        this.selectedCategoryFilter.set(params['category']);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.querySub?.unsubscribe();
+  }
+
   // Helper count for specific category
   getCategoryCount(catName: string): number {
     return this.modullerService.cards().filter(c => c.category.trim().toLowerCase() === catName.trim().toLowerCase()).length;
+  }
+
+  setActiveTab(tab: 'summary' | 'detail'): void {
+    this.activeTab.set(tab);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  selectSummarySeverity(sev: string): void {
+    this.summarySeverityFilter.set(sev);
+  }
+
+  goToDetail(category?: string, severity?: string): void {
+    if (category) {
+      this.selectedCategoryFilter.set(category);
+    }
+    if (severity && severity !== 'TÜMÜ') {
+      this.selectedSeverityFilter.set(severity);
+    }
+    this.setActiveTab('detail');
   }
 
   setCategoryFilter(cat: string): void {
@@ -136,7 +280,7 @@ export class ModulesComponent {
     this.searchFilter.set(val);
   }
 
-  getSeverityClass(severity: CardSeverity): string {
+  getSeverityClass(severity: CardSeverity | string): string {
     switch (severity) {
       case 'Kritik': return 'sev-kritik';
       case 'Yüksek': return 'sev-yuksek';
@@ -146,7 +290,7 @@ export class ModulesComponent {
     }
   }
 
-  getStatusClass(status: CardStatus): string {
+  getStatusClass(status: CardStatus | string): string {
     switch (status) {
       case 'Geliştirme': return 'status-gelistirme';
       case 'Standart': return 'status-standart';
