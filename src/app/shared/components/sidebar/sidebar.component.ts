@@ -101,8 +101,7 @@ import { IconComponent } from '../icon/icon.component';
           <div 
             class="nav-item group-header" 
             [class.active]="isModulesActive()"
-            routerLink="/modules"
-            [queryParams]="{ tab: 'summary' }"
+            (click)="navigateToModulesSummary($event)"
             [title]="collapsed ? 'SAP Uygulamaları' : ''">
             <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
             <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
@@ -116,19 +115,19 @@ import { IconComponent } from '../icon/icon.component';
           <!-- Alt Kırılımlar: Özet & Detay -->
           <div class="nav-sub-list" *ngIf="modulesExpanded && !collapsed">
             <a 
-              routerLink="/modules" 
-              [queryParams]="{ tab: 'summary' }"
+              (click)="navigateToModulesSummary($event)"
               [class.sub-active]="isModulesSummaryActive()"
-              class="sub-item">
+              class="sub-item"
+              style="cursor: pointer;">
               <span class="sub-dot">•</span>
               <span class="sub-text">Özet</span>
             </a>
 
             <a 
-              routerLink="/modules" 
-              [queryParams]="{ tab: 'detail' }"
+              (click)="navigateToModulesDetail($event)"
               [class.sub-active]="isModulesDetailActive()"
-              class="sub-item">
+              class="sub-item"
+              style="cursor: pointer;">
               <span class="sub-dot">•</span>
               <span class="sub-text">Detay</span>
             </a>
@@ -503,6 +502,20 @@ export class SidebarComponent {
 
   toggleCustomization(): void {
     this.customizationExpanded = !this.customizationExpanded;
+  }
+
+  navigateToModulesSummary(event?: Event): void {
+    if (event) event.preventDefault();
+    this.router.navigate(['/modules'], { 
+      queryParams: { tab: 'summary', r: Date.now() } 
+    });
+  }
+
+  navigateToModulesDetail(event?: Event): void {
+    if (event) event.preventDefault();
+    this.router.navigate(['/modules'], { 
+      queryParams: { tab: 'detail', r: Date.now() } 
+    });
   }
 
   isModulesActive(): boolean {

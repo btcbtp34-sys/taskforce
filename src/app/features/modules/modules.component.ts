@@ -85,37 +85,44 @@ export class ModulesComponent implements OnInit, OnDestroy {
     return counts;
   });
 
-  // Category Breakdown for Summary View
+  // Summary Breakdown: Groups by Title (Başlık) fields from imported Excel
   readonly categoryBreakdown = computed(() => {
     const cards = this.modullerService.cards();
     const activeSev = this.summarySeverityFilter();
-    const cats = this.modullerService.existingCategories();
+    
+    // Distinct titles (Başlık alanları)
+    const titlesSet = new Set<string>();
+    for (const c of cards) {
+      const t = (c.title || '').trim();
+      if (t) titlesSet.add(t);
+    }
+    const titles = Array.from(titlesSet).sort((a, b) => a.localeCompare(b, 'tr'));
 
-    const list = cats.map(catName => {
-      const catCards = cards.filter(c => (c.category || '').trim().toLowerCase() === catName.trim().toLowerCase());
+    const list = titles.map(titleName => {
+      const titleCards = cards.filter(c => (c.title || '').trim().toLowerCase() === titleName.trim().toLowerCase());
       
-      const kritik = catCards.filter(c => c.severity === 'Kritik');
-      const yuksek = catCards.filter(c => c.severity === 'Yüksek');
-      const orta = catCards.filter(c => c.severity === 'Orta');
-      const dusuk = catCards.filter(c => c.severity === 'Düşük');
+      const kritik = titleCards.filter(c => c.severity === 'Kritik');
+      const yuksek = titleCards.filter(c => c.severity === 'Yüksek');
+      const orta = titleCards.filter(c => c.severity === 'Orta');
+      const dusuk = titleCards.filter(c => c.severity === 'Düşük');
 
-      let filteredCount = catCards.length;
-      let filteredCards = catCards;
-      let sentence = `${catName} modülünde toplam ${catCards.length} değerlendirme maddesi mevcut`;
+      let filteredCount = titleCards.length;
+      let filteredCards = titleCards;
+      let sentence = `${titleName} başlığında toplam ${titleCards.length} değerlendirme mevcut`;
 
       if (activeSev !== 'TÜMÜ') {
-        filteredCards = catCards.filter(c => c.severity === activeSev);
+        filteredCards = titleCards.filter(c => c.severity === activeSev);
         filteredCount = filteredCards.length;
         if (filteredCount > 0) {
-          sentence = `${catName} modülünde ${filteredCount} madde ${activeSev.toLowerCase()}`;
+          sentence = `${titleName} başlığında ${filteredCount} madde ${activeSev.toLowerCase()}`;
         } else {
-          sentence = `${catName} modülünde ${activeSev.toLowerCase()} seviyesinde madde bulunmuyor`;
+          sentence = `${titleName} başlığında ${activeSev.toLowerCase()} seviyesinde madde bulunmuyor`;
         }
       }
 
       return {
-        name: catName,
-        total: catCards.length,
+        name: titleName,
+        total: titleCards.length,
         kritikCount: kritik.length,
         yuksekCount: yuksek.length,
         ortaCount: orta.length,
@@ -126,30 +133,12 @@ export class ModulesComponent implements OnInit, OnDestroy {
       };
     });
 
-    // If a specific severity is selected, only show categories that HAVE that severity (count > 0)
+    // If a specific severity is selected, only show titles that HAVE that severity (count > 0)
     if (activeSev !== 'TÜMÜ') {
       return list.filter(item => item.filteredCount > 0);
     }
 
     return list;
-  });
-
-  // All categories breakdown for the full matrix table
-  readonly allCategoryBreakdown = computed(() => {
-    const cards = this.modullerService.cards();
-    const cats = this.modullerService.existingCategories();
-
-    return cats.map(catName => {
-      const catCards = cards.filter(c => (c.category || '').trim().toLowerCase() === catName.trim().toLowerCase());
-      return {
-        name: catName,
-        total: catCards.length,
-        kritikCount: catCards.filter(c => c.severity === 'Kritik').length,
-        yuksekCount: catCards.filter(c => c.severity === 'Yüksek').length,
-        ortaCount: catCards.filter(c => c.severity === 'Orta').length,
-        dusukCount: catCards.filter(c => c.severity === 'Düşük').length
-      };
-    });
   });
 
   // Categories currently in data
@@ -215,19 +204,65 @@ export class ModulesComponent implements OnInit, OnDestroy {
     return this.groupedCategories().reduce((sum, g) => sum + g.cards.length, 0);
   });
 
+  readonly hasActiveFilters = computed(() => {
+    return (
+      this.searchFilter().trim().length > 0 ||
+      this.selectedCategoryFilter() !== 'TÜMÜ' ||
+      this.selectedSeverityFilter() !== 'TÜMÜ' ||
+      this.selectedStatusFilter() !== 'TÜMÜ'
+    );
+  });
+
+  resetDetailFiltersState(): void {
+    this.searchFilter.set('');
+    this.selectedCategoryFilter.set('TÜMÜ');
+    this.selectedSeverityFilter.set('TÜMÜ');
+    this.selectedStatusFilter.set('TÜMÜ');
+  }
+
+  resetDetailFilters(): void {
+    this.resetDetailFiltersState();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: 'detail' }
+    });
+  }
+
+  clearSearch(): void {
+    this.searchFilter.set('');
+    const queryParams: any = { ...this.route.snapshot.queryParams };
+    delete queryParams.search;
+    delete queryParams.r;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams
+    });
+  }
+
   ngOnInit(): void {
     this.querySub = this.route.queryParams.subscribe(params => {
       const tab = params['tab'];
       if (tab === 'detail') {
         this.activeTab.set('detail');
-      } else if (tab === 'summary') {
+        // If navigated to detail with no active filter params, reset filters to show all
+        if (!params['search'] && !params['category'] && !params['severity'] && !params['status']) {
+          this.resetDetailFiltersState();
+        }
+      } else {
         this.activeTab.set('summary');
       }
+
       if (params['severity']) {
         this.selectedSeverityFilter.set(params['severity']);
       }
       if (params['category']) {
         this.selectedCategoryFilter.set(params['category']);
+      }
+      if (params['search']) {
+        this.searchFilter.set(params['search']);
+      }
+      if (params['status']) {
+        this.selectedStatusFilter.set(params['status']);
       }
     });
   }
@@ -243,10 +278,12 @@ export class ModulesComponent implements OnInit, OnDestroy {
 
   setActiveTab(tab: 'summary' | 'detail'): void {
     this.activeTab.set(tab);
+    if (tab === 'detail') {
+      this.resetDetailFiltersState();
+    }
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge'
+      queryParams: { tab }
     });
   }
 
@@ -254,18 +291,55 @@ export class ModulesComponent implements OnInit, OnDestroy {
     this.summarySeverityFilter.set(sev);
   }
 
-  goToDetail(category?: string, severity?: string): void {
-    if (category) {
-      this.selectedCategoryFilter.set(category);
+  goToDetail(titleOrCat?: string, severity?: string): void {
+    const queryParams: any = { tab: 'detail' };
+
+    if (titleOrCat) {
+      const isCat = this.dynamicCategories().some(c => c.toLowerCase() === titleOrCat.toLowerCase());
+      if (isCat) {
+        this.selectedCategoryFilter.set(titleOrCat);
+        this.searchFilter.set('');
+        queryParams['category'] = titleOrCat;
+      } else {
+        this.selectedCategoryFilter.set('TÜMÜ');
+        this.searchFilter.set(titleOrCat);
+        queryParams['search'] = titleOrCat;
+      }
+    } else {
+      this.selectedCategoryFilter.set('TÜMÜ');
+      this.searchFilter.set('');
     }
+
     if (severity && severity !== 'TÜMÜ') {
       this.selectedSeverityFilter.set(severity);
+      queryParams['severity'] = severity;
+    } else {
+      this.selectedSeverityFilter.set('TÜMÜ');
     }
-    this.setActiveTab('detail');
+
+    this.selectedStatusFilter.set('TÜMÜ');
+    this.activeTab.set('detail');
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams
+    });
   }
 
   setCategoryFilter(cat: string): void {
-    this.selectedCategoryFilter.set(cat);
+    if (cat === 'TÜMÜ') {
+      this.resetDetailFilters();
+    } else {
+      this.selectedCategoryFilter.set(cat);
+      this.searchFilter.set(''); // Arama metnini temizle ki kategorideki tüm kartlar görünsün
+      const queryParams: any = { tab: 'detail', category: cat };
+      if (this.selectedSeverityFilter() !== 'TÜMÜ') queryParams.severity = this.selectedSeverityFilter();
+      if (this.selectedStatusFilter() !== 'TÜMÜ') queryParams.status = this.selectedStatusFilter();
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams
+      });
+    }
   }
 
   setSeverityFilter(sev: string): void {
