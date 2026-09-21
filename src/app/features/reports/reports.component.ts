@@ -125,23 +125,9 @@ import html2canvas from 'html2canvas';
           </div>
         </div>
 
-        <!-- 2. SIX EXECUTIVE KPI METRIC CARDS -->
+        <!-- 2. EXECUTIVE KPI METRIC CARDS -->
         <div class="kpi-cards-grid">
           <!-- KPI 1 -->
-          <div class="exec-kpi-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">Altyapı Konsolidasyonu</span>
-              <div class="kpi-icon-box bg-blue"><app-icon name="database" [size]="16" color="#0284c7"></app-icon></div>
-            </div>
-            <div class="kpi-main-val">11 ➔ 1 Sunucu</div>
-            <div class="kpi-sub">%100 SAP Bulut Yönetimli Altyapı</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill red">AS-IS: 11 Sunucu</span>
-              <span class="kpi-pill green">Target: 1 Bulut DB</span>
-            </div>
-          </div>
-
-          <!-- KPI 2 -->
           <div class="exec-kpi-card">
             <div class="kpi-top">
               <span class="kpi-lbl">Önerilen FUE Lisans Paketi</span>

@@ -16,9 +16,9 @@ export class AuthService {
   private customerService = inject(CustomerService);
 
   readonly currentUser = signal<UserSession>({
-    name: 'Hasan Cavit Koçak',
-    role: 'SAP Lead Architect',
-    email: 'hasan.kocak@taskforce.com'
+    name: 'Sistem Yöneticisi',
+    role: 'Admin',
+    email: 'admin@taskforce.com'
   });
 
   // Session state: checked from localStorage or defaults to false on fresh entry

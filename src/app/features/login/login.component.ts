@@ -53,7 +53,7 @@ import { Customer } from '../../core/models/customer.model';
                 [(ngModel)]="password" 
                 name="password" 
                 required 
-                placeholder="123" 
+                placeholder="••••••••" 
                 class="form-input" />
             </div>
           </div>
@@ -440,9 +440,9 @@ export class LoginComponent {
 
   @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
 
-  // Dummy credentials requested by user
+  // Credentials
   username = 'admin';
-  password = '123';
+  password = '';
 
   // Initially unselected, showing "Müşteri Seçiniz..."
   selectedCustomerId = signal<string>('');
@@ -496,6 +496,14 @@ export class LoginComponent {
   }
 
   onLogin(): void {
+    const u = this.username?.trim();
+    const p = this.password?.trim();
+
+    if (u !== 'admin' || p !== 'Ekonum2026*') {
+      this.errorMessage.set('Geçersiz kullanıcı adı veya şifre!');
+      return;
+    }
+
     const id = this.selectedCustomerId();
     if (!id) {
       this.errorMessage.set('Lütfen giriş yapmak için bir müşteri seçiniz.');
@@ -504,9 +512,9 @@ export class LoginComponent {
     }
 
     this.authService.login(id, {
-      name: this.username === 'admin' ? 'Hasan Cavit Koçak' : this.username,
-      role: 'SAP Lead Architect',
-      email: `${this.username}@taskforce.com`
+      name: 'Sistem Yöneticisi',
+      role: 'Admin',
+      email: 'admin@taskforce.com'
     });
   }
 }

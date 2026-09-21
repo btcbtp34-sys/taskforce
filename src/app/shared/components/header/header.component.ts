@@ -153,7 +153,7 @@ import { IconComponent } from '../icon/icon.component';
 
         <!-- User Profile -->
         <div class="user-profile">
-          <div class="avatar">HCK</div>
+          <div class="avatar">SY</div>
           <div class="user-info">
             <span class="user-name">{{ authService.currentUser().name }}</span>
             <span class="user-role">{{ authService.currentUser().role }}</span>
