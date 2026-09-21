@@ -141,6 +141,27 @@ export const MOCK_CUSTOMERS: Customer[] = [
     lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
   },
   {
+    id: 'cust-5',
+    name: 'AS*Ş',
+    code: 'AS*Ş',
+    sector: '',
+    sapUserCount: 0,
+    activeUserCount: 0,
+    lowUsageUserCount: 0,
+    totalLicenseCost: 0,
+    estimatedOpportunityValue: 0,
+    activeOpportunityCount: 0,
+    taskForceStatus: 'Data Collection',
+    progressPercentage: 10,
+    sapProducts: [],
+    coreProblems: [],
+    contactPerson: '',
+    email: '',
+    phone: '',
+    logo: 'building',
+    lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
+  },
+  {
     id: 'cust-test',
     name: 'TEST USER',
     code: 'TEST USER',
