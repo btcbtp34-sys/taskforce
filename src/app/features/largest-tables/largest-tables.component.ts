@@ -201,7 +201,6 @@ export interface LargestTableItem {
                 <th class="col-gib text-right">Tahmini Bellek (GiB)</th>
                 <th class="col-records text-right">Tahmini Kayıt Sayısı</th>
                 <th class="col-share text-center">Bellek Payı</th>
-                <th class="col-dvm">DVM / Arşivleme Aksiyonu</th>
               </tr>
             </thead>
             <tbody>
@@ -241,13 +240,6 @@ export interface LargestTableItem {
                       <div class="mini-fill" [style.width.%]="getSharePercentage(tbl.sizeGiB)"></div>
                     </div>
                     <span class="share-text">{{ getSharePercentage(tbl.sizeGiB) }}%</span>
-                  </td>
-
-                  <td class="col-dvm">
-                    <div class="dvm-action-cell">
-                      <span class="pot-tag">{{ tbl.archivingPotential }}</span>
-                      <span class="rec-text">{{ tbl.recommendation }}</span>
-                    </div>
                   </td>
                 </tr>
               }
