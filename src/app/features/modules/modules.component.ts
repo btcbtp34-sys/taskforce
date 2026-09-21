@@ -454,6 +454,16 @@ export class ModulesComponent implements OnInit, OnDestroy {
     }
   }
 
+  clearAllModuleData(): void {
+    const count = this.modullerService.totalCardsCount();
+    if (count === 0) return;
+    if (confirm(`SAP Uygulamaları sayfasındaki tüm (${count}) değerlendirme kartlarını silmek istediğinize emin misiniz?\n\nBu işlem sadece bu sayfayı temizler; FUE, Altyapı, Custom Code ve diğer sayfalar etkilenmez.`)) {
+      this.modullerService.clearCustomerModules();
+      this.resetDetailFilters();
+      this.setActiveTab('summary');
+    }
+  }
+
   downloadTemplate(): void {
     downloadModulesTemplate();
   }
