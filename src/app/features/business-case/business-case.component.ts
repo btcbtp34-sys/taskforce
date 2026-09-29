@@ -10,32 +10,28 @@ Chart.register(...registerables);
 export interface TcoExpenseItem {
   id: string;
   name: string;
-  y2025: number;
-  y2026: number;
-  y2027: number;
-  y2028: number;
-  y2029: number;
+  values: number[];
   isCustom?: boolean;
 }
 
-const DEFAULT_YEARS: string[] = ['2025', '2026', '2027', '2028', '2029'];
+const DEFAULT_YEARS: string[] = ['2022', '2023', '2024', '2025', '2026'];
 
-const DEFAULT_ASIS_ITEMS: TcoExpenseItem[] = [
-  { id: 'a1', name: 'Existing Maintenance', y2025: 80000, y2026: 80000, y2027: 80000, y2028: 80000, y2029: 80000 },
-  { id: 'a2', name: 'Additional License (S/4 Transformation)', y2025: 0, y2026: 10000, y2027: 0, y2028: 0, y2029: 0 },
-  { id: 'a3', name: 'Additional Maintenance', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-  { id: 'a4', name: 'Infra/Hosting', y2025: 36000, y2026: 36000, y2027: 36000, y2028: 36000, y2029: 36000 },
-  { id: 'a5', name: 'Infra Extensions', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-  { id: 'a6', name: 'Disaster Recovery', y2025: 10000, y2026: 10000, y2027: 10000, y2028: 10000, y2029: 10000 },
-  { id: 'a7', name: 'Security', y2025: 2000, y2026: 2000, y2027: 2000, y2028: 2000, y2029: 2000 },
-  { id: 'a8', name: 'Basis/Upgrade', y2025: 36000, y2026: 136000, y2027: 36000, y2028: 36000, y2029: 36000 },
-  { id: 'a9', name: 'Innovation Cost (AI, Sustainability, LowCode etc..)', y2025: 50000, y2026: 50000, y2027: 50000, y2028: 50000, y2029: 50000 }
+const DEFAULT_ASIS_ITEMS: { id: string; name: string; values: number[] }[] = [
+  { id: 'a1', name: 'Existing Maintenance', values: [80000, 80000, 80000, 80000, 80000] },
+  { id: 'a2', name: 'Additional License (S/4 Transformation)', values: [0, 10000, 0, 0, 0] },
+  { id: 'a3', name: 'Additional Maintenance', values: [0, 0, 0, 0, 0] },
+  { id: 'a4', name: 'Infra/Hosting', values: [36000, 36000, 36000, 36000, 36000] },
+  { id: 'a5', name: 'Infra Extensions', values: [0, 0, 0, 0, 0] },
+  { id: 'a6', name: 'Disaster Recovery', values: [10000, 10000, 10000, 10000, 10000] },
+  { id: 'a7', name: 'Security', values: [2000, 2000, 2000, 2000, 2000] },
+  { id: 'a8', name: 'Basis/Upgrade', values: [36000, 136000, 36000, 36000, 36000] },
+  { id: 'a9', name: 'Innovation Cost (AI, Sustainability, LowCode etc..)', values: [50000, 50000, 50000, 50000, 50000] }
 ];
 
-const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
-  { id: 'r1', name: 'RISE Fee', y2025: 500000, y2026: 400000, y2027: 400000, y2028: 400000, y2029: 400000 },
-  { id: 'r2', name: 'RISE Fund', y2025: 0, y2026: 0, y2027: 0, y2028: 0, y2029: 0 },
-  { id: 'r3', name: 'Project / Implementation', y2025: 200000, y2026: 0, y2027: 0, y2028: 0, y2029: 0 }
+const DEFAULT_RISE_ITEMS: { id: string; name: string; values: number[] }[] = [
+  { id: 'r1', name: 'RISE Fee', values: [500000, 400000, 400000, 400000, 400000] },
+  { id: 'r2', name: 'RISE Fund', values: [0, 0, 0, 0, 0] },
+  { id: 'r3', name: 'Project / Implementation', values: [200000, 0, 0, 0, 0] }
 ];
 
 @Component({
@@ -48,11 +44,11 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
       <div class="page-header">
         <div>
           <div class="header-tag-row">
-            <span class="brand-tco-title">TCO</span>
-            <span class="sub-badge">5 Yıllık Finansal Modelleme & Kıyaslama</span>
+            <span class="brand-tco-title">TOPLAM SAHİP OLMA MALİYETİ</span>
+            <span class="sub-badge">{{ years().length }} Yıllık Finansal Modelleme & Kıyaslama</span>
           </div>
-          <h1 class="page-title">Total Cost of Ownership (TCO) & Finansal Simülasyon</h1>
-          <p class="page-subtitle">Mevcut On-Premise Giderleri ile RISE with SAP Bulut Dönüşüm Maliyetlerinin 5 Yıllık Karşılaştırması</p>
+          <h1 class="page-title">Toplam Sahip Olma Maliyeti & Finansal Simülasyon</h1>
+          <p class="page-subtitle">Mevcut On-Premise Giderleri ile RISE with SAP Bulut Dönüşüm Maliyetlerinin {{ years().length }} Yıllık Karşılaştırması</p>
         </div>
 
         <div class="header-actions">
@@ -60,7 +56,7 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
           <div class="year-selector-box" title="Yılları 1 yıl ileri/geri kaydırın veya tablodaki yıl başlıklarına tıklayıp doğrudan düzenleyin">
             <span class="ys-label">Yıllar:</span>
             <button type="button" class="btn-year-nav" (click)="shiftYears(-1)" title="1 Yıl Geri">◀</button>
-            <span class="ys-range">{{ years()[0] }} — {{ years()[4] }}</span>
+            <span class="ys-range">{{ years()[0] }} — {{ years()[years().length - 1] }}</span>
             <button type="button" class="btn-year-nav" (click)="shiftYears(1)" title="1 Yıl İleri">▶</button>
           </div>
 
@@ -83,28 +79,28 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
       <div class="tco-summary-cards">
         <div class="sum-card asis">
           <div class="s-top">
-            <span class="s-lbl">5 Yıllık AS-IS On-Premise Toplamı</span>
+            <span class="s-lbl">{{ years().length }} Yıllık AS-IS On-Premise Toplamı</span>
             <app-icon name="database" [size]="16" color="#d97706"></app-icon>
           </div>
-          <div class="s-val text-amber">€{{ asisTotal5Years() | number:'1.2-2' }}</div>
+          <div class="s-val text-amber">€{{ asisTotalAllYears() | number:'1.2-2' }}</div>
           <div class="s-sub">Geleneksel Bakım, Donanım & Yükseltmeler</div>
         </div>
 
         <div class="sum-card rise">
           <div class="s-top">
-            <span class="s-lbl">5 Yıllık RISE with SAP Toplamı</span>
+            <span class="s-lbl">{{ years().length }} Yıllık RISE with SAP Toplamı</span>
             <app-icon name="sparkles" [size]="16" color="#0284c7"></app-icon>
           </div>
-          <div class="s-val text-blue">€{{ riseTotal5Years() | number:'1.2-2' }}</div>
+          <div class="s-val text-blue">€{{ riseTotalAllYears() | number:'1.2-2' }}</div>
           <div class="s-sub">Bulut Lisansı, Altyapı & Dönüşüm Projesi</div>
         </div>
 
         <div class="sum-card saving">
           <div class="s-top">
-            <span class="s-lbl">5 Yıllık Net TCO Farkı / Bütçe</span>
+            <span class="s-lbl">{{ years().length }} Yıllık Net Maliyet Farkı / Bütçe</span>
             <app-icon name="dollar" [size]="16" color="#059669"></app-icon>
           </div>
-          <div class="s-val text-emerald">€{{ (asisTotal5Years() - riseTotal5Years() > 0 ? asisTotal5Years() - riseTotal5Years() : riseTotal5Years() - asisTotal5Years()) | number:'1.2-2' }}</div>
+          <div class="s-val text-emerald">€{{ (asisTotalAllYears() - riseTotalAllYears() > 0 ? asisTotalAllYears() - riseTotalAllYears() : riseTotalAllYears() - asisTotalAllYears()) | number:'1.2-2' }}</div>
           <div class="s-sub">Tümleşik Bulut Yönetimi & Sürekli İnovasyon</div>
         </div>
       </div>
@@ -127,22 +123,34 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">Gider Kalemi (Cost Item)</th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-total">Toplam (5 Yıl)</th>
+                @for (yr of years(); track $index; let idx = $index; let isLast = $last) {
+                  <th class="col-year" [class.is-last-year]="isLast">
+                    <div class="year-header-cell" [class.last-cell]="isLast">
+                      <input 
+                        type="text" 
+                        class="header-year-input" 
+                        [ngModel]="yr" 
+                        (ngModelChange)="updateYear(idx, $event)" 
+                        [title]="(idx + 1) + '. Yılı değiştirmek için tıklayın'" />
+                      @if (isLast) {
+                        <div class="year-ctrl-btns">
+                          <button 
+                            *ngIf="years().length > 1" 
+                            type="button" 
+                            class="btn-year-del" 
+                            (click)="removeYear()" 
+                            title="En sağdaki yılı ({{ yr }}) sil">✕</button>
+                          <button 
+                            type="button" 
+                            class="btn-year-add" 
+                            (click)="addYear()" 
+                            title="Sağa yeni yıl ekle">+</button>
+                        </div>
+                      }
+                    </div>
+                  </th>
+                }
+                <th class="col-total">Toplam ({{ years().length }} Yıl)</th>
                 <th class="col-action"></th>
               </tr>
             </thead>
@@ -152,23 +160,13 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
                   <td class="cell-name">
                     <input type="text" [(ngModel)]="item.name" (ngModelChange)="onDataChanged()" class="input-name" placeholder="Gider Kalemi Adı" />
                   </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2025" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2026" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2027" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2028" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2029" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
+                  @for (yr of years(); track $index; let yIdx = $index) {
+                    <td class="cell-val">
+                      <input type="number" [(ngModel)]="item.values[yIdx]" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
+                    </td>
+                  }
                   <td class="cell-row-total">
-                    {{ (item.y2025 + item.y2026 + item.y2027 + item.y2028 + item.y2029) | number:'1.2-2' }}
+                    {{ getItemTotal(item) | number:'1.2-2' }}
                   </td>
                   <td class="cell-action">
                     <button *ngIf="item.isCustom" class="btn-del" (click)="removeAsisRow(idx)" title="Satırı Sil">✕</button>
@@ -178,11 +176,9 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
               <!-- Subtotals Row -->
               <tr class="tco-subtotal-row">
                 <td class="cell-name font-bold">YILLIK TOPLAM GİDER</td>
-                <td class="cell-val font-bold">{{ asisSum2025() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ asisSum2026() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ asisSum2027() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ asisSum2028() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ asisSum2029() | number:'1.2-2' }}</td>
+                @for (yr of years(); track $index; let yIdx = $index) {
+                  <td class="cell-val font-bold">{{ asisYearSum(yIdx) | number:'1.2-2' }}</td>
+                }
                 <td class="cell-row-total font-bold">—</td>
                 <td class="cell-action"></td>
               </tr>
@@ -190,11 +186,11 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
           </table>
         </div>
 
-        <!-- 5-Year Total Gold Box -->
+        <!-- Total Gold Box -->
         <div class="total-badge-box-container">
           <div class="gold-total-box">
-            <span class="gt-lbl">5 YILLIK AS-IS TOPLAM:</span>
-            <span class="gt-val">{{ asisTotal5Years() | number:'1.2-2' }} €</span>
+            <span class="gt-lbl">{{ years().length }} YILLIK AS-IS TOPLAM:</span>
+            <span class="gt-val">{{ asisTotalAllYears() | number:'1.2-2' }} €</span>
           </div>
         </div>
       </div>
@@ -217,22 +213,34 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">RISE Maliyet Kalemi (Cost Item)</th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-total">Toplam (5 Yıl)</th>
+                @for (yr of years(); track $index; let idx = $index; let isLast = $last) {
+                  <th class="col-year" [class.is-last-year]="isLast">
+                    <div class="year-header-cell" [class.last-cell]="isLast">
+                      <input 
+                        type="text" 
+                        class="header-year-input" 
+                        [ngModel]="yr" 
+                        (ngModelChange)="updateYear(idx, $event)" 
+                        [title]="(idx + 1) + '. Yılı değiştirmek için tıklayın'" />
+                      @if (isLast) {
+                        <div class="year-ctrl-btns">
+                          <button 
+                            *ngIf="years().length > 1" 
+                            type="button" 
+                            class="btn-year-del" 
+                            (click)="removeYear()" 
+                            title="En sağdaki yılı ({{ yr }}) sil">✕</button>
+                          <button 
+                            type="button" 
+                            class="btn-year-add" 
+                            (click)="addYear()" 
+                            title="Sağa yeni yıl ekle">+</button>
+                        </div>
+                      }
+                    </div>
+                  </th>
+                }
+                <th class="col-total">Toplam ({{ years().length }} Yıl)</th>
                 <th class="col-action"></th>
               </tr>
             </thead>
@@ -242,23 +250,13 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
                   <td class="cell-name">
                     <input type="text" [(ngModel)]="item.name" (ngModelChange)="onDataChanged()" class="input-name" placeholder="Kalem Adı" />
                   </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2025" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2026" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2027" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2028" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
-                  <td class="cell-val">
-                    <input type="number" [(ngModel)]="item.y2029" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
-                  </td>
+                  @for (yr of years(); track $index; let yIdx = $index) {
+                    <td class="cell-val">
+                      <input type="number" [(ngModel)]="item.values[yIdx]" (ngModelChange)="onDataChanged()" class="input-val" step="1000" />
+                    </td>
+                  }
                   <td class="cell-row-total">
-                    {{ (item.y2025 + item.y2026 + item.y2027 + item.y2028 + item.y2029) | number:'1.2-2' }}
+                    {{ getItemTotal(item) | number:'1.2-2' }}
                   </td>
                   <td class="cell-action">
                     <button *ngIf="item.isCustom" class="btn-del" (click)="removeRiseRow(idx)" title="Satırı Sil">✕</button>
@@ -268,11 +266,9 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
               <!-- Subtotals Row -->
               <tr class="tco-subtotal-row">
                 <td class="cell-name font-bold">YILLIK TOPLAM RISE GİDERİ</td>
-                <td class="cell-val font-bold">{{ riseSum2025() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ riseSum2026() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ riseSum2027() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ riseSum2028() | number:'1.2-2' }}</td>
-                <td class="cell-val font-bold">{{ riseSum2029() | number:'1.2-2' }}</td>
+                @for (yr of years(); track $index; let yIdx = $index) {
+                  <td class="cell-val font-bold">{{ riseYearSum(yIdx) | number:'1.2-2' }}</td>
+                }
                 <td class="cell-row-total font-bold">—</td>
                 <td class="cell-action"></td>
               </tr>
@@ -280,11 +276,11 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
           </table>
         </div>
 
-        <!-- 5-Year Total Gold Box -->
+        <!-- Total Gold Box -->
         <div class="total-badge-box-container">
           <div class="gold-total-box">
-            <span class="gt-lbl">5 YILLIK RISE WITH SAP TOPLAM:</span>
-            <span class="gt-val">{{ riseTotal5Years() | number:'1.2-2' }} €</span>
+            <span class="gt-lbl">{{ years().length }} YILLIK RISE WITH SAP TOPLAM:</span>
+            <span class="gt-val">{{ riseTotalAllYears() | number:'1.2-2' }} €</span>
           </div>
         </div>
       </div>
@@ -294,7 +290,7 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
         <div class="section-title-bar">
           <div class="st-left">
             <span class="table-num">3</span>
-            <h3>SAVING & TCO FARK ANALİZİ</h3>
+            <h3>TASARRUF & TOPLAM SAHİP OLMA MALİYETİ FARK ANALİZİ</h3>
           </div>
         </div>
 
@@ -303,45 +299,47 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
             <thead>
               <tr class="tco-gold-header">
                 <th class="col-name">Kalem</th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[0]" (ngModelChange)="updateYear(0, $event)" title="1. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[1]" (ngModelChange)="updateYear(1, $event)" title="2. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[2]" (ngModelChange)="updateYear(2, $event)" title="3. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[3]" (ngModelChange)="updateYear(3, $event)" title="4. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-year">
-                  <input type="text" class="header-year-input" [ngModel]="years()[4]" (ngModelChange)="updateYear(4, $event)" title="5. Yılı değiştirmek için tıklayın" />
-                </th>
-                <th class="col-total">5 Yıllık Net Durum</th>
+                @for (yr of years(); track $index; let idx = $index; let isLast = $last) {
+                  <th class="col-year" [class.is-last-year]="isLast">
+                    <div class="year-header-cell" [class.last-cell]="isLast">
+                      <input 
+                        type="text" 
+                        class="header-year-input" 
+                        [ngModel]="yr" 
+                        (ngModelChange)="updateYear(idx, $event)" 
+                        [title]="(idx + 1) + '. Yılı değiştirmek için tıklayın'" />
+                      @if (isLast) {
+                        <div class="year-ctrl-btns">
+                          <button 
+                            *ngIf="years().length > 1" 
+                            type="button" 
+                            class="btn-year-del" 
+                            (click)="removeYear()" 
+                            title="En sağdaki yılı sil">✕</button>
+                          <button 
+                            type="button" 
+                            class="btn-year-add" 
+                            (click)="addYear()" 
+                            title="Sağa yeni yıl ekle">+</button>
+                        </div>
+                      }
+                    </div>
+                  </th>
+                }
+                <th class="col-total">{{ years().length }} Yıllık Net Durum</th>
                 <th class="col-action"></th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td class="cell-name font-bold text-emerald">YILLIK NET TASARRUF / FARK</td>
-                <td class="cell-val font-bold" [class.text-red]="asisSum2025() - riseSum2025() < 0" [class.text-emerald]="asisSum2025() - riseSum2025() >= 0">
-                  {{ (asisSum2025() - riseSum2025()) | number:'1.2-2' }}
-                </td>
-                <td class="cell-val font-bold" [class.text-red]="asisSum2026() - riseSum2026() < 0" [class.text-emerald]="asisSum2026() - riseSum2026() >= 0">
-                  {{ (asisSum2026() - riseSum2026()) | number:'1.2-2' }}
-                </td>
-                <td class="cell-val font-bold" [class.text-red]="asisSum2027() - riseSum2027() < 0" [class.text-emerald]="asisSum2027() - riseSum2027() >= 0">
-                  {{ (asisSum2027() - riseSum2027()) | number:'1.2-2' }}
-                </td>
-                <td class="cell-val font-bold" [class.text-red]="asisSum2028() - riseSum2028() < 0" [class.text-emerald]="asisSum2028() - riseSum2028() >= 0">
-                  {{ (asisSum2028() - riseSum2028()) | number:'1.2-2' }}
-                </td>
-                <td class="cell-val font-bold" [class.text-red]="asisSum2029() - riseSum2029() < 0" [class.text-emerald]="asisSum2029() - riseSum2029() >= 0">
-                  {{ (asisSum2029() - riseSum2029()) | number:'1.2-2' }}
-                </td>
+                @for (yr of years(); track $index; let yIdx = $index) {
+                  <td class="cell-val font-bold" [class.text-red]="netDifference(yIdx) < 0" [class.text-emerald]="netDifference(yIdx) >= 0">
+                    {{ netDifference(yIdx) | number:'1.2-2' }}
+                  </td>
+                }
                 <td class="cell-row-total font-bold text-emerald">
-                  {{ (asisTotal5Years() - riseTotal5Years()) | number:'1.2-2' }} €
+                  {{ totalDifference() | number:'1.2-2' }} €
                 </td>
                 <td class="cell-action"></td>
               </tr>
@@ -351,17 +349,17 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
 
         <div class="total-badge-box-container">
           <div class="green-saving-box">
-            <span class="gt-lbl">5 YILLIK KÜMÜLATİF TCO FARKI:</span>
-            <span class="gt-val">{{ (asisTotal5Years() - riseTotal5Years()) | number:'1.2-2' }} €</span>
+            <span class="gt-lbl">{{ years().length }} YILLIK KÜMÜLATİF MALİYET FARKI:</span>
+            <span class="gt-val">{{ totalDifference() | number:'1.2-2' }} €</span>
           </div>
         </div>
       </div>
 
-      <!-- TCO 5-Year Cumulative Visual Curve Chart -->
+      <!-- TCO Cumulative Visual Curve Chart -->
       <div class="tco-chart-card mt-4">
         <div class="ch-header">
           <app-icon name="chart" [size]="18" color="#0284c7"></app-icon>
-          <h3>5 Yıllık Kümülatif Maliyet Trendi (AS-IS On-Premise vs RISE with SAP)</h3>
+          <h3>{{ years().length }} Yıllık Kümülatif Maliyet Trendi (AS-IS On-Premise vs RISE with SAP)</h3>
         </div>
         <div class="ch-body">
           <canvas #tcoChart></canvas>
@@ -652,36 +650,100 @@ const DEFAULT_RISE_ITEMS: TcoExpenseItem[] = [
           }
 
           &.col-year {
-            width: 11.5%;
-            min-width: 90px;
+            min-width: 85px;
             padding: 0.35rem 0.45rem;
 
-            .header-year-input {
-              width: 100%;
-              max-width: 90px;
-              margin-left: auto;
-              background: rgba(255, 255, 255, 0.2);
-              border: 1px dashed rgba(0, 0, 0, 0.35);
-              border-radius: 5px;
-              padding: 0.3rem 0.45rem;
-              font-size: 0.82rem;
-              font-weight: 800;
-              color: #000000;
-              text-align: right;
-              outline: none;
-              cursor: pointer;
-              transition: all 0.15s ease;
+            &.is-last-year {
+              min-width: 128px;
+            }
 
-              &:hover {
-                background: rgba(255, 255, 255, 0.45);
-                border-color: rgba(0, 0, 0, 0.7);
+            .year-header-cell {
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              gap: 4px;
+
+              &.last-cell {
+                min-width: 118px;
               }
 
-              &:focus {
-                background: #ffffff;
-                border: 1.5px solid #0284c7;
-                box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
-                cursor: text;
+              .header-year-input {
+                width: 60px;
+                max-width: 70px;
+                margin-left: auto;
+                background: rgba(255, 255, 255, 0.25);
+                border: 1px dashed rgba(0, 0, 0, 0.4);
+                border-radius: 5px;
+                padding: 0.28rem 0.35rem;
+                font-size: 0.82rem;
+                font-weight: 800;
+                color: #000000;
+                text-align: right;
+                outline: none;
+                cursor: pointer;
+                transition: all 0.15s ease;
+
+                &:hover {
+                  background: rgba(255, 255, 255, 0.5);
+                  border-color: rgba(0, 0, 0, 0.8);
+                }
+
+                &:focus {
+                  background: #ffffff;
+                  border: 1.5px solid #0284c7;
+                  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+                  cursor: text;
+                }
+              }
+
+              .year-ctrl-btns {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+
+                .btn-year-del,
+                .btn-year-add {
+                  width: 22px;
+                  height: 22px;
+                  padding: 0;
+                  border-radius: 4px;
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 0.72rem;
+                  font-weight: 800;
+                  cursor: pointer;
+                  line-height: 1;
+                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+                  transition: all 0.15s ease;
+                }
+
+                .btn-year-del {
+                  background: #fee2e2;
+                  color: #b91c1c;
+                  border: 1px solid #fca5a5;
+
+                  &:hover {
+                    background: #ef4444;
+                    color: #ffffff;
+                    border-color: #dc2626;
+                    transform: scale(1.08);
+                  }
+                }
+
+                .btn-year-add {
+                  background: #ecfdf5;
+                  color: #047857;
+                  border: 1px solid #6ee7b7;
+                  font-size: 0.88rem;
+
+                  &:hover {
+                    background: #10b981;
+                    color: #ffffff;
+                    border-color: #059669;
+                    transform: scale(1.08);
+                  }
+                }
               }
             }
           }
@@ -918,14 +980,14 @@ export class BusinessCaseComponent implements AfterViewInit {
   private chartInstance: Chart | null = null;
   customerService = inject(CustomerService);
 
-  // Editable Years (Default 2025-2029)
+  // Editable Years (Default 2022-2026)
   years = signal<string[]>([...DEFAULT_YEARS]);
 
   // 1. AS-IS On-Premise Items
-  asisItems = signal<TcoExpenseItem[]>([...DEFAULT_ASIS_ITEMS]);
+  asisItems = signal<TcoExpenseItem[]>([...DEFAULT_ASIS_ITEMS.map(it => this.normalizeItem(it, DEFAULT_YEARS.length))]);
 
   // 2. RISE with SAP Items
-  riseItems = signal<TcoExpenseItem[]>([...DEFAULT_RISE_ITEMS]);
+  riseItems = signal<TcoExpenseItem[]>([...DEFAULT_RISE_ITEMS.map(it => this.normalizeItem(it, DEFAULT_YEARS.length))]);
 
   constructor() {
     effect(() => {
@@ -934,25 +996,70 @@ export class BusinessCaseComponent implements AfterViewInit {
     });
   }
 
-  // Computed Sums for AS-IS
-  asisSum2025 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2025) || 0), 0));
-  asisSum2026 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2026) || 0), 0));
-  asisSum2027 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2027) || 0), 0));
-  asisSum2028 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2028) || 0), 0));
-  asisSum2029 = computed(() => this.asisItems().reduce((acc, it) => acc + (Number(it.y2029) || 0), 0));
-  asisTotal5Years = computed(() => 
-    this.asisSum2025() + this.asisSum2026() + this.asisSum2027() + this.asisSum2028() + this.asisSum2029()
-  );
+  // Helper to normalize any loaded item
+  normalizeItem(raw: any, yearCount: number): TcoExpenseItem {
+    let vals: number[] = [];
+    if (Array.isArray(raw.values)) {
+      vals = raw.values.map((v: any) => Number(v) || 0);
+    } else {
+      vals = [
+        Number(raw.y2025) || 0,
+        Number(raw.y2026) || 0,
+        Number(raw.y2027) || 0,
+        Number(raw.y2028) || 0,
+        Number(raw.y2029) || 0
+      ];
+    }
+    while (vals.length < yearCount) {
+      const lastVal = vals.length > 0 ? vals[vals.length - 1] : 0;
+      vals.push(lastVal);
+    }
+    if (vals.length > yearCount) {
+      vals = vals.slice(0, yearCount);
+    }
+    return {
+      id: raw.id || 'item-' + Math.random().toString(36).substring(2, 9),
+      name: raw.name || '',
+      values: vals,
+      isCustom: !!raw.isCustom
+    };
+  }
 
-  // Computed Sums for RISE
-  riseSum2025 = computed(() => this.riseItems().reduce((acc, it) => acc + (Number(it.y2025) || 0), 0));
-  riseSum2026 = computed(() => this.riseItems().reduce((acc, it) => acc + (Number(it.y2026) || 0), 0));
-  riseSum2027 = computed(() => this.riseItems().reduce((acc, it) => acc + (Number(it.y2027) || 0), 0));
-  riseSum2028 = computed(() => this.riseItems().reduce((acc, it) => acc + (Number(it.y2028) || 0), 0));
-  riseSum2029 = computed(() => this.riseItems().reduce((acc, it) => acc + (Number(it.y2029) || 0), 0));
-  riseTotal5Years = computed(() => 
-    this.riseSum2025() + this.riseSum2026() + this.riseSum2027() + this.riseSum2028() + this.riseSum2029()
-  );
+  // Row item total
+  getItemTotal(item: TcoExpenseItem): number {
+    if (!item || !item.values) return 0;
+    return item.values.reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }
+
+  // AS-IS per year sum
+  asisYearSum(index: number): number {
+    return this.asisItems().reduce((acc, it) => acc + (Number(it.values?.[index]) || 0), 0);
+  }
+
+  // Total AS-IS for all years
+  asisTotalAllYears = computed(() => {
+    return this.asisItems().reduce((acc, it) => acc + (it.values || []).reduce((s, v) => s + (Number(v) || 0), 0), 0);
+  });
+
+  // RISE per year sum
+  riseYearSum(index: number): number {
+    return this.riseItems().reduce((acc, it) => acc + (Number(it.values?.[index]) || 0), 0);
+  }
+
+  // Total RISE for all years
+  riseTotalAllYears = computed(() => {
+    return this.riseItems().reduce((acc, it) => acc + (it.values || []).reduce((s, v) => s + (Number(v) || 0), 0), 0);
+  });
+
+  // Difference per year
+  netDifference(index: number): number {
+    return this.asisYearSum(index) - this.riseYearSum(index);
+  }
+
+  // Cumulative total difference
+  totalDifference = computed(() => {
+    return this.asisTotalAllYears() - this.riseTotalAllYears();
+  });
 
   ngAfterViewInit(): void {
     setTimeout(() => {
@@ -966,25 +1073,32 @@ export class BusinessCaseComponent implements AfterViewInit {
       const savedYears = localStorage.getItem(`taskforce_tco_years_${custId}`);
       if (savedYears) {
         const parsed = JSON.parse(savedYears);
-        if (Array.isArray(parsed) && parsed.length === 5) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           this.years.set(parsed);
         }
       } else {
         this.years.set([...DEFAULT_YEARS]);
       }
 
+      const yearCount = this.years().length;
       const savedAsis = localStorage.getItem(`taskforce_tco_asis_${custId}`);
       if (savedAsis) {
-        this.asisItems.set(JSON.parse(savedAsis));
+        const parsed = JSON.parse(savedAsis);
+        if (Array.isArray(parsed)) {
+          this.asisItems.set(parsed.map(it => this.normalizeItem(it, yearCount)));
+        }
       } else {
-        this.asisItems.set([...DEFAULT_ASIS_ITEMS]);
+        this.asisItems.set(DEFAULT_ASIS_ITEMS.map(it => this.normalizeItem(it, yearCount)));
       }
 
       const savedRise = localStorage.getItem(`taskforce_tco_rise_${custId}`);
       if (savedRise) {
-        this.riseItems.set(JSON.parse(savedRise));
+        const parsed = JSON.parse(savedRise);
+        if (Array.isArray(parsed)) {
+          this.riseItems.set(parsed.map(it => this.normalizeItem(it, yearCount)));
+        }
       } else {
-        this.riseItems.set([...DEFAULT_RISE_ITEMS]);
+        this.riseItems.set(DEFAULT_RISE_ITEMS.map(it => this.normalizeItem(it, yearCount)));
       }
 
       this.updateChart();
@@ -1010,11 +1124,9 @@ export class BusinessCaseComponent implements AfterViewInit {
     const arr = [...this.years()];
     arr[index] = newYear;
 
-    // Smart auto-fill: If changing the 1st year (index 0) with a 4-digit number (e.g. 2026),
-    // automatically shift the subsequent years
     if (index === 0 && /^\d{4}$/.test(newYear.trim())) {
       const startNum = parseInt(newYear.trim(), 10);
-      for (let i = 1; i < 5; i++) {
+      for (let i = 1; i < arr.length; i++) {
         arr[i] = String(startNum + i);
       }
     }
@@ -1028,17 +1140,64 @@ export class BusinessCaseComponent implements AfterViewInit {
     const firstYearNum = parseInt(this.years()[0], 10);
     if (!isNaN(firstYearNum)) {
       const newStart = firstYearNum + delta;
-      const newYears = [
-        String(newStart),
-        String(newStart + 1),
-        String(newStart + 2),
-        String(newStart + 3),
-        String(newStart + 4)
-      ];
+      const newYears = this.years().map((_, idx) => String(newStart + idx));
       this.years.set(newYears);
       this.saveData();
       this.updateChart();
     }
+  }
+
+  addYear(): void {
+    const arr = [...this.years()];
+    const lastStr = arr[arr.length - 1] || '2026';
+    const lastNum = parseInt(lastStr.trim(), 10);
+    const newYear = !isNaN(lastNum) ? String(lastNum + 1) : `Yıl ${arr.length + 1}`;
+    arr.push(newYear);
+    this.years.set(arr);
+
+    // Extend values for all asis items
+    this.asisItems.update(items => items.map(item => {
+      const vals = [...(item.values || [])];
+      const prev = vals.length > 0 ? vals[vals.length - 1] : 0;
+      vals.push(prev);
+      return { ...item, values: vals };
+    }));
+
+    // Extend values for all rise items
+    this.riseItems.update(items => items.map(item => {
+      const vals = [...(item.values || [])];
+      const prev = vals.length > 0 ? vals[vals.length - 1] : 0;
+      vals.push(prev);
+      return { ...item, values: vals };
+    }));
+
+    this.saveData();
+    this.updateChart();
+  }
+
+  removeYear(): void {
+    if (this.years().length <= 1) return;
+
+    const arr = [...this.years()];
+    arr.pop();
+    this.years.set(arr);
+
+    // Pop last value for all asis items
+    this.asisItems.update(items => items.map(item => {
+      const vals = [...(item.values || [])];
+      vals.pop();
+      return { ...item, values: vals };
+    }));
+
+    // Pop last value for all rise items
+    this.riseItems.update(items => items.map(item => {
+      const vals = [...(item.values || [])];
+      vals.pop();
+      return { ...item, values: vals };
+    }));
+
+    this.saveData();
+    this.updateChart();
   }
 
   onDataChanged(): void {
@@ -1049,14 +1208,11 @@ export class BusinessCaseComponent implements AfterViewInit {
   }
 
   addAsisRow(): void {
+    const count = this.years().length;
     const newItem: TcoExpenseItem = {
       id: 'a-custom-' + Date.now(),
       name: 'Yeni Gider Kalemi',
-      y2025: 10000,
-      y2026: 10000,
-      y2027: 10000,
-      y2028: 10000,
-      y2029: 10000,
+      values: new Array(count).fill(10000),
       isCustom: true
     };
     this.asisItems.update(v => [...v, newItem]);
@@ -1071,14 +1227,11 @@ export class BusinessCaseComponent implements AfterViewInit {
   }
 
   addRiseRow(): void {
+    const count = this.years().length;
     const newItem: TcoExpenseItem = {
       id: 'r-custom-' + Date.now(),
       name: 'Ek RISE Hizmeti',
-      y2025: 20000,
-      y2026: 20000,
-      y2027: 20000,
-      y2028: 20000,
-      y2029: 20000,
+      values: new Array(count).fill(20000),
       isCustom: true
     };
     this.riseItems.update(v => [...v, newItem]);
@@ -1094,30 +1247,35 @@ export class BusinessCaseComponent implements AfterViewInit {
 
   resetToDefaults(): void {
     this.years.set([...DEFAULT_YEARS]);
-    this.asisItems.set([...DEFAULT_ASIS_ITEMS]);
-    this.riseItems.set([...DEFAULT_RISE_ITEMS]);
+    this.asisItems.set(DEFAULT_ASIS_ITEMS.map(it => this.normalizeItem(it, DEFAULT_YEARS.length)));
+    this.riseItems.set(DEFAULT_RISE_ITEMS.map(it => this.normalizeItem(it, DEFAULT_YEARS.length)));
     this.saveData();
     this.updateChart();
+  }
+
+  private getCumulativeData(): { asisCum: number[]; riseCum: number[] } {
+    const yearsCount = this.years().length;
+    let runningAsis = 0;
+    const asisCum: number[] = [];
+    for (let i = 0; i < yearsCount; i++) {
+      runningAsis += this.asisYearSum(i);
+      asisCum.push(runningAsis);
+    }
+
+    let runningRise = 0;
+    const riseCum: number[] = [];
+    for (let i = 0; i < yearsCount; i++) {
+      runningRise += this.riseYearSum(i);
+      riseCum.push(runningRise);
+    }
+
+    return { asisCum, riseCum };
   }
 
   private initChart(): void {
     if (!this.tcoChartRef?.nativeElement) return;
 
-    const asisCum = [
-      this.asisSum2025(),
-      this.asisSum2025() + this.asisSum2026(),
-      this.asisSum2025() + this.asisSum2026() + this.asisSum2027(),
-      this.asisSum2025() + this.asisSum2026() + this.asisSum2027() + this.asisSum2028(),
-      this.asisTotal5Years()
-    ];
-
-    const riseCum = [
-      this.riseSum2025(),
-      this.riseSum2025() + this.riseSum2026(),
-      this.riseSum2025() + this.riseSum2026() + this.riseSum2027(),
-      this.riseSum2025() + this.riseSum2026() + this.riseSum2027() + this.riseSum2028(),
-      this.riseTotal5Years()
-    ];
+    const { asisCum, riseCum } = this.getCumulativeData();
 
     this.chartInstance = new Chart(this.tcoChartRef.nativeElement, {
       type: 'line',
@@ -1165,21 +1323,7 @@ export class BusinessCaseComponent implements AfterViewInit {
   private updateChart(): void {
     if (!this.chartInstance) return;
 
-    const asisCum = [
-      this.asisSum2025(),
-      this.asisSum2025() + this.asisSum2026(),
-      this.asisSum2025() + this.asisSum2026() + this.asisSum2027(),
-      this.asisSum2025() + this.asisSum2026() + this.asisSum2027() + this.asisSum2028(),
-      this.asisTotal5Years()
-    ];
-
-    const riseCum = [
-      this.riseSum2025(),
-      this.riseSum2025() + this.riseSum2026(),
-      this.riseSum2025() + this.riseSum2026() + this.riseSum2027(),
-      this.riseSum2025() + this.riseSum2026() + this.riseSum2027() + this.riseSum2028(),
-      this.riseTotal5Years()
-    ];
+    const { asisCum, riseCum } = this.getCumulativeData();
 
     this.chartInstance.data.labels = [...this.years()];
     this.chartInstance.data.datasets[0].data = asisCum;
@@ -1189,23 +1333,23 @@ export class BusinessCaseComponent implements AfterViewInit {
 
   exportToCSV(): void {
     const y = this.years();
-    let csv = `Kategori;Gider Kalemi;${y[0]};${y[1]};${y[2]};${y[3]};${y[4]};Toplam\n`;
+    let csv = `Kategori;Gider Kalemi;${y.join(';')};Toplam\n`;
     this.asisItems().forEach(i => {
-      const tot = i.y2025 + i.y2026 + i.y2027 + i.y2028 + i.y2029;
-      csv += `AS-IS;${i.name};${i.y2025};${i.y2026};${i.y2027};${i.y2028};${i.y2029};${tot}\n`;
+      const tot = this.getItemTotal(i);
+      csv += `AS-IS;${i.name};${(i.values || []).join(';')};${tot}\n`;
     });
-    csv += `AS-IS;TOPLAM;${this.asisSum2025()};${this.asisSum2026()};${this.asisSum2027()};${this.asisSum2028()};${this.asisSum2029()};${this.asisTotal5Years()}\n`;
+    csv += `AS-IS;TOPLAM;${y.map((_, idx) => this.asisYearSum(idx)).join(';')};${this.asisTotalAllYears()}\n`;
 
     this.riseItems().forEach(i => {
-      const tot = i.y2025 + i.y2026 + i.y2027 + i.y2028 + i.y2029;
-      csv += `RISE;${i.name};${i.y2025};${i.y2026};${i.y2027};${i.y2028};${i.y2029};${tot}\n`;
+      const tot = this.getItemTotal(i);
+      csv += `RISE;${i.name};${(i.values || []).join(';')};${tot}\n`;
     });
-    csv += `RISE;TOPLAM;${this.riseSum2025()};${this.riseSum2026()};${this.riseSum2027()};${this.riseSum2028()};${this.riseSum2029()};${this.riseTotal5Years()}\n`;
+    csv += `RISE;TOPLAM;${y.map((_, idx) => this.riseYearSum(idx)).join(';')};${this.riseTotalAllYears()}\n`;
 
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `${this.customerService.activeCustomer().name}_TCO_Model.csv`;
+    link.download = `${this.customerService.activeCustomer().name}_Toplam_Sahip_Olma_Maliyeti.csv`;
     link.click();
   }
 

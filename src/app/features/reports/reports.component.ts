@@ -1,5 +1,6 @@
-import { Component, inject, signal, ElementRef, ViewChild, computed } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
@@ -7,10 +8,139 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+export interface ObjectivePillar {
+  id: string;
+  icon: string;
+  title: string;
+  desc: string;
+}
+
+export interface HowPillar {
+  id: string;
+  icon: string;
+  badge: string;
+  title: string;
+  bullets: string[];
+  note: string;
+}
+
+export interface ExecutiveSummaryData {
+  objectiveTitle: string;
+  objectiveSubtitle: string;
+  objectivePillars: ObjectivePillar[];
+  howTitle: string;
+  howSubtitle: string;
+  howPillars: HowPillar[];
+  salesNotes: string;
+  preparedBy: string;
+}
+
+export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryData {
+  return {
+    objectiveTitle: '1. Amaç: RISE with SAP ile Yeni Nesil Kurumsal Dönüşüm',
+    objectiveSubtitle: `${customerName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`,
+    objectivePillars: [
+      {
+        id: 'ai',
+        icon: 'sparkles',
+        title: 'AI Tabanlı Mimari',
+        desc: 'SAP Business AI ve Joule destekli akıllı karar alma mekanizmaları ve öngörülü analitik kabiliyetler.'
+      },
+      {
+        id: 'flexible',
+        icon: 'layers',
+        title: 'Esnek Altyapı',
+        desc: 'Değişen pazar koşullarına ve kurumsal stratejilere hızla entegre olabilen modüler yapı.'
+      },
+      {
+        id: 'agile',
+        icon: 'bolt',
+        title: 'Çevik Operasyon',
+        desc: 'İş süreçlerinin hızlanması, yeni özelliklerin ve sürümlerin anında devreye alınabilmesi.'
+      },
+      {
+        id: 'scalable',
+        icon: 'sliders',
+        title: 'Ölçeklenebilirlik',
+        desc: 'Hacim artışlarına, yeni şirket entegrasyonlarına ve global büyümeye anında uyum sağlayan bulut kapasitesi.'
+      },
+      {
+        id: 'security',
+        icon: 'shield',
+        title: 'Güçlendirilmiş Siber Güvenlik',
+        desc: 'SAP garantisinde 7/24 SOC izleme, proaktif yama yönetimi ve sıfır gün tehdit koruması.'
+      },
+      {
+        id: 'self-sufficient',
+        icon: 'users',
+        title: 'Kendi Kendine Yetme Yetkinliği',
+        desc: 'Zaman içerisinde kurum içi ekiplerin yetkinliklerinin artışı ve dış müdahalelere bağımsız yönetim gücü.'
+      },
+      {
+        id: 'independence',
+        icon: 'database',
+        title: 'Dış Dünyaya Bağımlılığın Azalması',
+        desc: 'Clean Core yaklaşımı ile özel kod ve karmaşık katman yükünden arınmış, standartlaştırılmış çekirdek.'
+      },
+      {
+        id: 'autonomous',
+        icon: 'cpu',
+        title: 'Daha Otonom Süreçler',
+        desc: 'Rutin operasyonların otomatikleştiği, kendi kendini denetleyen ve iyileştiren akıllı kurumsal omurga.'
+      }
+    ],
+    howTitle: '2. Nasıl? Dönüşüm Metodolojisi, Takvim ve Finansal Model',
+    howSubtitle: 'Dönüşümün güvenle ve en düşük operasyonel risk ile tamamlanması için planlanan 3 temel sacayağı:',
+    howPillars: [
+      {
+        id: 'method',
+        icon: 'map',
+        badge: 'GEÇİŞ YÖNTEMİ',
+        title: 'Brownfield (System Conversion) + DVM / Arşivleme',
+        bullets: [
+          'Finansal ve operasyonel geçmiş işlem verilerinin %100 bütünlükle yeni sisteme aktarımı',
+          'SAP Readiness Check bulgularına göre Z kodların Clean Core prensipleriyle sadeleştirilmesi',
+          'Yüksek boyutlu tabloların go-live öncesi arşivlenerek HANA bellek maliyetinin optimize edilmesi',
+          'Kesinti süresini minimize eden SUM (Software Update Manager) ile kanıtlanmış teknik geçiş'
+        ],
+        note: 'Geçmiş veri sürekliliği ve minimum iş kesintisi sağlayan en güvenli geçiş modeli'
+      },
+      {
+        id: 'timeline',
+        icon: 'calendar',
+        badge: 'TAKİVM',
+        title: '6 Aylık Kademeli Canlıya Geçiş Yol Haritası',
+        bullets: [
+          '1. - 2. Ay: Hazırlık, SAP Readiness Check ve DVM Arşivleme Projesi',
+          '2. - 3. Ay: Z-Kod Sadeleştirme, Clean Core ve Business Partner (BP) Ön Dönüşümü',
+          '4. - 5. Ay: System Conversion, Sandbox / Test Provaları ve Kullanıcı Kabul Testleri',
+          '6. Ay: Cutover, Canlıya Geçiş (Go-Live) ve Hypercare Destek Süreci'
+        ],
+        note: 'Riskleri minimize eden provalı ve aşamalı canlıya geçiş takvimi'
+      },
+      {
+        id: 'cost-transformation',
+        icon: 'dollar',
+        badge: 'MALİYET DÖNÜŞÜMÜ',
+        title: 'Sabit Maliyetlerden Kontrol Edilebilir Değişken Maliyetlere Dönüş',
+        bullets: [
+          'Donanım, sunucu yenileme ve veri merkezi gibi yüksek sabit CapEx maliyetlerinin sonlandırılması',
+          'İhtiyaç duyulan kapasite kadar ödeme (Pay-as-you-grow) esnekliği ve tahmin edilebilir bütçeleme',
+          'Altyapı, işletim sistemi, SAP lisansı ve 7/24 SLA garantisinin tek bir OpEx bulut aboneliğinde toplanması',
+          'Beklenmedik felaket kurtarma ve bakım harcamalarından arınmış, ölçülebilir finansal yapı'
+        ],
+        note: 'Toplam Sahip Olma Maliyetinde %20-30 oranında nakit akışı ve öngörülebilirlik avantajı'
+      }
+    ],
+    salesNotes: 'Müşterimizin büyüme vizyonuna tam uyumlu, veri kaybı riski taşımayan ve operasyonel sürekliliği güvenceye alan özel RISE with SAP teklif paketimiz hazırlanmıştır.',
+    preparedBy: 'SAP Satış & Satış Öncesi (Presales) Çözüm Mimarlığı Ekibi'
+  };
+}
+
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterModule, IconComponent],
+  imports: [CommonModule, FormsModule, RouterModule, IconComponent],
   template: `
     <div class="executive-report-page">
       <!-- Header Banner & Print Actions -->
@@ -18,46 +148,78 @@ import html2canvas from 'html2canvas';
         <div class="header-left">
           <div class="badge-row">
             <span class="company-badge">{{ activeCustomerName() }}</span>
-            <span class="report-type-tag">Executive Summary & Transformation Report</span>
+            <span class="report-type-tag">Yönetici Özeti & Dönüşüm Raporu</span>
             <span class="date-tag">Eylül 2026</span>
           </div>
-          <h1 class="main-title">Yönetici Özeti (Executive Summary)</h1>
-          <p class="sub-title">{{ basisService.hasUploadedData() ? ('Boyutlandırma: ' + ramText() + ' RAM, ' + fueValueText() + ' Lisanslama ve Canlı Entegrasyon Analizi') : 'S/4HANA Dönüşüm Yönetici Özeti ve Boyutlandırma Raporu' }}</p>
+          <h1 class="main-title">Yönetici Özeti</h1>
+          <p class="sub-title">RISE with SAP Stratejik Vizyon, Amaç ve Dönüşüm Metodolojisi</p>
         </div>
 
         <div class="header-actions">
-          <button type="button" class="btn btn-secondary" (click)="refreshScores()">
-            <app-icon name="refresh" [size]="16" color="#475569"></app-icon>
-            <span>Verileri Yenile</span>
+          <!-- Edit Mode Toggle -->
+          <button 
+            type="button" 
+            class="btn" 
+            [class.btn-edit-active]="isEditMode()" 
+            [class.btn-secondary]="!isEditMode()"
+            (click)="toggleEditMode()">
+            <app-icon [name]="isEditMode() ? 'check' : 'sliders'" [size]="16" [color]="isEditMode() ? '#ffffff' : '#475569'"></app-icon>
+            <span>{{ isEditMode() ? 'Düzenleme Modundan Çık' : 'Yönetici Özetini Düzenle' }}</span>
           </button>
-          
+
+          <!-- Save Button (Only in edit mode) -->
+          <button 
+            type="button" 
+            class="btn btn-save" 
+            *ngIf="isEditMode()"
+            (click)="saveContent()">
+            <app-icon name="check" [size]="16" color="#ffffff"></app-icon>
+            <span>{{ isSaved() ? 'Kaydedildi ✓' : 'Değişiklikleri Kaydet' }}</span>
+          </button>
+
+          <!-- Reset Button (Only in edit mode) -->
+          <button 
+            type="button" 
+            class="btn btn-outline-danger" 
+            *ngIf="isEditMode()"
+            (click)="resetToDefault()">
+            <app-icon name="refresh" [size]="15" color="#dc2626"></app-icon>
+            <span>Varsayılana Sıfırla</span>
+          </button>
+
+          <!-- PDF Export -->
           <button 
             type="button" 
             class="btn btn-primary btn-pdf-export" 
             (click)="exportToPDF()"
-            [disabled]="isExporting() || !basisService.hasUploadedData()">
+            [disabled]="isExporting()">
             <app-icon [name]="isExporting() ? 'refresh' : 'download'" [size]="16" color="#ffffff"></app-icon>
-            <span>{{ isExporting() ? 'PDF Üretiliyor...' : 'Yönetici Raporunu İndir (PDF)' }}</span>
+            <span>{{ isExporting() ? 'PDF Üretiliyor...' : 'Raporu İndir (PDF)' }}</span>
           </button>
         </div>
       </div>
 
-      <!-- EMPTY STATE WHEN NO EXCEL HAS BEEN UPLOADED -->
-      <div class="empty-upload-card" *ngIf="!basisService.hasUploadedData()">
-        <div class="empty-icon-wrap" style="background: #f1f5f9;">
-          <app-icon name="file-text" [size]="32" color="#64748b"></app-icon>
+      <!-- EDIT MODE ACTIVE NOTIFICATION BANNER -->
+      <div class="edit-mode-banner no-print" *ngIf="isEditMode()">
+        <div class="banner-content">
+          <app-icon name="sliders" [size]="18" color="#0284c7"></app-icon>
+          <span>
+            <strong>Düzenleme Modu Aktif:</strong> Satış ve Presales ekipleri metinleri müşteriye özel olarak düzenleyebilir. Değişiklikler tarayıcıda saklanır ve PDF çıktısına aynen yansır.
+          </span>
         </div>
-        <h3 style="color: #334155;">Veri Yok</h3>
-        <p style="color: #64748b;">Yönetici özeti raporu için henüz veri bulunmamaktadır.</p>
+        <button class="btn btn-xs btn-primary" (click)="saveContent()">Kaydet</button>
       </div>
 
-      <!-- MAIN PRINTABLE / EXPORTABLE REPORT CONTAINER (Only rendered when an Excel is uploaded!) -->
-      <div class="report-content-container" #reportContainer id="reportContainer" *ngIf="basisService.hasUploadedData()">
-        <!-- 1. LIGHT & MODERN HERO SCORE CARD (%84 MATCH SKORU) -->
+      <!-- MAIN REPORT CONTAINER (Printable & Exportable) -->
+      <div class="report-content-container" #reportContainer id="reportContainer">
+        
+        <!-- ========================================================================= -->
+        <!-- SİSTEMDEN OTOMATİK GELEN BÖLÜM: SADECE RISE READINESS / MATCH SKORU      -->
+        <!-- ========================================================================= -->
         <div class="hero-score-card">
           <div class="score-ring-section">
             <div class="circular-score-badge">
-              <div class="score-number">%84</div>
+              <div class="score-number">{{ matchScoreText() }}</div>
               <div class="score-label">MATCH SKORU</div>
             </div>
 
@@ -66,12 +228,10 @@ import html2canvas from 'html2canvas';
                 <app-icon name="check" [size]="13" color="#059669"></app-icon>
                 <span>RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN</span>
               </div>
-              <h3>{{ activeCustomerName() }} Bulut Hazırlık & Dönüşüm Uyumu</h3>
+              <h3>{{ activeCustomerName() }} RISE Readiness & Bulut Uyum Analizi</h3>
               <p>
-                Mevcut SAP altyapısı, fiili kullanıcı profili ve entegrasyon envanteri incelendiğinde; 
-                <strong>11 parçalı dağınık On-Premise sunucu yapısının</strong> tek bir S/4HANA Private Cloud veri tabanına konsolide edilmesi ve 
-                sözleşme lisanslarının <strong>{{ fueValueText() }}</strong> seviyesine optimize edilmesi durumunda şirketiniz 
-                <strong>%84 genel bulut uyum skoru</strong> ile dönüşüme tam hazır durumdadır.
+                Mevcut SAP altyapısı, aktif kullanıcı profili, veritabanı boyutlandırması ve entegrasyon envanteri incelendiğinde; 
+                şirketiniz <strong>{{ matchScoreText() }} genel bulut uyum skoru</strong> ile RISE with SAP Private Cloud dönüşümüne tam hazır durumdadır.
               </p>
             </div>
           </div>
@@ -84,25 +244,25 @@ import html2canvas from 'html2canvas';
                 <strong class="p-score text-blue">%91</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-blue" style="width: 91%"></div></div>
-              <span class="p-desc">11 Dağınık Sunucu ➔ 1 S/4HANA Private Cloud DB</span>
+              <span class="p-desc">Dağınık Sunucular ➔ 1 S/4HANA Private Cloud DB</span>
             </div>
 
             <div class="pillar-item">
               <div class="p-head">
-                <span class="p-name"><app-icon name="users" [size]="14" color="#059669"></app-icon> FUE Lisans Optimizasyonu</span>
+                <span class="p-name"><app-icon name="users" [size]="14" color="#059669"></app-icon> Lisans Optimizasyonu</span>
                 <strong class="p-score text-emerald">%85</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-emerald" style="width: 85%"></div></div>
-              <span class="p-desc">{{ usersCountText() }} Aktif Kullanıcı ➔ {{ fueValueText() }} Lisansı (Sıfır Aşım Riski)</span>
+              <span class="p-desc">FUE Lisanslama ile Atıl Lisans ve Aşım Riski Sıfırlanır</span>
             </div>
 
             <div class="pillar-item">
               <div class="p-head">
-                <span class="p-name"><app-icon name="bolt" [size]="14" color="#7e22ce"></app-icon> PO Entegrasyon BTP Uyumu</span>
+                <span class="p-name"><app-icon name="bolt" [size]="14" color="#7e22ce"></app-icon> Entegrasyon BTP Uyumu</span>
                 <strong class="p-score text-purple">%82</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-purple" style="width: 82%"></div></div>
-              <span class="p-desc">109 Canlı Servis BTP Integration Suite uyumlu</span>
+              <span class="p-desc">PO / AIF Servisleri SAP Integration Suite Uyumlu</span>
             </div>
 
             <div class="pillar-item">
@@ -111,407 +271,257 @@ import html2canvas from 'html2canvas';
                 <strong class="p-score text-amber">%78</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-amber" style="width: 78%"></div></div>
-              <span class="p-desc">{{ ramText() }} RAM Hedefi & {{ diskText() }} Disk Hacmi</span>
+              <span class="p-desc">Veri Arşivleme ile HANA Bellek İhtiyacı Optimize Edilir</span>
             </div>
 
             <div class="pillar-item">
               <div class="p-head">
-                <span class="p-name"><app-icon name="shield" [size]="14" color="#059669"></app-icon> EoS Destek Riski Eliminasyonu</span>
+                <span class="p-name"><app-icon name="shield" [size]="14" color="#059669"></app-icon> Destek & Güvenlik Riski</span>
                 <strong class="p-score text-emerald">%100</strong>
               </div>
               <div class="progress-bar"><div class="progress-fill bg-emerald" style="width: 100%"></div></div>
-              <span class="p-desc">FES 200 & CS 6.5 (2020 EoS) riski sıfırlanıyor</span>
+              <span class="p-desc">Eski Sürümler ve EoS Destek Sonu Riskleri Ortadan Kalkar</span>
             </div>
           </div>
         </div>
 
-        <!-- 2. EXECUTIVE KPI METRIC CARDS -->
-        <div class="kpi-cards-grid">
-          <!-- KPI 1 -->
-          <div class="exec-kpi-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">Önerilen FUE Lisans Paketi</span>
-              <div class="kpi-icon-box bg-emerald"><app-icon name="users" [size]="16" color="#059669"></app-icon></div>
-            </div>
-            <div class="kpi-main-val text-emerald">{{ fueValueText() }}</div>
-            <div class="kpi-sub">{{ usersCountText() }} Fiili Kullanıcı İçin Tam Uyumlu</div>
-            <div class="tag-row">
-              <span class="kpi-pill green">Doğrudan SAP Formülü</span>
-            </div>
-          </div>
-
-          <!-- KPI 3 -->
-          <div class="exec-kpi-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">HANA DB Sizing Boyutu</span>
-              <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="16" color="#0891b2"></app-icon></div>
-            </div>
-            <div class="kpi-main-val">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB }} GiB RAM</div>
-            <div class="kpi-sub">Net Disk: {{ basisService.diskDetails()?.initialNetDiskGiB }} GiB • {{ basisService.systemInfo()?.tablesAnalyzed }} Tablo</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill blue">S/4HANA Prod DB: 2,2 TB</span>
-            </div>
-          </div>
-
-          <!-- KPI 4 -->
-          <div class="exec-kpi-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">Canlı Sistem & Veritabanı</span>
-              <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon></div>
-            </div>
-            <div class="kpi-main-val text-purple">{{ basisService.systemInfo()?.dbType }}</div>
-            <div class="kpi-sub">SID: {{ basisService.systemInfo()?.sid }} • OS: {{ basisService.systemInfo()?.operatingSystem }}</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill purple">S/4HANA Private Cloud Hazır</span>
-            </div>
-          </div>
-
-          <!-- KPI 5 -->
-          <div class="exec-kpi-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">En Büyük Tablolar (DVM)</span>
-              <div class="kpi-icon-box bg-amber"><app-icon name="layers" [size]="16" color="#d97706"></app-icon></div>
-            </div>
-            <div class="kpi-main-val text-amber">{{ basisService.largestTables().length }} Tablo</div>
-            <div class="kpi-sub">En Büyük: {{ topTable1().name }} ({{ topTable1().sizeGiB }} GiB) & {{ topTable2().name }}</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill amber">DVM Yaşam Döngüsü Planlandı</span>
-            </div>
-          </div>
-
-          <!-- KPI 6 -->
-          <div class="exec-kpi-card highlight-card">
-            <div class="kpi-top">
-              <span class="kpi-lbl">Tahmini Yıllık Lisans & TCO</span>
-              <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="16" color="#059669"></app-icon></div>
-            </div>
-            <div class="kpi-main-val text-emerald">{{ fueValueText() }} Paketi</div>
-            <div class="kpi-sub">Atıl Lisans Optimizasyonu ve Konsolidasyon</div>
-            <div class="kpi-tag-row">
-              <span class="kpi-pill green">Tam Formül / Sıfır Aşım Riski</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. DETAILED 4-PILLAR TRANSFORMATION MATRICES -->
-        <div class="breakdown-grid-2x2">
-          <!-- Matrix 1: AS-IS vs RISE with SAP Altyapı Karşılaştırması -->
-          <div class="card-box matrix-card">
-            <div class="c-header">
-              <div class="c-title-group">
-                <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
-                <h3>Altyapı Konsolidasyon Matrisi (Source ➔ Target Sizing)</h3>
+        <!-- ========================================================================= -->
+        <!-- SATIŞ & PRESALES DÜZENLENEBİLİR İÇERİK: 1. AMAÇ                         -->
+        <!-- ========================================================================= -->
+        <div class="section-card purpose-section">
+          <div class="section-header">
+            <div class="sec-title-group">
+              <div class="icon-circle bg-emerald">
+                <app-icon name="sparkles" [size]="18" color="#059669"></app-icon>
               </div>
-              <a routerLink="/source-sizing" class="c-link no-print">Sizing Kokpiti ➔</a>
-            </div>
+              <div>
+                <h2 class="sec-title" *ngIf="!isEditMode()">{{ content.objectiveTitle }}</h2>
+                <input 
+                  type="text" 
+                  class="edit-input-title" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="content.objectiveTitle" />
 
-            <table class="mini-table">
-              <thead>
-                <tr>
-                  <th>Bileşen (Component)</th>
-                  <th>Mevcut (Current)</th>
-                  <th>Hedef (Target S/4HANA)</th>
-                  <th>Açıklama</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of basisService.sizingMatrix(); track item.product) {
-                  <tr>
-                    <td><strong>{{ item.product }}</strong></td>
-                    <td><span class="badge-red">{{ item.current }}</span></td>
-                    <td><strong class="text-teal">{{ item.target }}</strong></td>
-                    <td class="text-muted">{{ item.description }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Matrix 2: FUE Lisans Dağılımı ve Kullanım Doğrulaması -->
-          <div class="card-box matrix-card">
-            <div class="c-header">
-              <div class="c-title-group">
-                <app-icon name="users" [size]="16" color="#059669"></app-icon>
-                <h3>FUE Lisanslama & Kullanıcı Doğrulama Matrisi</h3>
-              </div>
-              <a routerLink="/analytics" class="c-link no-print">Lisans Detayı ➔</a>
-            </div>
-
-            <table class="mini-table">
-              <thead>
-                <tr>
-                  <th>Kullanıcı Seviyesi</th>
-                  <th>Fiili Kullanıcı</th>
-                  <th>FUE Oranı</th>
-                  <th>Hesaplanan FUE</th>
-                  <th>Durum</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>HB Professional Use</strong></td>
-                  <td>{{ hbCount() }} Kullanıcı</td>
-                  <td>1.0 FUE</td>
-                  <td><strong class="text-emerald">{{ hbCount() }}.0 FUE</strong></td>
-                  <td><span class="badge-green">Kapsamda</span></td>
-                </tr>
-                <tr>
-                  <td><strong>HC Functional Use</strong></td>
-                  <td>{{ hcCount() }} Kullanıcı</td>
-                  <td>0.2 FUE (5:1)</td>
-                  <td><strong class="text-emerald">{{ (hcCount() / 5).toFixed(1) }} FUE</strong></td>
-                  <td><span class="badge-green">Kapsamda</span></td>
-                </tr>
-                <tr>
-                  <td><strong>HD Productivity Use</strong></td>
-                  <td>{{ hdCount() }} Kullanıcı</td>
-                  <td>0.033 FUE (30:1)</td>
-                  <td><strong class="text-emerald">{{ (hdCount() / 30).toFixed(2) }} FUE</strong></td>
-                  <td><span class="badge-green">Kapsamda</span></td>
-                </tr>
-                <tr class="total-highlight-row">
-                  <td><strong>TOPLAM GEREKEN FUE LİSANSI</strong></td>
-                  <td><strong>{{ usersCountText() }} Kullanıcı</strong></td>
-                  <td>—</td>
-                  <td><strong class="text-emerald font-bold">{{ fueValueText() }}</strong></td>
-                  <td><span class="badge-green">Doğrudan SAP Formülü</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Matrix 3: HANA DB Sizing & DVM Arşivleme Raporu -->
-          <div class="card-box matrix-card">
-            <div class="c-header">
-              <div class="c-title-group">
-                <app-icon name="database" [size]="16" color="#0891b2"></app-icon>
-                <h3>HANA Bellek & Disk Boyutlandırma (/SDF/HDB_SIZING)</h3>
-              </div>
-              <a routerLink="/source-sizing" class="c-link no-print">Sizing Kokpiti ➔</a>
-            </div>
-
-            <table class="mini-table">
-              <thead>
-                <tr>
-                  <th>Metrik / Boyut</th>
-                  <th>Değer (GiB)</th>
-                  <th>Açıklama / Durum</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Anticipated Initial RAM</strong></td>
-                  <td><strong class="text-blue">{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB }} GiB</strong></td>
-                  <td>Column Loadable ({{ basisService.memoryDetails()?.columnLoadable }} GiB) + Workspace ({{ basisService.memoryDetails()?.workSpace }} GiB)</td>
-                </tr>
-                <tr>
-                  <td><strong>Initial Net Disk Size</strong></td>
-                  <td><strong class="text-blue">{{ basisService.diskDetails()?.initialNetDiskGiB }} GiB</strong></td>
-                  <td>LOB, NSE Cache ve sıkıştırma sonrası net disk ihtiyacı</td>
-                </tr>
-                <tr>
-                  <td><strong>En Büyük Tablo ({{ topTable1().name }})</strong></td>
-                  <td>{{ topTable1().sizeGiB }} GiB</td>
-                  <td><span class="badge-green">{{ topTable1().recommendation }}</span></td>
-                </tr>
-                <tr>
-                  <td><strong>İkinci Büyük Tablo ({{ topTable2().name }})</strong></td>
-                  <td>{{ topTable2().sizeGiB }} GiB</td>
-                  <td><span class="badge-green">{{ topTable2().recommendation }}</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Matrix 4: PO Entegrasyon Listesi & Protokol Dağılımı -->
-          <div class="card-box matrix-card">
-            <div class="c-header">
-              <div class="c-title-group">
-                <app-icon name="bolt" [size]="16" color="#7e22ce"></app-icon>
-                <h3>PO Canlı Entegrasyon & Adaptör Dağılımı (109 Servis)</h3>
-              </div>
-              <a routerLink="/architecture-map" [queryParams]="{ mode: 'po' }" class="c-link no-print">Entegrasyon Haritası ➔</a>
-            </div>
-
-            <table class="mini-table">
-              <thead>
-                <tr>
-                  <th>Entegrasyon Protokolü</th>
-                  <th>Servis Sayısı</th>
-                  <th>Akış Yönü</th>
-                  <th>BTP Bulut Dönüşüm Durumu</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>SOAP ➔ JDBC (Veritabanı)</strong></td>
-                  <td><strong class="text-purple">43 Servis</strong></td>
-                  <td>Verici (Outbound)</td>
-                  <td><span class="badge-green">Cloud Connector JDBC Uyumlu</span></td>
-                </tr>
-                <tr>
-                  <td><strong>SOAP ➔ SOAP (Web Servisleri)</strong></td>
-                  <td><strong class="text-purple">28 Servis</strong></td>
-                  <td>Çift Yönlü / Senkron</td>
-                  <td><span class="badge-green">BTP Cloud iFlows Hazır</span></td>
-                </tr>
-                <tr>
-                  <td><strong>SOAP ➔ RFC (SAP İçi Çağrılar)</strong></td>
-                  <td><strong class="text-purple">18 Servis</strong></td>
-                  <td>Senkron (Real-time)</td>
-                  <td><span class="badge-green">S/4HANA OData / RFC Uyumlu</span></td>
-                </tr>
-                <tr>
-                  <td><strong>SOAP ➔ REST (Acente & Portallar)</strong></td>
-                  <td><strong class="text-purple">10 Servis</strong></td>
-                  <td>Alıcı (Inbound)</td>
-                  <td><span class="badge-green">BTP API Management Uyumlu</span></td>
-                </tr>
-                <tr>
-                  <td><strong>NFS / SFTP ➔ RFC & File (Ekstre)</strong></td>
-                  <td><strong class="text-purple">8 Servis</strong></td>
-                  <td>Alıcı (Inbound)</td>
-                  <td><span class="badge-green">BTP Secure SFTP Gateway</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- 4. EXECUTIVE ADVISORY & 4-STEP ACTION ROADMAP -->
-        <div class="card-box roadmap-card">
-          <div class="c-header">
-            <div class="c-title-group">
-              <app-icon name="sparkles" [size]="18" color="#047857"></app-icon>
-              <h3>RISE with SAP Dönüşüm Yol Haritası & Yönetici Tavsiyeleri</h3>
-            </div>
-            <span class="badge-green">Stratejik Eylem Planı</span>
-          </div>
-
-          <div class="roadmap-grid">
-            <!-- Step 1 -->
-            <div class="roadmap-step">
-              <div class="step-num">1</div>
-              <div class="step-content">
-                <h4>{{ fueValueText() }} Lisans Sözleşmesi</h4>
-                <p>Fiili {{ usersCountText() }} kullanıcı aktivitesi ve SAP standart formülü (HB + HC/5 + HD/30) doğrultusunda {{ fueValueText() }} paketi seçilmeli, atıl lisans maliyetleri engellenmelidir.</p>
-                <span class="step-benefit">Yıllık €65.000 Lisans Tasarrufu</span>
+                <p class="sec-subtitle" *ngIf="!isEditMode()">{{ content.objectiveSubtitle }}</p>
+                <textarea 
+                  class="edit-textarea-subtitle" 
+                  rows="2" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="content.objectiveSubtitle"></textarea>
               </div>
             </div>
+            <span class="pillar-badge emerald">Temel Vizyon</span>
+          </div>
 
-            <!-- Step 2 -->
-            <div class="roadmap-step">
-              <div class="step-num">2</div>
-              <div class="step-content">
-                <h4>DVM & REGUP Tablo Arşivleme</h4>
-                <p>S/4HANA geçişi öncesinde <code>FI_PAYDATA</code> ve <code>FI_DOCUMNT</code> arşivleme projeleri çalıştırılarak 336 GiB disk alanı kazanılmalıdır.</p>
-                <span class="step-benefit">336 GiB Disk & 95 GiB RAM Tasarrufu</span>
+          <!-- 8 Temel Değer Taşı Grid -->
+          <div class="pillars-grid-8">
+            <div class="purpose-card" *ngFor="let pillar of content.objectivePillars; let idx = index">
+              <div class="p-icon-box">
+                <app-icon [name]="pillar.icon || 'check'" [size]="17" color="#0284c7"></app-icon>
               </div>
-            </div>
+              <div class="p-text-body">
+                <h4 *ngIf="!isEditMode()">{{ pillar.title }}</h4>
+                <input 
+                  type="text" 
+                  class="edit-input-card-title" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="pillar.title" />
 
-            <!-- Step 3 -->
-            <div class="roadmap-step">
-              <div class="step-num">3</div>
-              <div class="step-content">
-                <h4>S/4HANA Private Cloud Geçişi</h4>
-                <p>Mevcut 11 parçalı altyapı tek bir SAP S/4HANA Private Cloud HANA 2.0 In-Memory veri tabanında birleştirilmeli, EoS riski sıfırlanmalıdır.</p>
-                <span class="step-benefit">%40 Performans Artışı & 0 EoS Riski</span>
-              </div>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="roadmap-step">
-              <div class="step-num">4</div>
-              <div class="step-content">
-                <h4>PO ➔ BTP Integration Suite</h4>
-                <p>109 canlı entegrasyon servisi SAP BTP Integration Suite bulut standardına taşınarak On-Premise PO sunucu bakım yükü kaldırılmalıdır.</p>
-                <span class="step-benefit">16 Entegrasyon Sunucusu Kapatılıyor</span>
+                <p *ngIf="!isEditMode()">{{ pillar.desc }}</p>
+                <textarea 
+                  class="edit-textarea-card-desc" 
+                  rows="2" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="pillar.desc"></textarea>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- ========================================================================= -->
+        <!-- SATIŞ & PRESALES DÜZENLENEBİLİR İÇERİK: 2. NASIL?                        -->
+        <!-- ========================================================================= -->
+        <div class="section-card how-section">
+          <div class="section-header">
+            <div class="sec-title-group">
+              <div class="icon-circle bg-blue">
+                <app-icon name="map" [size]="18" color="#0284c7"></app-icon>
+              </div>
+              <div>
+                <h2 class="sec-title" *ngIf="!isEditMode()">{{ content.howTitle }}</h2>
+                <input 
+                  type="text" 
+                  class="edit-input-title" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="content.howTitle" />
+
+                <p class="sec-subtitle" *ngIf="!isEditMode()">{{ content.howSubtitle }}</p>
+                <textarea 
+                  class="edit-textarea-subtitle" 
+                  rows="2" 
+                  *ngIf="isEditMode()" 
+                  [(ngModel)]="content.howSubtitle"></textarea>
+              </div>
+            </div>
+            <span class="pillar-badge blue">Uygulama Stratejisi</span>
+          </div>
+
+          <!-- 3 Ana Kırılım: Geçiş Yöntemi, Takvim, Sabit -> Değişken Maliyet -->
+          <div class="how-pillars-grid">
+            <div class="how-card" *ngFor="let item of content.howPillars; let idx = index">
+              <div class="how-card-top">
+                <div class="badge-tag">{{ item.badge }}</div>
+                <div class="how-icon">
+                  <app-icon [name]="item.icon || 'layers'" [size]="16" color="#0284c7"></app-icon>
+                </div>
+              </div>
+
+              <h3 *ngIf="!isEditMode()">{{ item.title }}</h3>
+              <input 
+                type="text" 
+                class="edit-input-how-title" 
+                *ngIf="isEditMode()" 
+                [(ngModel)]="item.title" />
+
+              <ul class="how-bullets-list" *ngIf="!isEditMode()">
+                <li *ngFor="let bullet of item.bullets">
+                  <span class="bullet-dot">•</span>
+                  <span>{{ bullet }}</span>
+                </li>
+              </ul>
+
+              <div class="how-bullets-edit" *ngIf="isEditMode()">
+                <label class="edit-label">Maddeler (Her satır bir madde):</label>
+                <textarea 
+                  class="edit-textarea-bullets" 
+                  rows="4" 
+                  [ngModel]="item.bullets.join('\n')" 
+                  (ngModelChange)="updateBullets(item, $event)"></textarea>
+              </div>
+
+              <div class="how-footer-note" *ngIf="!isEditMode()">
+                <app-icon name="check" [size]="13" color="#059669"></app-icon>
+                <span>{{ item.note }}</span>
+              </div>
+              <input 
+                type="text" 
+                class="edit-input-note" 
+                *ngIf="isEditMode()" 
+                [(ngModel)]="item.note" 
+                placeholder="Alt vurgu notu" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- PRESALES & SATIŞ MÜŞTERİYE ÖZEL NOTLAR VE İMZA                         -->
+        <!-- ========================================================================= -->
+        <div class="section-card notes-section">
+          <div class="notes-header">
+            <div class="nh-left">
+              <app-icon name="file-text" [size]="16" color="#475569"></app-icon>
+              <h4>Satış & Presales Değerlendirme Notu</h4>
+            </div>
+            <span class="nh-meta">Hazırlayan: {{ content.preparedBy }}</span>
+          </div>
+
+          <p class="notes-text" *ngIf="!isEditMode()">{{ content.salesNotes }}</p>
+          <textarea 
+            class="edit-textarea-notes" 
+            rows="3" 
+            *ngIf="isEditMode()" 
+            [(ngModel)]="content.salesNotes" 
+            placeholder="Presales ve Satış ekipleri müşteriye özel notlarını buraya girebilir..."></textarea>
+
+          <div class="edit-meta-row" *ngIf="isEditMode()">
+            <label class="edit-label">Hazırlayan Ekip:</label>
+            <input type="text" class="edit-input-author" [(ngModel)]="content.preparedBy" />
+          </div>
+        </div>
+
       </div>
     </div>
   `,
   styles: [`
-    .executive-report-page {
-      padding: 1.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    :host {
+      display: block;
       background: #f8fafc;
       min-height: 100vh;
+      color: #1e293b;
+      width: 100%;
+      box-sizing: border-box;
     }
 
-    .report-content-container {
+    .executive-report-page {
+      padding: 1.5rem 1.75rem 3rem;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    /* BUTTONS STYLING */
+    /* BUTTONS */
     .btn {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
       gap: 0.5rem;
-      padding: 0.65rem 1.25rem;
+      padding: 0.6rem 1.1rem;
       border-radius: 8px;
-      font-size: 0.82rem;
-      font-weight: 700;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.18s ease-in-out;
-      user-select: none;
-      white-space: nowrap;
+      font-size: 0.85rem;
+      font-weight: 600;
       border: 1px solid transparent;
-
-      &:active {
-        transform: scale(0.98);
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
     .btn-secondary {
       background: #ffffff;
       color: #334155;
       border-color: #cbd5e1;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-
-      &:hover:not(:disabled) {
-        background: #f1f5f9;
-        border-color: #94a3b8;
-        color: #0f172a;
-      }
+      &:hover { background: #f1f5f9; border-color: #94a3b8; }
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    .btn-edit-active {
+      background: #0284c7;
       color: #ffffff;
       border-color: #0284c7;
-      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.28);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+      &:hover { background: #0369a1; }
+    }
 
-      &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
-        box-shadow: 0 5px 15px rgba(2, 132, 199, 0.38);
-        transform: translateY(-1px);
-      }
+    .btn-save {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+      box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+      &:hover { background: #047857; }
+    }
+
+    .btn-outline-danger {
+      background: #fff;
+      color: #dc2626;
+      border-color: #fca5a5;
+      &:hover { background: #fef2f2; }
     }
 
     .btn-pdf-export {
       background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      border-color: #059669;
+      color: #ffffff;
       box-shadow: 0 3px 10px rgba(5, 150, 105, 0.28);
-
       &:hover:not(:disabled) {
         background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-        box-shadow: 0 5px 15px rgba(5, 150, 105, 0.38);
         transform: translateY(-1px);
       }
+    }
+
+    .btn-xs {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: 6px;
     }
 
     /* HEADER */
@@ -565,7 +575,7 @@ import html2canvas from 'html2canvas';
         }
 
         .main-title {
-          font-size: 1.45rem;
+          font-size: 1.5rem;
           font-weight: 800;
           color: #0f172a;
           margin: 0;
@@ -573,7 +583,7 @@ import html2canvas from 'html2canvas';
 
         .sub-title {
           margin: 0;
-          font-size: 0.82rem;
+          font-size: 0.85rem;
           color: #64748b;
         }
       }
@@ -582,11 +592,43 @@ import html2canvas from 'html2canvas';
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        flex-wrap: wrap;
       }
     }
 
-    /* 1. LIGHT & MODERN HERO SCORE CARD (%84 MATCH) */
+    /* EDIT BANNER */
+    .edit-mode-banner {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      color: #0369a1;
+      font-size: 0.82rem;
+
+      .banner-content {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+    }
+
+    /* REPORT CONTENT CONTAINER */
+    .report-content-container {
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* 1. HERO SCORE CARD (AUTOMATIC SYSTEM METRICS) */
     .hero-score-card {
+      width: 100%;
+      box-sizing: border-box;
       background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
       border: 1.5px solid #bae6fd;
       border-radius: 14px;
@@ -599,16 +641,16 @@ import html2canvas from 'html2canvas';
       .score-ring-section {
         display: flex;
         align-items: center;
-        gap: 1.75rem;
+        gap: 2rem;
         flex-wrap: wrap;
 
         .circular-score-badge {
-          width: 120px;
-          height: 120px;
+          width: 110px;
+          height: 110px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-          border: 4px solid #0284c7;
-          box-shadow: 0 0 20px rgba(2, 132, 199, 0.2);
+          background: #ffffff;
+          border: 6px solid #059669;
+          box-shadow: 0 4px 15px rgba(5, 150, 105, 0.22);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -616,42 +658,46 @@ import html2canvas from 'html2canvas';
           flex-shrink: 0;
 
           .score-number {
-            font-size: 2.1rem;
+            font-size: 1.75rem;
             font-weight: 900;
-            color: #0369a1;
+            color: #059669;
             line-height: 1;
           }
 
           .score-label {
             font-size: 0.62rem;
             font-weight: 800;
-            color: #0284c7;
             letter-spacing: 0.05em;
-            margin-top: 0.2rem;
+            color: #64748b;
+            margin-top: 0.25rem;
           }
         }
 
         .score-ring-text {
           flex: 1;
-          min-width: 280px;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
 
           .status-pill-green {
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
             background: #ecfdf5;
-            color: #047857;
+            color: #059669;
             border: 1px solid #a7f3d0;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
             font-size: 0.72rem;
             font-weight: 800;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            margin-bottom: 0.45rem;
+            letter-spacing: 0.03em;
+            align-self: flex-start;
           }
 
           h3 {
-            margin: 0 0 0.4rem 0;
-            font-size: 1.25rem;
+            margin: 0;
+            font-size: 1.2rem;
             font-weight: 800;
             color: #0f172a;
           }
@@ -661,20 +707,20 @@ import html2canvas from 'html2canvas';
             font-size: 0.84rem;
             color: #475569;
             line-height: 1.5;
-
-            strong { color: #0f172a; }
           }
         }
       }
 
       .pillar-breakdown-grid {
+        width: 100%;
+        box-sizing: border-box;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
         gap: 1rem;
         background: #ffffff;
-        border: 1px solid #e2e8f0;
+        padding: 1.2rem 1.4rem;
         border-radius: 10px;
-        padding: 1.15rem;
+        border: 1px solid #e2e8f0;
 
         .pillar-item {
           display: flex;
@@ -685,369 +731,512 @@ import html2canvas from 'html2canvas';
             display: flex;
             align-items: center;
             justify-content: space-between;
+            font-size: 0.75rem;
 
             .p-name {
-              font-size: 0.74rem;
-              font-weight: 700;
-              color: #334155;
               display: flex;
               align-items: center;
               gap: 0.35rem;
+              font-weight: 700;
+              color: #334155;
             }
 
-            .p-score {
-              font-size: 0.85rem;
-              font-weight: 800;
-            }
+            .p-score { font-weight: 800; font-size: 0.85rem; }
           }
 
           .progress-bar {
-            height: 7px;
+            height: 6px;
             background: #f1f5f9;
-            border-radius: 10px;
+            border-radius: 3px;
             overflow: hidden;
 
             .progress-fill {
               height: 100%;
-              border-radius: 10px;
+              border-radius: 3px;
+              transition: width 0.6s ease;
             }
           }
 
           .p-desc {
-            font-size: 0.67rem;
+            font-size: 0.68rem;
             color: #64748b;
+            line-height: 1.3;
           }
         }
       }
     }
 
-    /* KPI CARDS (6 GRIDS) */
-    .kpi-cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-
-      .exec-kpi-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.15rem;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-        transition: transform 0.15s, box-shadow 0.15s;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-        }
-
-        &.highlight-card {
-          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-          border-color: #a7f3d0;
-        }
-
-        .kpi-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          .kpi-lbl {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #64748b;
-          }
-
-          .kpi-icon-box {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            &.bg-blue { background: #f0f9ff; }
-            &.bg-emerald { background: #ecfdf5; }
-            &.bg-cyan { background: #ecfeff; }
-            &.bg-purple { background: #fdf4ff; }
-            &.bg-amber { background: #fffbeb; }
-          }
-        }
-
-        .kpi-main-val {
-          font-size: 1.25rem;
-          font-weight: 900;
-          color: #0f172a;
-          line-height: 1.2;
-        }
-
-        .kpi-sub {
-          font-size: 0.68rem;
-          color: #64748b;
-        }
-
-        .kpi-tag-row {
-          display: flex;
-          gap: 0.3rem;
-          flex-wrap: wrap;
-          margin-top: 0.2rem;
-
-          .kpi-pill {
-            font-size: 0.62rem;
-            font-weight: 700;
-            padding: 0.1rem 0.4rem;
-            border-radius: 4px;
-
-            &.red { background: #fee2e2; color: #dc2626; }
-            &.green { background: #ecfdf5; color: #047857; }
-            &.blue { background: #f0f9ff; color: #0284c7; }
-            &.purple { background: #fdf4ff; color: #7e22ce; }
-            &.amber { background: #fffbeb; color: #b45309; }
-          }
-        }
-      }
-    }
-
-    /* 2x2 BREAKDOWN MATRICES */
-    .breakdown-grid-2x2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
-      gap: 1.25rem;
-
-      .matrix-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-        display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
-
-        .c-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          .c-title-group {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-
-            h3 {
-              margin: 0;
-              font-size: 0.88rem;
-              font-weight: 800;
-              color: #0f172a;
-            }
-          }
-
-          .c-link {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #0284c7;
-            text-decoration: none;
-
-            &:hover { text-decoration: underline; }
-          }
-        }
-      }
-    }
-
-    .mini-table {
+    /* SECTION CARDS */
+    .section-card {
       width: 100%;
-      border-collapse: collapse;
-      font-size: 0.74rem;
-
-      th {
-        background: #f8fafc;
-        color: #475569;
-        font-weight: 700;
-        padding: 0.5rem 0.65rem;
-        text-align: left;
-        border-bottom: 2px solid #e2e8f0;
-      }
-
-      td {
-        padding: 0.55rem 0.65rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-      }
-
-      tr.total-highlight-row {
-        background: #f0fdf4;
-        border-top: 2px solid #a7f3d0;
-      }
-    }
-
-    /* ROADMAP CARD */
-    .roadmap-card {
+      box-sizing: border-box;
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1.25rem;
-      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+      border-radius: 14px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.35rem;
 
-      .c-header {
+      .section-header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
-
-        .c-title-group {
-          display: flex;
-          align-items: center;
-          gap: 0.45rem;
-
-          h3 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #0f172a;
-          }
-        }
-      }
-
-      .roadmap-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1rem;
+        flex-wrap: wrap;
 
-        .roadmap-step {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          padding: 1rem;
+        .sec-title-group {
           display: flex;
-          gap: 0.75rem;
+          align-items: flex-start;
+          gap: 0.85rem;
+          flex: 1;
 
-          .step-num {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #0284c7;
-            color: #ffffff;
-            font-weight: 800;
-            font-size: 0.9rem;
+          .icon-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            &.bg-emerald { background: #ecfdf5; }
+            &.bg-blue { background: #f0f9ff; }
           }
 
-          .step-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
+          .sec-title {
+            margin: 0 0 0.3rem 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
 
-            h4 {
-              margin: 0;
-              font-size: 0.82rem;
-              font-weight: 800;
-              color: #0f172a;
-            }
+          .sec-subtitle {
+            margin: 0;
+            font-size: 0.84rem;
+            color: #64748b;
+            line-height: 1.45;
+          }
+        }
 
-            p {
-              margin: 0;
-              font-size: 0.72rem;
-              color: #64748b;
-              line-height: 1.4;
-            }
+        .pillar-badge {
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 0.25rem 0.65rem;
+          border-radius: 20px;
+          letter-spacing: 0.03em;
+          text-transform: uppercase;
+          &.emerald { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+          &.blue { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+        }
+      }
+    }
 
-            .step-benefit {
-              font-size: 0.66rem;
-              font-weight: 800;
-              color: #059669;
-              background: #ecfdf5;
-              padding: 0.15rem 0.45rem;
-              border-radius: 4px;
-              display: inline-block;
-              margin-top: 0.2rem;
-              align-self: flex-start;
-            }
+    /* 8 PILLARS GRID (AMAÇ) */
+    .pillars-grid-8 {
+      width: 100%;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+      gap: 1rem;
+
+      .purpose-card {
+        min-width: 0;
+        box-sizing: border-box;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.1rem;
+        display: flex;
+        gap: 0.85rem;
+        align-items: flex-start;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #ffffff;
+          border-color: #bae6fd;
+          box-shadow: 0 4px 14px rgba(2, 132, 199, 0.07);
+          transform: translateY(-1px);
+        }
+
+        .p-icon-box {
+          width: 34px;
+          height: 34px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .p-text-body {
+          flex: 1;
+
+          h4 {
+            margin: 0 0 0.35rem;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #0f172a;
+          }
+
+          p {
+            margin: 0;
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.45;
           }
         }
       }
     }
 
-    /* BADGES & UTILITIES */
-    .badge-red { background: #fee2e2; color: #dc2626; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; }
-    .badge-eos { background: #ef4444; color: #ffffff; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; }
-    .badge-green { background: #ecfdf5; color: #047857; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; }
-    .badge-gray { background: #f1f5f9; color: #475569; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; }
-    
+    /* HOW PILLARS GRID (NASIL?) */
+    .how-pillars-grid {
+      width: 100%;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+      gap: 1.25rem;
+
+      .how-card {
+        min-width: 0;
+        box-sizing: border-box;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.35rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.03);
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: #0284c7;
+          box-shadow: 0 6px 18px rgba(2, 132, 199, 0.08);
+        }
+
+        .how-card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .badge-tag {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            background: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+            letter-spacing: 0.04em;
+          }
+
+          .how-icon {
+            width: 32px;
+            height: 32px;
+            background: #f8fafc;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 1.05rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .how-bullets-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          flex: 1;
+
+          li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            color: #334155;
+            line-height: 1.4;
+
+            .bullet-dot {
+              color: #0284c7;
+              font-weight: 800;
+              line-height: 1;
+            }
+          }
+        }
+
+        .how-footer-note {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.55rem 0.75rem;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 6px;
+          font-size: 0.74rem;
+          font-weight: 700;
+          color: #047857;
+          margin-top: auto;
+        }
+      }
+    }
+
+    /* NOTES SECTION */
+    .notes-section {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+
+      .notes-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+
+        .nh-left {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+
+          h4 {
+            margin: 0;
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+          }
+        }
+
+        .nh-meta {
+          font-size: 0.74rem;
+          color: #64748b;
+          font-weight: 600;
+        }
+      }
+
+      .notes-text {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #334155;
+        line-height: 1.6;
+        font-style: italic;
+      }
+    }
+
+    /* EDIT CONTROLS */
+    .edit-input-title {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #0284c7;
+      border-radius: 6px;
+      margin-bottom: 0.4rem;
+    }
+
+    .edit-textarea-subtitle {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.84rem;
+      color: #334155;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+      resize: vertical;
+    }
+
+    .edit-input-card-title {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.45rem;
+      border: 1px solid #0284c7;
+      border-radius: 4px;
+      margin-bottom: 0.3rem;
+    }
+
+    .edit-textarea-card-desc {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.78rem;
+      padding: 0.25rem 0.45rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      resize: vertical;
+    }
+
+    .edit-input-how-title {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.95rem;
+      font-weight: 800;
+      padding: 0.35rem 0.55rem;
+      border: 1px solid #0284c7;
+      border-radius: 6px;
+    }
+
+    .edit-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .edit-textarea-bullets {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      line-height: 1.4;
+      resize: vertical;
+    }
+
+    .edit-input-note {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.75rem;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #a7f3d0;
+      border-radius: 4px;
+      background: #f0fdf4;
+    }
+
+    .edit-textarea-notes {
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #0284c7;
+      border-radius: 6px;
+      resize: vertical;
+    }
+
+    .edit-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+
+      .edit-input-author {
+        flex: 1;
+        box-sizing: border-box;
+        max-width: 100%;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+      }
+    }
+
+    /* COLOR UTILITIES */
     .text-blue { color: #0284c7; }
     .text-emerald { color: #059669; }
     .text-purple { color: #7e22ce; }
     .text-amber { color: #d97706; }
-    .text-teal { color: #0d9488; }
-    
     .bg-blue { background: #0284c7; }
     .bg-emerald { background: #10b981; }
     .bg-purple { background: #7e22ce; }
     .bg-amber { background: #f59e0b; }
 
-    /* HIGH RESOLUTION PDF PRINT STYLES */
+    /* HIGH RESOLUTION PRINT STYLES */
     @media print {
       body { background: #ffffff !important; }
-      .no-print, .sidebar, app-sidebar, .header-actions, .c-link { display: none !important; }
-      .executive-report-page { padding: 0 !important; background: #ffffff !important; }
+      .no-print, .sidebar, app-sidebar, .header-actions { display: none !important; }
+      .executive-report-page { padding: 0 !important; background: #ffffff !important; max-width: 100% !important; }
       .hero-score-card { break-inside: avoid; background: #ffffff !important; border: 2px solid #0284c7 !important; }
-      .kpi-cards-grid { break-inside: avoid; }
-      .breakdown-grid-2x2 { break-inside: avoid; }
-      .roadmap-card { break-inside: avoid; }
+      .section-card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+      .purpose-card, .how-card { break-inside: avoid; }
     }
   `]
 })
-export class ReportsComponent {
+export class ReportsComponent implements OnInit {
   customerService = inject(CustomerService);
   basisService = inject(BasisSizingService);
+
   isExporting = signal<boolean>(false);
+  isEditMode = signal<boolean>(false);
+  isSaved = signal<boolean>(false);
 
-  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'T***A');
+  content: ExecutiveSummaryData = getDefaultExecutiveData('Müşteri');
 
-  fueValueText = computed(() => {
-    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${Math.round(this.basisService.fueSummary()!.calculatedFUE)} FUE`;
-    }
-    return '—';
+  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'Müşteri');
+
+  matchScoreText = computed(() => {
+    return '%84';
   });
-
-  usersCountText = computed(() => {
-    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
-      return `${this.basisService.fueSummary()!.totalUsers}`;
-    }
-    return '0';
-  });
-
-  ramText = computed(() => {
-    const mem = this.basisService.memoryDetails();
-    return mem ? `${Math.round(mem.anticipatedInitialMemoryGiB)} GiB` : '—';
-  });
-
-  diskText = computed(() => {
-    const d = this.basisService.diskDetails();
-    return d ? `${Math.round(d.initialNetDiskGiB)} GiB` : '—';
-  });
-
-  topTable1 = computed(() => {
-    const list = this.basisService.largestTables();
-    return (list && list.length > 0) ? list[0] : { name: '—', sizeGiB: 0, recommendation: '—' };
-  });
-
-  topTable2 = computed(() => {
-    const list = this.basisService.largestTables();
-    return (list && list.length > 1) ? list[1] : { name: '—', sizeGiB: 0, recommendation: '—' };
-  });
-
-  hbCount = computed(() => this.basisService.fueSummary()?.hbCount ?? 0);
-  hcCount = computed(() => this.basisService.fueSummary()?.hcCount ?? 0);
-  hdCount = computed(() => this.basisService.fueSummary()?.hdCount ?? 0);
 
   @ViewChild('reportContainer') reportContainer!: ElementRef<HTMLDivElement>;
+
+  ngOnInit(): void {
+    this.loadSavedContent();
+  }
+
+  toggleEditMode(): void {
+    this.isEditMode.update(v => !v);
+  }
+
+  updateBullets(item: HowPillar, rawText: string): void {
+    item.bullets = rawText.split('\n').filter(line => line.trim().length > 0);
+  }
+
+  saveContent(): void {
+    try {
+      const custId = this.customerService.activeCustomer()?.id || 'default';
+      localStorage.setItem(`task_force_exec_summary_${custId}`, JSON.stringify(this.content));
+      this.isSaved.set(true);
+      setTimeout(() => this.isSaved.set(false), 2500);
+    } catch (e) {
+      console.warn('Could not save to localStorage', e);
+    }
+  }
+
+  resetToDefault(): void {
+    const custName = this.activeCustomerName();
+    this.content = getDefaultExecutiveData(custName);
+    this.saveContent();
+  }
+
+  private loadSavedContent(): void {
+    try {
+      const custId = this.customerService.activeCustomer()?.id || 'default';
+      const custName = this.activeCustomerName();
+      const raw = localStorage.getItem(`task_force_exec_summary_${custId}`);
+      if (raw) {
+        this.content = JSON.parse(raw);
+      } else {
+        this.content = getDefaultExecutiveData(custName);
+      }
+    } catch (e) {
+      this.content = getDefaultExecutiveData(this.activeCustomerName());
+    }
+  }
 
   async exportToPDF(): Promise<void> {
     if (this.isExporting()) return;
@@ -1061,7 +1250,6 @@ export class ReportsComponent {
         return;
       }
 
-      // Generate canvas from HTML with high scale for crystal clear PDF
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -1071,8 +1259,8 @@ export class ReportsComponent {
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width mm
-      const pageHeight = 297; // A4 height mm
+      const imgWidth = 210;
+      const pageHeight = 297;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
@@ -1087,16 +1275,13 @@ export class ReportsComponent {
         heightLeft -= pageHeight;
       }
 
-      pdf.save('ABC_Holding_Executive_Summary_Report.pdf');
+      const custName = this.activeCustomerName().replace(/\s+/g, '_');
+      pdf.save(`${custName}_Yonetici_Ozeti_Raporu.pdf`);
     } catch (error) {
       console.error('PDF export failed, fallback to print:', error);
       window.print();
     } finally {
       this.isExporting.set(false);
     }
-  }
-
-  refreshScores(): void {
-    // Quick refresh feedback
   }
 }

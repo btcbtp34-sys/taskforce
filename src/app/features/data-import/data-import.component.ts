@@ -40,7 +40,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               <p class="cat-desc">S/4HANA Boyutlandırma (QuickSizer), En Büyük 30 Tablo (DVM), FUE Lisans Analizi ve Sözleşme Envanteri</p>
               <div class="cat-screens-pill">
                 <span>Beslediği Ekranlar:</span>
-                <strong>Customer Summary • Sizing (Current/Target) • Largest Tables (DVM) • FUE / License • Executive Summary</strong>
+                <strong>Teknik Altyapı > Source (Current / Target) • En Büyük Tablolar (DVM) • SAP Lisans ve Bulut • Yönetici Özeti</strong>
               </div>
             </div>
           </div>
@@ -63,7 +63,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
               <p class="cat-desc">Canlı Arayüzler (Interfaces), Gönderen & Alıcı Dış Sistemler, SOAP / JDBC / RFC / REST Protokolleri</p>
               <div class="cat-screens-pill">
                 <span>Beslediği Ekranlar:</span>
-                <strong>Alt Yapı > Integration (Dinamik Ağ Mimarisi Şeması & Canlı Servisler Tablosu)</strong>
+                <strong>SAP Uygulamaları > Entegrasyon (Dinamik Ağ Mimarisi Şeması & Canlı Servisler Tablosu)</strong>
               </div>
             </div>
           </div>

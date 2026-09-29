@@ -219,23 +219,23 @@ export interface ThirdPartySystem {
           </button>
           <button class="btn btn-primary" routerLink="/business-case">
             <app-icon name="dollar" [size]="15" color="#ffffff"></app-icon>
-            <span>TCO & Finansal Model</span>
+            <span>Toplam Sahip Olma Maliyeti & Finansal Model</span>
           </button>
         </div>
       </div>
 
-      <!-- Navigation Tabs (3 Ana Kırılım) -->
+      <!-- Navigation Tabs (Sıralama: 1. Önerilen Yöntem, 2. Hedef Mimari, 3. Geçiş Yöntemleri) -->
       <div class="tab-navigation-card">
         <div class="nav-tabs-bar">
           <button 
             type="button" 
             class="tab-btn" 
-            [class.active]="activeTab() === 'methods'"
-            (click)="selectTab('methods')">
-            <app-icon name="shuffle" [size]="16" [color]="activeTab() === 'methods' ? '#0284c7' : '#64748b'"></app-icon>
+            [class.active]="activeTab() === 'recommended'"
+            (click)="selectTab('recommended')">
+            <app-icon name="sparkles" [size]="16" [color]="activeTab() === 'recommended' ? '#0284c7' : '#64748b'"></app-icon>
             <div class="tab-label-group">
-              <span class="tab-title">SAP Geçiş Yöntemleri</span>
-              <span class="tab-desc">Brownfield, Selective Data Transition & Strateji</span>
+              <span class="tab-title">1. Önerilen Yöntem</span>
+              <span class="tab-desc">Brownfield Yol Haritası, Fazlar & Süreç Modeli</span>
             </div>
           </button>
 
@@ -246,7 +246,7 @@ export interface ThirdPartySystem {
             (click)="selectTab('target-architecture')">
             <app-icon name="layers" [size]="16" [color]="activeTab() === 'target-architecture' ? '#0284c7' : '#64748b'"></app-icon>
             <div class="tab-label-group">
-              <span class="tab-title">Hedef Mimari & 3rd Partiler</span>
+              <span class="tab-title">2. Hedef Mimari</span>
               <span class="tab-desc">Mevcut (Solda) vs Hedef (Sağda) + Müşteri Entegrasyon Tablosu</span>
             </div>
           </button>
@@ -254,12 +254,12 @@ export interface ThirdPartySystem {
           <button 
             type="button" 
             class="tab-btn" 
-            [class.active]="activeTab() === 'recommended'"
-            (click)="selectTab('recommended')">
-            <app-icon name="sparkles" [size]="16" [color]="activeTab() === 'recommended' ? '#0284c7' : '#64748b'"></app-icon>
+            [class.active]="activeTab() === 'methods'"
+            (click)="selectTab('methods')">
+            <app-icon name="shuffle" [size]="16" [color]="activeTab() === 'methods' ? '#0284c7' : '#64748b'"></app-icon>
             <div class="tab-label-group">
-              <span class="tab-title">Önerilen Geçiş Yöntemi</span>
-              <span class="tab-desc">Brownfield Yol Haritası, Fazlar & Süreç Modeli</span>
+              <span class="tab-title">3. Geçiş Yöntemleri</span>
+              <span class="tab-desc">Brownfield, Selective Data Transition & Strateji</span>
             </div>
           </button>
         </div>
@@ -1987,7 +1987,7 @@ export class SolutionProposalComponent implements OnInit {
   route = inject(ActivatedRoute);
   router = inject(Router);
 
-  activeTab = signal<'methods' | 'target-architecture' | 'recommended'>('methods');
+  activeTab = signal<'methods' | 'target-architecture' | 'recommended'>('recommended');
   searchQuery = '';
   selectedCategory = signal<string>('TÜMÜ');
 
@@ -2368,12 +2368,12 @@ export class SolutionProposalComponent implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       const tab = params['tab'];
-      if (tab === 'target-architecture' || tab === 'hedef-mimari') {
-        this.activeTab.set('target-architecture');
-      } else if (tab === 'recommended' || tab === 'onerilen' || tab === 'onerilen-yontem') {
-        this.activeTab.set('recommended');
-      } else if (tab === 'methods' || tab === 'gecis-yontemleri') {
+      if (tab === 'methods' || tab === 'gecis-yontemleri') {
         this.activeTab.set('methods');
+      } else if (tab === 'target-architecture' || tab === 'hedef-mimari') {
+        this.activeTab.set('target-architecture');
+      } else {
+        this.activeTab.set('recommended');
       }
     });
   }

@@ -38,10 +38,62 @@
       </div>
     </div>
 
+    <!-- SAP Uygulamaları 4 Başlık Navigasyon Barı: Bulgularımız, Detaylı Analiz, Geliştirmeler, Entegrasyon -->
+    <div class="sap-apps-nav-tabs">
+      <button 
+        type="button" 
+        class="nav-tab-item" 
+        [class.active]="activeTab() === 'summary'"
+        (click)="setActiveTab('summary')">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span class="tab-label">Bulgularımız</span>
+        <span class="tab-pill">{{ severityCounts()['TÜMÜ'] }}</span>
+      </button>
 
+      <button 
+        type="button" 
+        class="nav-tab-item" 
+        [class.active]="activeTab() === 'detail'"
+        (click)="setActiveTab('detail')">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span class="tab-label">Detaylı Analiz</span>
+      </button>
+
+      <a 
+        routerLink="/development" 
+        class="nav-tab-item tab-link-item">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <span class="tab-label">Geliştirmeler</span>
+        <span class="tab-tag-hint">ABAP & Z Kod</span>
+      </a>
+
+      <a 
+        routerLink="/architecture-map" 
+        [queryParams]="{ mode: 'po' }" 
+        class="nav-tab-item tab-link-item">
+        <svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span class="tab-label">Entegrasyon</span>
+        <span class="tab-tag-hint">PO / BTP</span>
+      </a>
+    </div>
 
     <!-- ========================================================================= -->
-    <!-- SECTION 1: ÖZET (DASHBOARD) GÖRÜNÜMÜ                                      -->
+    <!-- SECTION 1: BULGULARIMIZ (ÖZET DASHBOARD) GÖRÜNÜMÜ                         -->
     <!-- ========================================================================= -->
     <div class="summary-view-section" *ngIf="activeTab() === 'summary'">
       

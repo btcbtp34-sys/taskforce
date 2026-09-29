@@ -31,88 +31,34 @@ import { IconComponent } from '../icon/icon.component';
       <nav class="sidebar-nav">
         <div class="nav-section-title" *ngIf="!collapsed">MENÜ</div>
 
-        <!-- 1. Executive Summary (Şimdilik en üstte, karar verilecek) -->
+        <!-- 1. Yönetici Özeti -->
         <a 
           routerLink="/reports" 
           routerLinkActive="active" 
           class="nav-item" 
-          [title]="collapsed ? 'Executive Summary' : ''">
+          [title]="collapsed ? 'Yönetici Özeti' : ''">
           <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#059669"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Executive Summary</span>
-          <span class="nav-badge" *ngIf="!collapsed">PDF</span>
+          <span class="nav-label" *ngIf="!collapsed">Yönetici Özeti</span>
+          <span class="nav-badge highlight" *ngIf="!collapsed">Özet</span>
         </a>
 
-        <!-- 4. Alt Yapı (Eski Basis/Infra - Expandable Group) -->
-        <div class="nav-group" [class.open]="basisExpanded">
-          <div 
-            class="nav-item group-header" 
-            [class.active]="isBasisActive()"
-            (click)="toggleBasis()"
-            [title]="collapsed ? 'Alt Yapı' : ''">
-            <div class="nav-icon"><app-icon name="database" [size]="17"></app-icon></div>
-            <span class="nav-label" *ngIf="!collapsed">Alt Yapı</span>
-            <div class="chevron-icon" *ngIf="!collapsed">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="basisExpanded ? 'rotate(90deg)' : 'none'">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Alt Kırılımlar (Sub Items) -->
-          <div class="nav-sub-list" *ngIf="basisExpanded && !collapsed">
-            <a 
-              routerLink="/architecture-map" 
-              [queryParams]="{ mode: 'asis' }" 
-              [class.sub-active]="isLandscapeActive()" 
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">Lanscape/Versiyon / EoS</span>
-            </a>
-
-            <a 
-              routerLink="/analytics" 
-              routerLinkActive="sub-active" 
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">FUE / License</span>
-            </a>
-
-            <a 
-              routerLink="/source-sizing" 
-              routerLinkActive="sub-active" 
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">Source (Current/Target)</span>
-            </a>
-
-            <a 
-              routerLink="/largest-tables" 
-              routerLinkActive="sub-active" 
-              class="sub-item">
-              <span class="sub-dot">•</span>
-              <span class="sub-text">Largest Table (DVM)</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- 5. SAP Uygulamaları (Expandable Group) -->
+        <!-- 2. SAP Uygulamaları (Expandable Group) -->
         <div class="nav-group" [class.open]="modulesExpanded">
           <div 
             class="nav-item group-header" 
             [class.active]="isModulesActive()"
-            (click)="navigateToModulesSummary($event)"
+            (click)="toggleModules()"
             [title]="collapsed ? 'SAP Uygulamaları' : ''">
             <div class="nav-icon"><app-icon name="sliders" [size]="17"></app-icon></div>
             <span class="nav-label" *ngIf="!collapsed">SAP Uygulamaları</span>
-            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleModules()">
+            <div class="chevron-icon" *ngIf="!collapsed">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="modulesExpanded ? 'rotate(90deg)' : 'none'">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </div>
           </div>
 
-          <!-- Alt Kırılımlar: Özet & Detay -->
+          <!-- Alt Kırılımlar: Bulgularımız, Detaylı Analiz, Geliştirmeler, Entegrasyon -->
           <div class="nav-sub-list" *ngIf="modulesExpanded && !collapsed">
             <a 
               (click)="navigateToModulesSummary($event)"
@@ -120,7 +66,7 @@ import { IconComponent } from '../icon/icon.component';
               class="sub-item"
               style="cursor: pointer;">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Özet</span>
+              <span class="sub-text">Bulgularımız</span>
             </a>
 
             <a 
@@ -129,36 +75,16 @@ import { IconComponent } from '../icon/icon.component';
               class="sub-item"
               style="cursor: pointer;">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Detay</span>
+              <span class="sub-text">Detaylı Analiz</span>
             </a>
-          </div>
-        </div>
 
-        <!-- 6. SAP Customization (Expandable Group) -->
-        <div class="nav-group" [class.open]="customizationExpanded">
-          <div 
-            class="nav-item group-header" 
-            [class.active]="isCustomizationActive()"
-            routerLink="/development"
-            [title]="collapsed ? 'SAP Customization' : ''">
-            <div class="nav-icon"><app-icon name="cpu" [size]="17"></app-icon></div>
-            <span class="nav-label" *ngIf="!collapsed">SAP Customization</span>
-            <div class="chevron-icon" *ngIf="!collapsed" (click)="$event.stopPropagation(); toggleCustomization()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="customizationExpanded ? 'rotate(90deg)' : 'none'">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Alt Kırılımlar (Sub Items) -->
-          <div class="nav-sub-list" *ngIf="customizationExpanded && !collapsed">
             <a 
               routerLink="/development" 
               routerLinkActive="sub-active" 
               [routerLinkActiveOptions]="{ exact: true }"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Custom Code (ABAP)</span>
+              <span class="sub-text">Geliştirmeler</span>
             </a>
 
             <a 
@@ -167,12 +93,88 @@ import { IconComponent } from '../icon/icon.component';
               [class.sub-active]="isIntegrationActive()" 
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Integration</span>
+              <span class="sub-text">Entegrasyon</span>
             </a>
           </div>
         </div>
 
-        <!-- 7. Çözüm Önerisi (Ayrı Menü Başlığı) -->
+        <!-- 3. SAP Lisans ve Bulut (Yeni Ana Menü) -->
+        <div class="nav-group" [class.open]="licenseExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isLicenseActive()"
+            (click)="toggleLicense()"
+            [title]="collapsed ? 'SAP Lisans ve Bulut' : ''">
+            <div class="nav-icon"><app-icon name="bolt" [size]="17" color="#059669"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">SAP Lisans ve Bulut</span>
+            <div class="chevron-icon" *ngIf="!collapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="licenseExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="nav-sub-list" *ngIf="licenseExpanded && !collapsed">
+            <a 
+              routerLink="/analytics" 
+              routerLinkActive="sub-active" 
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="sub-item">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">FUE Lisans Analizi</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 4. Teknik Altyapı (Eski Alt Yapı) -->
+        <div class="nav-group" [class.open]="basisExpanded">
+          <div 
+            class="nav-item group-header" 
+            [class.active]="isTeknikAltyapiActive()"
+            (click)="toggleBasis()"
+            [title]="collapsed ? 'Teknik Altyapı' : ''">
+            <div class="nav-icon"><app-icon name="database" [size]="17" color="#0284c7"></app-icon></div>
+            <span class="nav-label" *ngIf="!collapsed">Teknik Altyapı</span>
+            <div class="chevron-icon" *ngIf="!collapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="basisExpanded ? 'rotate(90deg)' : 'none'">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Alt Kırılımlar: Mevcut / Hedef Sistem, Sistem Ortamı / Sürüm / Destek Bitişi, En Büyük Tablolar (DVM) -->
+          <div class="nav-sub-list" *ngIf="basisExpanded && !collapsed">
+            <a 
+              routerLink="/source-sizing" 
+              routerLinkActive="sub-active" 
+              class="sub-item"
+              title="Mevcut / Hedef Sistem">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Mevcut / Hedef Sistem</span>
+            </a>
+
+            <a 
+              routerLink="/architecture-map" 
+              [queryParams]="{ mode: 'asis' }" 
+              [class.sub-active]="isLandscapeActive()" 
+              class="sub-item"
+              title="Sistem Ortamı / Sürüm / Destek Bitişi">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">Sistem Ortamı / Sürüm / Destek Bitişi</span>
+            </a>
+
+            <a 
+              routerLink="/largest-tables" 
+              routerLinkActive="sub-active" 
+              class="sub-item"
+              title="En Büyük Tablolar (DVM)">
+              <span class="sub-dot">•</span>
+              <span class="sub-text">En Büyük Tablolar (DVM)</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 5. Çözüm Önerisi (Sıralama: 1. Önerilen Yöntem, 2. Hedef Mimari, 3. Geçiş Yöntemleri) -->
         <div class="nav-group" [class.open]="solutionExpanded">
           <div 
             class="nav-item group-header" 
@@ -191,11 +193,11 @@ import { IconComponent } from '../icon/icon.component';
           <div class="nav-sub-list" *ngIf="solutionExpanded && !collapsed">
             <a 
               routerLink="/solution-proposal" 
-              [queryParams]="{ tab: 'methods' }" 
-              [class.sub-active]="isSolutionTabActive('methods')"
+              [queryParams]="{ tab: 'recommended' }" 
+              [class.sub-active]="isSolutionTabActive('recommended')"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">SAP Geçiş Yöntemleri</span>
+              <span class="sub-text">1. Önerilen Yöntem</span>
             </a>
 
             <a 
@@ -204,35 +206,24 @@ import { IconComponent } from '../icon/icon.component';
               [class.sub-active]="isSolutionTabActive('target-architecture')"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Hedef Mimari</span>
+              <span class="sub-text">2. Hedef Mimari</span>
             </a>
 
             <a 
               routerLink="/solution-proposal" 
-              [queryParams]="{ tab: 'recommended' }" 
-              [class.sub-active]="isSolutionTabActive('recommended')"
+              [queryParams]="{ tab: 'methods' }" 
+              [class.sub-active]="isSolutionTabActive('methods')"
               class="sub-item">
               <span class="sub-dot">•</span>
-              <span class="sub-text">Önerilen Geçiş Yöntemi</span>
+              <span class="sub-text">3. Geçiş Yöntemleri</span>
             </a>
           </div>
         </div>
 
-        <!-- 8. Customer Summary (Çözüm Önerisi Altında, TCO Üstünde) -->
-        <a 
-          routerLink="/dashboard" 
-          routerLinkActive="active" 
-          [routerLinkActiveOptions]="{ exact: true }" 
-          class="nav-item"
-          [title]="collapsed ? 'Customer Summary' : ''">
-          <div class="nav-icon"><app-icon name="dashboard" [size]="17" color="#0284c7"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Customer Summary</span>
-        </a>
-
-        <!-- 9. TCO -->
-        <a routerLink="/business-case" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'TCO' : ''">
+        <!-- 6. Toplam Sahip Olma Maliyeti (TCO) -->
+        <a routerLink="/business-case" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Toplam Sahip Olma Maliyeti' : ''">
           <div class="nav-icon"><app-icon name="dollar" [size]="17"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">TCO</span>
+          <span class="nav-label" *ngIf="!collapsed">Toplam Sahip Olma Maliyeti</span>
         </a>
 
         <!-- Section: Hızlı İşlemler -->
@@ -258,7 +249,7 @@ import { IconComponent } from '../icon/icon.component';
     }
 
     .sidebar-container {
-      width: 240px;
+      width: 272px;
       height: 100vh;
       background: #ffffff;
       color: #374151;
@@ -373,9 +364,9 @@ import { IconComponent } from '../icon/icon.component';
       }
 
       .nav-label {
-        white-space: nowrap;
+        white-space: normal;
+        line-height: 1.35;
         overflow: hidden;
-        text-overflow: ellipsis;
       }
 
       .chevron-icon {
@@ -423,7 +414,7 @@ import { IconComponent } from '../icon/icon.component';
     .nav-sub-list {
       display: flex;
       flex-direction: column;
-      padding-left: 1.85rem;
+      padding-left: 1.75rem;
       margin: 0.15rem 0 0.35rem;
       gap: 0.15rem;
       position: relative;
@@ -441,9 +432,9 @@ import { IconComponent } from '../icon/icon.component';
 
     .sub-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 0.45rem;
-      padding: 0.32rem 0.5rem;
+      padding: 0.35rem 0.5rem;
       color: #6b7280;
       text-decoration: none;
       font-size: 0.77rem;
@@ -454,13 +445,14 @@ import { IconComponent } from '../icon/icon.component';
       .sub-dot {
         color: #9ca3af;
         font-size: 0.9rem;
-        line-height: 1;
+        line-height: 1.25;
+        margin-top: 1px;
       }
 
       .sub-text {
-        white-space: nowrap;
+        white-space: normal;
+        line-height: 1.35;
         overflow: hidden;
-        text-overflow: ellipsis;
       }
 
       &:hover {
@@ -483,25 +475,25 @@ export class SidebarComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
 
   router = inject(Router);
-  basisExpanded = true;
   modulesExpanded = true;
+  licenseExpanded = true;
+  basisExpanded = true;
   solutionExpanded = true;
-  customizationExpanded = true;
-
-  toggleBasis(): void {
-    this.basisExpanded = !this.basisExpanded;
-  }
 
   toggleModules(): void {
     this.modulesExpanded = !this.modulesExpanded;
   }
 
-  toggleSolution(): void {
-    this.solutionExpanded = !this.solutionExpanded;
+  toggleLicense(): void {
+    this.licenseExpanded = !this.licenseExpanded;
   }
 
-  toggleCustomization(): void {
-    this.customizationExpanded = !this.customizationExpanded;
+  toggleBasis(): void {
+    this.basisExpanded = !this.basisExpanded;
+  }
+
+  toggleSolution(): void {
+    this.solutionExpanded = !this.solutionExpanded;
   }
 
   navigateToModulesSummary(event?: Event): void {
@@ -520,34 +512,34 @@ export class SidebarComponent {
 
   isModulesActive(): boolean {
     const url = this.router.url;
-    return url.includes('/modules') || url.includes('/moduller') || url.includes('/sap-uygulamalari');
+    return url.includes('/modules') || url.includes('/moduller') || url.includes('/sap-uygulamalari') || url.includes('/development') || (url.includes('architecture-map') && url.includes('mode=po'));
   }
 
   isModulesSummaryActive(): boolean {
-    if (!this.isModulesActive()) return false;
+    if (!this.router.url.includes('/modules')) return false;
     return this.router.url.includes('tab=summary') || (!this.router.url.includes('tab=detail'));
   }
 
   isModulesDetailActive(): boolean {
-    if (!this.isModulesActive()) return false;
+    if (!this.router.url.includes('/modules')) return false;
     return this.router.url.includes('tab=detail');
   }
 
-  isBasisActive(): boolean {
+  isLicenseActive(): boolean {
+    const url = this.router.url;
+    return url.includes('/analytics') || url.includes('/sap-lisans-bulut') || url.includes('/fue');
+  }
+
+  isTeknikAltyapiActive(): boolean {
     const url = this.router.url;
     const isPo = url.includes('architecture-map') && url.includes('mode=po');
     if (isPo) return false;
-    return url.includes('architecture-map') || (url.includes('analytics') && !url.includes('category')) || url.includes('source-sizing') || url.includes('largest-tables');
+    return url.includes('source-sizing') || url.includes('largest-tables') || (url.includes('architecture-map') && !url.includes('mode=po'));
   }
 
   isLandscapeActive(): boolean {
     const url = this.router.url;
     return url.includes('architecture-map') && (url.includes('mode=asis') || (!url.includes('mode=po') && !url.includes('mode=rise')));
-  }
-
-  isCustomizationActive(): boolean {
-    const url = this.router.url;
-    return url.includes('/development') || (url.includes('architecture-map') && url.includes('mode=po'));
   }
 
   isIntegrationActive(): boolean {
@@ -562,8 +554,8 @@ export class SidebarComponent {
 
   isSolutionTabActive(tab: string): boolean {
     if (!this.isSolutionActive()) return false;
-    if (tab === 'methods') {
-      return this.router.url.includes('tab=methods') || (!this.router.url.includes('tab=target-architecture') && !this.router.url.includes('tab=recommended'));
+    if (tab === 'recommended') {
+      return this.router.url.includes('tab=recommended') || (!this.router.url.includes('tab=target-architecture') && !this.router.url.includes('tab=methods'));
     }
     return this.router.url.includes('tab=' + tab);
   }

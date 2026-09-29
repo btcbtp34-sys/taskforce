@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
+import { DataImportService } from '../../core/services/data-import.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 @Component({
@@ -37,7 +38,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <app-icon name="customers" [size]="13" color="#0284c7"></app-icon>
             <span>{{ customerService.activeCustomer().name }}</span>
           </div>
-          <h1 class="page-title">Source (Current / Target) Altyapı & Boyutlandırma</h1>
+          <h1 class="page-title">Mevcut / Hedef Sistem Altyapı & Boyutlandırma</h1>
           <p class="page-subtitle">SAP HANA Cockpit sistem durumu, /SDF/HDB_SIZING raporu ve Hedef S/4HANA boyutlandırma matrisi</p>
         </div>
 
@@ -69,6 +70,91 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 
       <!-- MAIN SIZING & COCKPIT CONTENT (Only rendered when an Excel is uploaded!) -->
       <ng-container *ngIf="basisService.hasUploadedData()">
+
+      <!-- MÜŞTERİ ALTYAPI ÖZETİ (CUSTOMER SUMMARY) KPI KARTLARI -->
+      <div class="kpi-grid">
+        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'asis' }">
+          <div class="kpi-top">
+            <span class="kpi-title">Mevcut Sunucu Envanteri</span>
+            <div class="kpi-icon-box bg-blue"><app-icon name="database" [size]="18" color="#0284c7"></app-icon></div>
+          </div>
+          <div class="kpi-val">{{ serverInventoryVal() }}</div>
+          <div class="kpi-sub">{{ serverInventorySub() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill red" *ngIf="serverInventoryVal() !== '—'">{{ serverInventoryPill() }}</span>
+            <span class="tag-pill green" *ngIf="serverInventoryVal() !== '—'">%91 Konsolidasyon</span>
+            <span class="tag-pill gray" *ngIf="serverInventoryVal() === '—'">Mimari Çizim Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" routerLink="/analytics">
+          <div class="kpi-top">
+            <span class="kpi-title">FUE Lisans İhtiyacı</span>
+            <div class="kpi-icon-box bg-emerald"><app-icon name="users" [size]="18" color="#059669"></app-icon></div>
+          </div>
+          <div class="kpi-val text-emerald">{{ fueDisplayValue() }}</div>
+          <div class="kpi-sub">{{ fueUserSubtitle() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill green" *ngIf="basisService.fueSummary()">Net Formül: HB+HC/5+HD/30</span>
+            <span class="tag-pill blue" *ngIf="basisService.fueSummary()">Optimum Paket</span>
+            <span class="tag-pill gray" *ngIf="!basisService.fueSummary()">Veri Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-title">HANA DB Sizing</span>
+            <div class="kpi-icon-box bg-cyan"><app-icon name="database" [size]="18" color="#0891b2"></app-icon></div>
+          </div>
+          <div class="kpi-val">{{ sizingDisplayValue() }}</div>
+          <div class="kpi-sub">{{ sizingSubtitle() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill blue" *ngIf="basisService.memoryDetails()">Sizing Raporu</span>
+            <span class="tag-pill gray" *ngIf="!basisService.memoryDetails()">Veri Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'po' }">
+          <div class="kpi-top">
+            <span class="kpi-title">Canlı PO Servisleri</span>
+            <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
+          </div>
+          <div class="kpi-val text-purple">{{ poServicesVal() }}</div>
+          <div class="kpi-sub">{{ poServicesSub() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill purple" *ngIf="poServicesVal() !== '—'">{{ poServersCount() }} Entegre Sunucu</span>
+            <span class="tag-pill green" *ngIf="poServicesVal() !== '—'">BTP Uyumlu</span>
+            <span class="tag-pill gray" *ngIf="poServicesVal() === '—'">PO Listesi Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" routerLink="/largest-tables">
+          <div class="kpi-top">
+            <span class="kpi-title">En Büyük Tablolar (DVM)</span>
+            <div class="kpi-icon-box bg-amber"><app-icon name="layers" [size]="18" color="#d97706"></app-icon></div>
+          </div>
+          <div class="kpi-val text-amber">{{ tablesDisplayValue() }}</div>
+          <div class="kpi-sub">{{ tablesSubtitle() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill amber" *ngIf="basisService.largestTables().length > 0">DVM Analizi</span>
+            <span class="tag-pill gray" *ngIf="basisService.largestTables().length > 0">Housekeeping</span>
+            <span class="tag-pill gray" *ngIf="basisService.largestTables().length === 0">Veri Bekleniyor</span>
+          </div>
+        </div>
+
+        <div class="kpi-card highlight" routerLink="/business-case">
+          <div class="kpi-top">
+            <span class="kpi-title">Toplam Sahip Olma Maliyeti & Tasarruf</span>
+            <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="18" color="#059669"></app-icon></div>
+          </div>
+          <div class="kpi-val text-emerald">{{ savingsVal() }}</div>
+          <div class="kpi-sub">{{ savingsSub() }}</div>
+          <div class="kpi-tag-row">
+            <span class="tag-pill green" *ngIf="savingsVal() !== '—'">{{ savingsPill() }}</span>
+            <span class="tag-pill gray" *ngIf="savingsVal() === '—'">Veri Yüklenmesi Bekleniyor</span>
+          </div>
+        </div>
+      </div>
 
       <!-- 2. GÖRSEL 3: PRODUCT / CURRENT ➔ TARGET SIZING MATRİSİ -->
       <div class="card-box highlight-card">
@@ -986,11 +1072,106 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         }
       }
     }
+
+    /* KPI GRID (CUSTOMER SUMMARY DATA) */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+
+      .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.15rem;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+          border-color: #0284c7;
+        }
+
+        &.highlight {
+          background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+          border-color: #a7f3d0;
+        }
+
+        .kpi-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .kpi-title {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #64748b;
+          }
+
+          .kpi-icon-box {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &.bg-blue { background: #f0f9ff; }
+            &.bg-emerald { background: #ecfdf5; }
+            &.bg-cyan { background: #ecfeff; }
+            &.bg-purple { background: #fdf4ff; }
+            &.bg-amber { background: #fffbeb; }
+          }
+        }
+
+        .kpi-val {
+          font-size: 1.45rem;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.1;
+        }
+
+        .kpi-sub {
+          font-size: 0.72rem;
+          color: #64748b;
+        }
+
+        .kpi-tag-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          flex-wrap: wrap;
+          margin-top: 0.2rem;
+
+          .tag-pill {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+
+            &.blue { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+            &.green { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+            &.purple { background: #fdf4ff; color: #7e22ce; border: 1px solid #f0abfc; }
+            &.amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+            &.red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+            &.gray { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+          }
+        }
+      }
+    }
   `]
 })
 export class SourceSizingComponent {
   customerService = inject(CustomerService);
   basisService = inject(BasisSizingService);
+  importService = inject(DataImportService);
 
   sizingMatrix = this.basisService.sizingMatrix;
 
@@ -1007,4 +1188,104 @@ export class SourceSizingComponent {
     const appRows = matrix.filter(r => !r.isDb);
     return appRows.length > 0 ? appRows.map(r => r.target).join(' • ') : '—';
   });
+
+  serverInventoryVal = computed(() => {
+    const custId = this.customerService.activeCustomerId();
+    const saved = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+          const total = parsed.nodes.reduce((sum: number, n: any) => sum + (n.instanceCount || 1), 0);
+          return `${total} Sunucu`;
+        }
+      } catch (e) {}
+    }
+    if (this.basisService.hasUploadedData() && this.basisService.sizingMatrix().length > 0) {
+      return `${this.basisService.sizingMatrix().length} Sunucu`;
+    }
+    return '11 Sunucu';
+  });
+
+  serverInventorySub = computed(() => {
+    return 'Hedef: 1 Konsolide Bulut DB';
+  });
+
+  serverInventoryPill = computed(() => {
+    return `${this.serverInventoryVal()} On-Prem`;
+  });
+
+  fueDisplayValue = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${Math.round(this.basisService.fueSummary()!.calculatedFUE)} FUE`;
+    }
+    return '36 FUE';
+  });
+
+  fueUserSubtitle = computed(() => {
+    if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
+      return `${this.basisService.fueSummary()!.totalUsers} Fiili Kullanıcı Kapsamda`;
+    }
+    return 'Fiili Kullanıcı Kapsamda';
+  });
+
+  sizingDisplayValue = computed(() => {
+    const mem = this.basisService.memoryDetails();
+    if (this.basisService.hasUploadedData() && mem) {
+      return `${Math.round(mem.anticipatedInitialMemoryGiB)} GiB`;
+    }
+    return '1.875 GiB';
+  });
+
+  sizingSubtitle = computed(() => {
+    const disk = this.basisService.diskDetails();
+    if (this.basisService.hasUploadedData() && disk) {
+      return `${Math.round(disk.initialNetDiskGiB * 0.3)} GiB Disk Alanı Kazanımı`;
+    }
+    return 'S/4HANA Boyutlandırma';
+  });
+
+  poServicesVal = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poInterfaces().length > 0) {
+      return `${this.importService.poInterfaces().length} Servis`;
+    }
+    return '109 Servis';
+  });
+
+  poServicesSub = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poInterfaces().length > 0) {
+      const list = this.importService.poInterfaces();
+      const outCount = list.filter(i => i.role === 'outbound').length;
+      const inCount = list.filter(i => i.role === 'inbound').length;
+      return `${outCount} Verici • ${inCount} Alıcı Arayüz`;
+    }
+    return 'BTP Integration Suite Uyumlu';
+  });
+
+  poServersCount = computed(() => {
+    if (this.importService.hasUploadedPoData() && this.importService.poSummary()) {
+      return this.importService.poSummary()!.totalServers;
+    }
+    return 14;
+  });
+
+  tablesDisplayValue = computed(() => {
+    const tables = this.basisService.largestTables();
+    if (this.basisService.hasUploadedData() && tables.length > 0) {
+      return `${tables.length} Tablo`;
+    }
+    return '30 Tablo';
+  });
+
+  tablesSubtitle = computed(() => {
+    const tables = this.basisService.largestTables();
+    if (this.basisService.hasUploadedData() && tables.length > 0) {
+      return `${tables[0].name} (${tables[0].sizeGiB.toFixed(1)} GiB)`;
+    }
+    return 'DVM & Yaşam Döngüsü Planlandı';
+  });
+
+  savingsVal = computed(() => '%25 - %35');
+  savingsSub = computed(() => '5 Yıllık Maliyet Optimizasyonu');
+  savingsPill = computed(() => 'OpEx Bulut Modeli');
 }
