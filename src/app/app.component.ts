@@ -3,12 +3,21 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { SidebarComponent } from './shared/components/sidebar/sidebar.component';
 import { HeaderComponent } from './shared/components/header/header.component';
+import { QuickPdfExportModalComponent } from './shared/components/quick-pdf-export-modal/quick-pdf-export-modal.component';
+import { AddNoteModalComponent } from './shared/components/add-note-modal/add-note-modal.component';
 import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, SidebarComponent, HeaderComponent],
+  imports: [
+    CommonModule, 
+    RouterOutlet, 
+    SidebarComponent, 
+    HeaderComponent,
+    QuickPdfExportModalComponent,
+    AddNoteModalComponent
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

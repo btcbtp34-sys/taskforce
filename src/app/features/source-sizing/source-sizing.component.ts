@@ -114,20 +114,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
           </div>
         </div>
 
-        <div class="kpi-card" routerLink="/architecture-map" [queryParams]="{ mode: 'po' }">
-          <div class="kpi-top">
-            <span class="kpi-title">Canlı PO Servisleri</span>
-            <div class="kpi-icon-box bg-purple"><app-icon name="bolt" [size]="18" color="#7e22ce"></app-icon></div>
-          </div>
-          <div class="kpi-val text-purple">{{ poServicesVal() }}</div>
-          <div class="kpi-sub">{{ poServicesSub() }}</div>
-          <div class="kpi-tag-row">
-            <span class="tag-pill purple" *ngIf="poServicesVal() !== '—'">{{ poServersCount() }} Entegre Sunucu</span>
-            <span class="tag-pill green" *ngIf="poServicesVal() !== '—'">BTP Uyumlu</span>
-            <span class="tag-pill gray" *ngIf="poServicesVal() === '—'">PO Listesi Bekleniyor</span>
-          </div>
-        </div>
-
         <div class="kpi-card" routerLink="/largest-tables">
           <div class="kpi-top">
             <span class="kpi-title">En Büyük Tablolar (DVM)</span>
@@ -139,19 +125,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <span class="tag-pill amber" *ngIf="basisService.largestTables().length > 0">DVM Analizi</span>
             <span class="tag-pill gray" *ngIf="basisService.largestTables().length > 0">Housekeeping</span>
             <span class="tag-pill gray" *ngIf="basisService.largestTables().length === 0">Veri Bekleniyor</span>
-          </div>
-        </div>
-
-        <div class="kpi-card highlight" routerLink="/business-case">
-          <div class="kpi-top">
-            <span class="kpi-title">Toplam Sahip Olma Maliyeti & Tasarruf</span>
-            <div class="kpi-icon-box bg-emerald"><app-icon name="dollar" [size]="18" color="#059669"></app-icon></div>
-          </div>
-          <div class="kpi-val text-emerald">{{ savingsVal() }}</div>
-          <div class="kpi-sub">{{ savingsSub() }}</div>
-          <div class="kpi-tag-row">
-            <span class="tag-pill green" *ngIf="savingsVal() !== '—'">{{ savingsPill() }}</span>
-            <span class="tag-pill gray" *ngIf="savingsVal() === '—'">Veri Yüklenmesi Bekleniyor</span>
           </div>
         </div>
       </div>
@@ -1284,8 +1257,4 @@ export class SourceSizingComponent {
     }
     return 'DVM & Yaşam Döngüsü Planlandı';
   });
-
-  savingsVal = computed(() => '%25 - %35');
-  savingsSub = computed(() => '5 Yıllık Maliyet Optimizasyonu');
-  savingsPill = computed(() => 'OpEx Bulut Modeli');
 }

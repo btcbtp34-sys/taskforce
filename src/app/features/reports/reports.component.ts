@@ -4,9 +4,29 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
+import { NotesService } from '../../core/services/notes.service';
+import { QuickToolsService } from '../../core/services/quick-tools.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+
+export interface HeroPillarItem {
+  id: string;
+  icon: string;
+  name: string;
+  score: number;
+  colorClass: string;
+  desc: string;
+}
+
+export interface HeroScoreData {
+  matchScore: number;
+  matchLabel: string;
+  badgeText: string;
+  title: string;
+  description: string;
+  pillars: HeroPillarItem[];
+}
 
 export interface ObjectivePillar {
   id: string;
@@ -25,6 +45,7 @@ export interface HowPillar {
 }
 
 export interface ExecutiveSummaryData {
+  heroScore?: HeroScoreData;
   objectiveTitle: string;
   objectiveSubtitle: string;
   objectivePillars: ObjectivePillar[];
@@ -35,8 +56,61 @@ export interface ExecutiveSummaryData {
   preparedBy: string;
 }
 
+export function getDefaultHeroScore(customerName: string): HeroScoreData {
+  return {
+    matchScore: 84,
+    matchLabel: 'MATCH SKORU',
+    badgeText: 'RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN',
+    title: `${customerName} RISE Readiness & Bulut Uyum Analizi`,
+    description: `Mevcut SAP altyapısı, aktif kullanıcı profili, veritabanı boyutlandırması ve entegrasyon envanteri incelendiğinde; şirketiniz %84 genel bulut uyum skoru ile RISE with SAP Private Cloud dönüşümüne tam hazır durumdadır.`,
+    pillars: [
+      {
+        id: 'infra',
+        icon: 'database',
+        name: 'Altyapı Konsolidasyonu',
+        score: 91,
+        colorClass: 'blue',
+        desc: 'Dağınık Sunucular ➔ 1 S/4HANA Private Cloud DB'
+      },
+      {
+        id: 'license',
+        icon: 'users',
+        name: 'Lisans Optimizasyonu',
+        score: 85,
+        colorClass: 'emerald',
+        desc: 'FUE Lisanslama ile Atıl Lisans ve Aşım Riski Sıfırlanır'
+      },
+      {
+        id: 'integration',
+        icon: 'bolt',
+        name: 'Entegrasyon BTP Uyumu',
+        score: 82,
+        colorClass: 'purple',
+        desc: 'PO / AIF Servisleri SAP Integration Suite Uyumlu'
+      },
+      {
+        id: 'dvm',
+        icon: 'layers',
+        name: 'DVM & Bellek Tasarrufu',
+        score: 78,
+        colorClass: 'amber',
+        desc: 'Veri Arşivleme ile HANA Bellek İhtiyacı Optimize Edilir'
+      },
+      {
+        id: 'security',
+        icon: 'shield',
+        name: 'Destek & Güvenlik Riski',
+        score: 100,
+        colorClass: 'emerald',
+        desc: 'Eski Sürümler ve EoS Destek Sonu Riskleri Ortadan Kalkar'
+      }
+    ]
+  };
+}
+
 export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryData {
   return {
+    heroScore: getDefaultHeroScore(customerName),
     objectiveTitle: '1. Amaç: RISE with SAP ile Yeni Nesil Kurumsal Dönüşüm',
     objectiveSubtitle: `${customerName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`,
     objectivePillars: [
@@ -214,76 +288,126 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       <div class="report-content-container" #reportContainer id="reportContainer">
         
         <!-- ========================================================================= -->
-        <!-- SİSTEMDEN OTOMATİK GELEN BÖLÜM: SADECE RISE READINESS / MATCH SKORU      -->
+        <!-- SİSTEMDEN GELEN BÖLÜM: RISE READINESS / MATCH SKORU (DÜZENLENEBİLİR)    -->
         <!-- ========================================================================= -->
-        <div class="hero-score-card">
-          <div class="score-ring-section">
-            <div class="circular-score-badge">
-              <div class="score-number">{{ matchScoreText() }}</div>
-              <div class="score-label">MATCH SKORU</div>
+        @if (!isEditMode()) {
+          <div class="hero-score-card">
+            <div class="score-ring-section">
+              <div class="circular-score-badge">
+                <div class="score-number">%{{ content.heroScore?.matchScore || 84 }}</div>
+                <div class="score-label">{{ content.heroScore?.matchLabel || 'MATCH SKORU' }}</div>
+              </div>
+
+              <div class="score-ring-text">
+                <div class="status-pill-green">
+                  <app-icon name="check" [size]="13" color="#059669"></app-icon>
+                  <span>{{ content.heroScore?.badgeText || 'RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN' }}</span>
+                </div>
+                <h3>{{ content.heroScore?.title || (activeCustomerName() + ' RISE Readiness & Bulut Uyum Analizi') }}</h3>
+                <p>{{ content.heroScore?.description }}</p>
+              </div>
             </div>
 
-            <div class="score-ring-text">
-              <div class="status-pill-green">
-                <app-icon name="check" [size]="13" color="#059669"></app-icon>
-                <span>RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN</span>
-              </div>
-              <h3>{{ activeCustomerName() }} RISE Readiness & Bulut Uyum Analizi</h3>
-              <p>
-                Mevcut SAP altyapısı, aktif kullanıcı profili, veritabanı boyutlandırması ve entegrasyon envanteri incelendiğinde; 
-                şirketiniz <strong>{{ matchScoreText() }} genel bulut uyum skoru</strong> ile RISE with SAP Private Cloud dönüşümüne tam hazır durumdadır.
-              </p>
+            <!-- Pillar Match Breakdown Progress Bars -->
+            <div class="pillar-breakdown-grid">
+              @for (pillar of content.heroScore?.pillars; track pillar.id) {
+                <div class="pillar-item">
+                  <div class="p-head">
+                    <span class="p-name">
+                      <app-icon [name]="pillar.icon" [size]="14" [color]="getPillarColor(pillar.colorClass)"></app-icon>
+                      {{ pillar.name }}
+                    </span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [ngClass]="'bg-' + pillar.colorClass" [style.width.%]="pillar.score"></div>
+                  </div>
+                  <span class="p-desc">{{ pillar.desc }}</span>
+                </div>
+              }
             </div>
           </div>
-
-          <!-- Pillar Match Breakdown Progress Bars -->
-          <div class="pillar-breakdown-grid">
-            <div class="pillar-item">
-              <div class="p-head">
-                <span class="p-name"><app-icon name="database" [size]="14" color="#0284c7"></app-icon> Altyapı Konsolidasyonu</span>
-                <strong class="p-score text-blue">%91</strong>
+        } @else {
+          <!-- EDIT MODE ACTIVE: HERO SCORE CARD CAN BE EDITED -->
+          <div class="hero-score-card edit-active-hero">
+            <div class="score-ring-section">
+              <div class="circular-score-badge edit-badge-box">
+                <div class="edit-badge-input-group">
+                  <span class="pct">%</span>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    class="edit-hero-score-input" 
+                    [(ngModel)]="content.heroScore!.matchScore" 
+                    title="Match Skoru"
+                  />
+                </div>
+                <input 
+                  type="text" 
+                  class="edit-hero-label-input" 
+                  [(ngModel)]="content.heroScore!.matchLabel" 
+                  placeholder="MATCH SKORU"
+                />
               </div>
-              <div class="progress-bar"><div class="progress-fill bg-blue" style="width: 91%"></div></div>
-              <span class="p-desc">Dağınık Sunucular ➔ 1 S/4HANA Private Cloud DB</span>
+
+              <div class="score-ring-text edit-ring-text">
+                <div class="edit-field-group">
+                  <label class="edit-field-lbl">Durum Rozeti:</label>
+                  <input 
+                    type="text" 
+                    class="edit-input-hero-badge" 
+                    [(ngModel)]="content.heroScore!.badgeText" 
+                    placeholder="RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN" 
+                  />
+                </div>
+                
+                <div class="edit-field-group">
+                  <label class="edit-field-lbl">Ana Rapor Başlığı:</label>
+                  <input 
+                    type="text" 
+                    class="edit-input-hero-title" 
+                    [(ngModel)]="content.heroScore!.title" 
+                    placeholder="Başlık giriniz..." 
+                  />
+                </div>
+
+                <div class="edit-field-group">
+                  <label class="edit-field-lbl">Bulut Uyum Özeti / Açıklama:</label>
+                  <textarea 
+                    class="edit-textarea-hero-desc" 
+                    rows="2" 
+                    [(ngModel)]="content.heroScore!.description" 
+                    placeholder="Mevcut SAP altyapısı incelendiğinde..."></textarea>
+                </div>
+              </div>
             </div>
 
-            <div class="pillar-item">
-              <div class="p-head">
-                <span class="p-name"><app-icon name="users" [size]="14" color="#059669"></app-icon> Lisans Optimizasyonu</span>
-                <strong class="p-score text-emerald">%85</strong>
-              </div>
-              <div class="progress-bar"><div class="progress-fill bg-emerald" style="width: 85%"></div></div>
-              <span class="p-desc">FUE Lisanslama ile Atıl Lisans ve Aşım Riski Sıfırlanır</span>
-            </div>
-
-            <div class="pillar-item">
-              <div class="p-head">
-                <span class="p-name"><app-icon name="bolt" [size]="14" color="#7e22ce"></app-icon> Entegrasyon BTP Uyumu</span>
-                <strong class="p-score text-purple">%82</strong>
-              </div>
-              <div class="progress-bar"><div class="progress-fill bg-purple" style="width: 82%"></div></div>
-              <span class="p-desc">PO / AIF Servisleri SAP Integration Suite Uyumlu</span>
-            </div>
-
-            <div class="pillar-item">
-              <div class="p-head">
-                <span class="p-name"><app-icon name="layers" [size]="14" color="#d97706"></app-icon> DVM & Bellek Tasarrufu</span>
-                <strong class="p-score text-amber">%78</strong>
-              </div>
-              <div class="progress-bar"><div class="progress-fill bg-amber" style="width: 78%"></div></div>
-              <span class="p-desc">Veri Arşivleme ile HANA Bellek İhtiyacı Optimize Edilir</span>
-            </div>
-
-            <div class="pillar-item">
-              <div class="p-head">
-                <span class="p-name"><app-icon name="shield" [size]="14" color="#059669"></app-icon> Destek & Güvenlik Riski</span>
-                <strong class="p-score text-emerald">%100</strong>
-              </div>
-              <div class="progress-bar"><div class="progress-fill bg-emerald" style="width: 100%"></div></div>
-              <span class="p-desc">Eski Sürümler ve EoS Destek Sonu Riskleri Ortadan Kalkar</span>
+            <!-- Editable Pillar Breakdown Grid -->
+            <div class="pillar-breakdown-grid edit-pillar-grid">
+              @for (pillar of content.heroScore?.pillars; track pillar.id) {
+                <div class="pillar-item edit-pillar-item">
+                  <div class="p-head-edit">
+                    <input 
+                      type="text" 
+                      class="edit-pillar-name-input" 
+                      [(ngModel)]="pillar.name" 
+                      placeholder="Metrik Adı" 
+                    />
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [ngClass]="'bg-' + pillar.colorClass" [style.width.%]="pillar.score"></div>
+                  </div>
+                  <input 
+                    type="text" 
+                    class="edit-pillar-desc-input" 
+                    [(ngModel)]="pillar.desc" 
+                    placeholder="Açıklama / Alt Metin" 
+                  />
+                </div>
+              }
             </div>
           </div>
-        </div>
+        }
 
         <!-- ========================================================================= -->
         <!-- SATIŞ & PRESALES DÜZENLENEBİLİR İÇERİK: 1. AMAÇ                         -->
@@ -410,32 +534,6 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                 [(ngModel)]="item.note" 
                 placeholder="Alt vurgu notu" />
             </div>
-          </div>
-        </div>
-
-        <!-- ========================================================================= -->
-        <!-- PRESALES & SATIŞ MÜŞTERİYE ÖZEL NOTLAR VE İMZA                         -->
-        <!-- ========================================================================= -->
-        <div class="section-card notes-section">
-          <div class="notes-header">
-            <div class="nh-left">
-              <app-icon name="file-text" [size]="16" color="#475569"></app-icon>
-              <h4>Satış & Presales Değerlendirme Notu</h4>
-            </div>
-            <span class="nh-meta">Hazırlayan: {{ content.preparedBy }}</span>
-          </div>
-
-          <p class="notes-text" *ngIf="!isEditMode()">{{ content.salesNotes }}</p>
-          <textarea 
-            class="edit-textarea-notes" 
-            rows="3" 
-            *ngIf="isEditMode()" 
-            [(ngModel)]="content.salesNotes" 
-            placeholder="Presales ve Satış ekipleri müşteriye özel notlarını buraya girebilir..."></textarea>
-
-          <div class="edit-meta-row" *ngIf="isEditMode()">
-            <label class="edit-label">Hazırlayan Ekip:</label>
-            <input type="text" class="edit-input-author" [(ngModel)]="content.preparedBy" />
           </div>
         </div>
 
@@ -1155,6 +1253,387 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       }
     }
 
+    /* EDITABLE HERO SCORE CARD STYLES */
+    .edit-active-hero {
+      border: 2px dashed #0284c7 !important;
+      background: #f0fdf4 !important;
+
+      .edit-badge-box {
+        border-color: #0284c7 !important;
+        background: #f8fafc !important;
+      }
+
+      .edit-badge-input-group {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+
+        .pct {
+          font-size: 1.3rem;
+          font-weight: 800;
+          color: #059669;
+        }
+
+        .edit-hero-score-input {
+          width: 58px;
+          border: 1px solid #10b981;
+          border-radius: 6px;
+          padding: 2px 4px;
+          font-size: 1.45rem;
+          font-weight: 900;
+          color: #059669;
+          text-align: center;
+          background: #ffffff;
+        }
+      }
+
+      .edit-hero-label-input {
+        width: 84px;
+        margin-top: 4px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 2px;
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-align: center;
+        color: #475569;
+      }
+
+      .edit-ring-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+
+        .edit-field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+
+          .edit-field-lbl {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #0284c7;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+          }
+
+          .edit-input-hero-badge {
+            padding: 0.3rem 0.6rem;
+            border: 1px solid #a7f3d0;
+            background: #ffffff;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #059669;
+          }
+
+          .edit-input-hero-title {
+            padding: 0.35rem 0.6rem;
+            border: 1px solid #bae6fd;
+            background: #ffffff;
+            border-radius: 6px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #0f172a;
+          }
+
+          .edit-textarea-hero-desc {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #334155;
+            font-family: inherit;
+            line-height: 1.45;
+          }
+        }
+      }
+
+      .edit-pillar-grid {
+        border-color: #bae6fd !important;
+        background: #ffffff !important;
+      }
+
+      .edit-pillar-item {
+        gap: 0.4rem;
+
+        .p-head-edit {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+
+          .edit-pillar-name-input {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #0f172a;
+          }
+
+          .edit-score-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #0284c7;
+
+            .edit-pillar-score-input {
+              width: 36px;
+              border: 1px solid #0284c7;
+              border-radius: 4px;
+              padding: 2px 3px;
+              font-size: 0.72rem;
+              font-weight: 800;
+              text-align: right;
+            }
+          }
+        }
+
+        .edit-pillar-desc-input {
+          border: 1px solid #cbd5e1;
+          border-radius: 4px;
+          padding: 2px 4px;
+          font-size: 0.66rem;
+          color: #475569;
+        }
+      }
+    }
+
+    /* NOTES STREAM & TIMELINE STYLES */
+    .notes-count-pill {
+      padding: 0.15rem 0.5rem;
+      background: #e0f2fe;
+      color: #0284c7;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 9999px;
+    }
+
+    .nh-right {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+
+      .btn-popup-add-note {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        background: #0284c7;
+        border: 1px solid #0284c7;
+        border-radius: 6px;
+        color: #ffffff;
+        font-size: 0.76rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+          background: #0369a1;
+          border-color: #0369a1;
+        }
+      }
+
+      .btn-quick-tool-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.32rem 0.65rem;
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 6px;
+        color: #0284c7;
+        font-size: 0.74rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover {
+          background: #e0f2fe;
+        }
+      }
+    }
+
+    .notes-stream-exec {
+      margin: 1rem 0;
+
+      .empty-notes-prompt {
+        padding: 1.5rem;
+        text-align: center;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+
+        p {
+          font-size: 0.84rem;
+          color: #64748b;
+          margin-bottom: 0.75rem;
+        }
+
+        .btn-add-first-note {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 1rem;
+          background: #0284c7;
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+
+          &:hover {
+            background: #0369a1;
+          }
+        }
+      }
+
+      .notes-timeline-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .note-timeline-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+          .tl-bullet {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0284c7;
+            margin-top: 6px;
+            flex-shrink: 0;
+          }
+
+          .tl-content {
+            flex: 1;
+
+            .tl-meta {
+              display: flex;
+              align-items: center;
+              gap: 0.65rem;
+              margin-bottom: 0.35rem;
+
+              .tl-date {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                padding: 0.15rem 0.45rem;
+                background: #e0f2fe;
+                color: #0369a1;
+                font-size: 0.72rem;
+                font-weight: 700;
+                border-radius: 4px;
+              }
+
+              .tl-author {
+                font-size: 0.74rem;
+                color: #475569;
+                font-weight: 600;
+              }
+
+              .btn-del-note {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                padding: 2px;
+                margin-left: auto;
+                border-radius: 4px;
+
+                &:hover {
+                  background: #fee2e2;
+                }
+              }
+            }
+
+            .tl-text {
+              font-size: 0.84rem;
+              color: #1e293b;
+              line-height: 1.45;
+              white-space: pre-wrap;
+            }
+          }
+        }
+      }
+    }
+
+    .exec-add-note-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+
+      .add-note-inline-title {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #166534;
+      }
+
+      .add-note-inline-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        .author-inline-input {
+          padding: 0.35rem 0.65rem;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          max-width: 280px;
+        }
+
+        .note-textarea-wrap {
+          display: flex;
+          gap: 0.6rem;
+          align-items: flex-end;
+
+          .btn-inline-add {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem 1rem;
+            background: #059669;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+
+            &:hover:not(:disabled) {
+              background: #047857;
+            }
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+        }
+      }
+    }
+
     /* COLOR UTILITIES */
     .text-blue { color: #0284c7; }
     .text-emerald { color: #059669; }
@@ -1179,6 +1658,8 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
 export class ReportsComponent implements OnInit {
   customerService = inject(CustomerService);
   basisService = inject(BasisSizingService);
+  notesService = inject(NotesService);
+  quickToolsService = inject(QuickToolsService);
 
   isExporting = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
@@ -1189,8 +1670,11 @@ export class ReportsComponent implements OnInit {
   activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'Müşteri');
 
   matchScoreText = computed(() => {
-    return '%84';
+    return '%' + (this.content?.heroScore?.matchScore ?? 84);
   });
+
+  inlineNoteText = '';
+  inlineNoteAuthor = 'Satış & Presales Ekibi';
 
   @ViewChild('reportContainer') reportContainer!: ElementRef<HTMLDivElement>;
 
@@ -1200,6 +1684,28 @@ export class ReportsComponent implements OnInit {
 
   toggleEditMode(): void {
     this.isEditMode.update(v => !v);
+  }
+
+  getPillarColor(colorClass: string): string {
+    switch (colorClass) {
+      case 'blue': return '#0284c7';
+      case 'emerald': return '#059669';
+      case 'purple': return '#7e22ce';
+      case 'amber': return '#d97706';
+      default: return '#0284c7';
+    }
+  }
+
+  addInlineNote(): void {
+    if (!this.inlineNoteText.trim()) return;
+    this.notesService.addNote(this.inlineNoteText, this.inlineNoteAuthor);
+    this.inlineNoteText = '';
+  }
+
+  deleteNote(id: string): void {
+    if (confirm('Bu notu silmek istediğinize emin misiniz?')) {
+      this.notesService.deleteNote(id);
+    }
   }
 
   updateBullets(item: HowPillar, rawText: string): void {
@@ -1230,6 +1736,9 @@ export class ReportsComponent implements OnInit {
       const raw = localStorage.getItem(`task_force_exec_summary_${custId}`);
       if (raw) {
         this.content = JSON.parse(raw);
+        if (!this.content.heroScore || !this.content.heroScore.pillars || this.content.heroScore.pillars.length === 0) {
+          this.content.heroScore = getDefaultHeroScore(custName);
+        }
       } else {
         this.content = getDefaultExecutiveData(custName);
       }

@@ -94,15 +94,6 @@ const DEFAULT_RISE_ITEMS: { id: string; name: string; values: number[] }[] = [
           <div class="s-val text-blue">€{{ riseTotalAllYears() | number:'1.2-2' }}</div>
           <div class="s-sub">Bulut Lisansı, Altyapı & Dönüşüm Projesi</div>
         </div>
-
-        <div class="sum-card saving">
-          <div class="s-top">
-            <span class="s-lbl">{{ years().length }} Yıllık Net Maliyet Farkı / Bütçe</span>
-            <app-icon name="dollar" [size]="16" color="#059669"></app-icon>
-          </div>
-          <div class="s-val text-emerald">€{{ (asisTotalAllYears() - riseTotalAllYears() > 0 ? asisTotalAllYears() - riseTotalAllYears() : riseTotalAllYears() - asisTotalAllYears()) | number:'1.2-2' }}</div>
-          <div class="s-sub">Tümleşik Bulut Yönetimi & Sürekli İnovasyon</div>
-        </div>
       </div>
 
       <!-- Interactive Table 1: AS-IS On-Premise Costs -->
@@ -281,76 +272,6 @@ const DEFAULT_RISE_ITEMS: { id: string; name: string; values: number[] }[] = [
           <div class="gold-total-box">
             <span class="gt-lbl">{{ years().length }} YILLIK RISE WITH SAP TOPLAM:</span>
             <span class="gt-val">{{ riseTotalAllYears() | number:'1.2-2' }} €</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Interactive Table 3: SAVING / NET FARK -->
-      <div class="tco-section-card mt-4">
-        <div class="section-title-bar">
-          <div class="st-left">
-            <span class="table-num">3</span>
-            <h3>TASARRUF & TOPLAM SAHİP OLMA MALİYETİ FARK ANALİZİ</h3>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="tco-table saving-table">
-            <thead>
-              <tr class="tco-gold-header">
-                <th class="col-name">Kalem</th>
-                @for (yr of years(); track $index; let idx = $index; let isLast = $last) {
-                  <th class="col-year" [class.is-last-year]="isLast">
-                    <div class="year-header-cell" [class.last-cell]="isLast">
-                      <input 
-                        type="text" 
-                        class="header-year-input" 
-                        [ngModel]="yr" 
-                        (ngModelChange)="updateYear(idx, $event)" 
-                        [title]="(idx + 1) + '. Yılı değiştirmek için tıklayın'" />
-                      @if (isLast) {
-                        <div class="year-ctrl-btns">
-                          <button 
-                            *ngIf="years().length > 1" 
-                            type="button" 
-                            class="btn-year-del" 
-                            (click)="removeYear()" 
-                            title="En sağdaki yılı sil">✕</button>
-                          <button 
-                            type="button" 
-                            class="btn-year-add" 
-                            (click)="addYear()" 
-                            title="Sağa yeni yıl ekle">+</button>
-                        </div>
-                      }
-                    </div>
-                  </th>
-                }
-                <th class="col-total">{{ years().length }} Yıllık Net Durum</th>
-                <th class="col-action"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="cell-name font-bold text-emerald">YILLIK NET TASARRUF / FARK</td>
-                @for (yr of years(); track $index; let yIdx = $index) {
-                  <td class="cell-val font-bold" [class.text-red]="netDifference(yIdx) < 0" [class.text-emerald]="netDifference(yIdx) >= 0">
-                    {{ netDifference(yIdx) | number:'1.2-2' }}
-                  </td>
-                }
-                <td class="cell-row-total font-bold text-emerald">
-                  {{ totalDifference() | number:'1.2-2' }} €
-                </td>
-                <td class="cell-action"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="total-badge-box-container">
-          <div class="green-saving-box">
-            <span class="gt-lbl">{{ years().length }} YILLIK KÜMÜLATİF MALİYET FARKI:</span>
-            <span class="gt-val">{{ totalDifference() | number:'1.2-2' }} €</span>
           </div>
         </div>
       </div>

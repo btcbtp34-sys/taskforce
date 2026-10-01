@@ -15,6 +15,8 @@ import { LargestTablesComponent } from './features/largest-tables/largest-tables
 import { ModulesComponent } from './features/modules/modules.component';
 import { DevelopmentComponent } from './features/development/development.component';
 import { SolutionProposalComponent } from './features/solution-proposal/solution-proposal.component';
+import { ArchitectureGeneratorComponent } from './features/architecture-generator/architecture-generator.component';
+import { NotesComponent } from './features/notes/notes.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'reports', pathMatch: 'full' },
@@ -50,6 +52,12 @@ export const routes: Routes = [
   { path: 'customers', component: CustomerListComponent },
   { path: 'customers/:id', component: CustomerDetailComponent },
   { path: 'data-import', component: DataImportComponent },
+  { path: 'architecture-generator', component: ArchitectureGeneratorComponent },
+  { path: 'prompt-mimari', redirectTo: 'architecture-generator' },
+  { path: 'prompt-architecture', redirectTo: 'architecture-generator' },
+  { path: 'notes', component: NotesComponent },
+  { path: 'notlar', redirectTo: 'notes' },
+  { path: 'yorum-notlar', redirectTo: 'notes' },
   { path: 'opportunities', component: OpportunitiesComponent },
   { path: 'workspace', redirectTo: 'reports' },
   { path: 'ai-assistant', redirectTo: 'reports' },

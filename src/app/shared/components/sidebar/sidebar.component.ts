@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { IconComponent } from '../icon/icon.component';
+import { QuickToolsService } from '../../../core/services/quick-tools.service';
+import { NotesService } from '../../../core/services/notes.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -235,6 +237,27 @@ import { IconComponent } from '../icon/icon.component';
           <span class="nav-label" *ngIf="!collapsed">Veri Yükleme</span>
           <span class="nav-badge highlight" *ngIf="!collapsed">+ Excel</span>
         </a>
+
+        <!-- Prompt ile Mimari Çizici -->
+        <a routerLink="/architecture-generator" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Prompt ile Mimari Çizici' : ''">
+          <div class="nav-icon"><app-icon name="sparkles" [size]="17" color="#7c3aed"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Prompt ile Mimari Çizici</span>
+          <span class="nav-badge highlight-purple" *ngIf="!collapsed">AI</span>
+        </a>
+
+        <!-- Yorum ve Notlar -->
+        <a routerLink="/notes" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Notlar & Yorumlar' : ''">
+          <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#0284c7"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Notlar & Yorumlar</span>
+          <span class="nav-badge highlight-blue" *ngIf="!collapsed">{{ notesService.currentCustomerNotesCount() }} Not</span>
+        </a>
+
+        <!-- PDF İndir (Tüm Menüler) -->
+        <a (click)="quickToolsService.openPdfExport()" class="nav-item" style="cursor: pointer;" [title]="collapsed ? 'PDF İndir (Tüm Menüler)' : ''">
+          <div class="nav-icon"><app-icon name="download" [size]="17" color="#059669"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">PDF İndir</span>
+          <span class="nav-badge highlight-green" *ngIf="!collapsed">Tüm Menüler</span>
+        </a>
       </nav>
     </aside>
   `,
@@ -391,6 +414,24 @@ import { IconComponent } from '../icon/icon.component';
           color: #0284c7;
           border: 1px solid #bae6fd;
         }
+
+        &.highlight-purple {
+          background: #f5f3ff;
+          color: #7c3aed;
+          border: 1px solid #ddd6fe;
+        }
+
+        &.highlight-green {
+          background: #f0fdf4;
+          color: #166534;
+          border: 1px solid #bbf7d0;
+        }
+
+        &.highlight-blue {
+          background: #f0f9ff;
+          color: #0369a1;
+          border: 1px solid #bae6fd;
+        }
       }
 
       &:hover {
@@ -409,6 +450,8 @@ import { IconComponent } from '../icon/icon.component';
         .chevron-icon { color: #0284c7; }
       }
     }
+
+
 
     /* Sub Navigation */
     .nav-sub-list {
@@ -475,6 +518,8 @@ export class SidebarComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
 
   router = inject(Router);
+  quickToolsService = inject(QuickToolsService);
+  notesService = inject(NotesService);
   modulesExpanded = true;
   licenseExpanded = true;
   basisExpanded = true;
