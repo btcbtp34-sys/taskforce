@@ -9,7 +9,7 @@ export type IconName =
   | 'info' | 'dollar' | 'sliders' | 'file-text' | 'file-spreadsheet' 
   | 'arrow-right' | 'plus' | 'trash' | 'edit' | 'download' | 'play' 
   | 'map' | 'shield' | 'refresh' | 'chevron-right' | 'chevron-down' | 'message' | 'link'
-  | 'shuffle' | 'server' | 'check-circle' | 'x';
+  | 'shuffle' | 'server' | 'check-circle' | 'x' | 'calculator';
 
 @Component({
   selector: 'app-icon',
@@ -73,6 +73,7 @@ export type IconName =
         <g *ngSwitchCase="'server'"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></g>
         <g *ngSwitchCase="'check-circle'"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></g>
         <g *ngSwitchCase="'x'"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></g>
+        <g *ngSwitchCase="'calculator'"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"></path></g>
         <g *ngSwitchDefault><circle cx="12" cy="12" r="10"></circle></g>
       </ng-container>
     </svg>

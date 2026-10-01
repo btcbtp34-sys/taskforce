@@ -16,8 +16,37 @@ export class CustomerService {
   readonly activeCustomerId = this.activeCustomerIdSignal.asReadonly();
 
   readonly activeCustomer = computed(() => {
-    return this.customersSignal().find(c => c.id === this.activeCustomerIdSignal()) || this.customersSignal()[0];
+    const cust = this.customersSignal().find(c => c.id === this.activeCustomerIdSignal()) || this.customersSignal()[0];
+    if (cust && (cust.id === 'cust-sigorta' || (cust.name && (/k\*\*/i.test(cust.name) || cust.name.includes('*'))))) {
+      return {
+        ...cust,
+        name: 'Kale Endüstri Holding',
+        code: 'KEH'
+      };
+    }
+    return cust;
   });
+
+  getActiveCustomerCleanName(): string {
+    const cust = this.activeCustomer();
+    const name = cust?.name || '';
+    if (!name || name.includes('*') || /k\*\*/i.test(name) || cust?.id === 'cust-sigorta') {
+      return 'Kale Endüstri Holding';
+    }
+    return name;
+  }
+
+  cleanCustomerText(text?: string, fallbackName?: string): string {
+    if (!text) return '';
+    const cleanName = fallbackName || this.getActiveCustomerCleanName();
+    return text
+      .replace(/K\*\*\s*E\*\*\s*H\*\*/gi, cleanName)
+      .replace(/K\*\*\s*E\*\*/gi, cleanName)
+      .replace(/K\*\*/gi, cleanName)
+      .replace(/T\*\*\*A/gi, cleanName)
+      .replace(/F\*\*\*\*\*R/gi, cleanName)
+      .replace(/İ\*\s*H\*\*\*\*/gi, cleanName);
+  }
 
   readonly totalCustomerCount = computed(() => this.customersSignal().length);
   
@@ -34,6 +63,22 @@ export class CustomerService {
   );
 
   constructor() {
+    try {
+      const list = this.customersSignal();
+      let changed = false;
+      const sanitizedList = list.map(c => {
+        if (c.id === 'cust-sigorta' || (c.name && /k\*\*/i.test(c.name))) {
+          changed = true;
+          return { ...c, name: 'Kale Endüstri Holding', code: 'KEH' };
+        }
+        return c;
+      });
+      if (changed) {
+        this.customersSignal.set(sanitizedList);
+        this.saveCustomers(sanitizedList);
+      }
+    } catch (e) {}
+
     try {
       // Eski global ortak mimari çizim anahtarlarını temizle ve müşterileri birbirinden tamamen izole et
       ['taskforce_custom_arch_asis', 'taskforce_custom_arch_tobe', 'taskforce_custom_arch_rise'].forEach(k => {
@@ -63,9 +108,9 @@ export class CustomerService {
               return {
                 ...mock,
                 ...c,
-                name: mock.name,
+                name: (c.id === 'cust-sigorta' || mock.id === 'cust-sigorta') ? 'Kale Endüstri Holding' : mock.name,
                 sector: mock.sector,
-                code: mock.code,
+                code: (c.id === 'cust-sigorta' || mock.id === 'cust-sigorta') ? 'KEH' : mock.code,
                 contactPerson: mock.contactPerson,
                 email: mock.email,
                 phone: mock.phone,
@@ -73,6 +118,9 @@ export class CustomerService {
                 sapProducts: (c.sapProducts && c.sapProducts.length > 0) ? c.sapProducts : mock.sapProducts,
                 coreProblems: (c.coreProblems && c.coreProblems.length > 0) ? c.coreProblems : mock.coreProblems
               };
+            }
+            if (c.id === 'cust-sigorta' || (c.name && c.name.includes('*') && c.name.toLowerCase().includes('k'))) {
+              return { ...c, name: 'Kale Endüstri Holding', code: 'KEH' };
             }
             return c;
           });

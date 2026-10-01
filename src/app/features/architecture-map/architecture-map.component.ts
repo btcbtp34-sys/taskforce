@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, ElementRef, ViewChild, HostListene
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import html2canvas from 'html2canvas';
 import { CustomerService } from '../../core/services/customer.service';
 import { DataImportService } from '../../core/services/data-import.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
@@ -139,6 +140,11 @@ export interface ArchitectureEdge {
           <button class="btn btn-secondary" (click)="resetDiagram()" title="Düğümleri İlk Konumuna Getir">
             <app-icon name="refresh" [size]="15"></app-icon>
             <span>Haritayı Sıfırla</span>
+          </button>
+
+          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="PO Entegrasyon mimari çizimini ve ekran görüntüsünü tarayıcıya kaydet">
+            <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+            <span>Çizimi Kaydet</span>
           </button>
 
           <button class="btn btn-primary" (click)="exportDiagram()" title="Entegrasyon Haritasını PNG Olarak İndir">
@@ -4423,6 +4429,11 @@ export class ArchitectureMapComponent {
     this.excelImportSuccess.set(false);
     this.cancelConnectingMode();
     this.loadDiagramForMode(mode);
+    setTimeout(() => {
+      if (this.nodes().length > 0) {
+        this.captureAndSaveScreenshot(true);
+      }
+    }, 450);
   }
 
   /* --- Interactive Studio: Node Modal & Presets --- */
@@ -4726,7 +4737,7 @@ export class ArchitectureMapComponent {
   }
 
   /* --- Interactive Studio: Persistence & Storage --- */
-  saveCustomLayout(): void {
+  async saveCustomLayout(): Promise<void> {
     const mode = this.architectureMode();
     const custId = this.customerService.activeCustomerId();
     const key = this.getStorageKey(mode);
@@ -4739,10 +4750,12 @@ export class ArchitectureMapComponent {
     };
     try {
       localStorage.setItem(key, JSON.stringify(data));
+      // Ekran görüntüsünü de sessizce kaydet — PDF raporu bu görüntüyü kullanır
+      await this.captureAndSaveScreenshot(true);
       const count = this.nodes().length;
       const edgeCount = this.currentEdges().length;
       const modeTitle = mode === 'asis' ? 'Mevcut Durum (AS-IS)' : (mode === 'rise' ? 'RISE with SAP' : 'PO Entegrasyon');
-      this.showToast(`✓ Mimari çiziminiz (${modeTitle}) tarayıcıya (Local Storage) başarıyla kaydedildi! (${count} bileşen, ${edgeCount} bağlantı)`);
+      this.showToast(`✓ Mimari çiziminiz (${modeTitle}) ve ekran görüntüsü PDF için kaydedildi! (${count} bileşen, ${edgeCount} bağlantı)`);
     } catch (e) {
       console.error('Save diagram error', e);
       this.showToast('Çizim kaydedilirken bir hata oluştu.');
@@ -5001,7 +5014,67 @@ export class ArchitectureMapComponent {
     this.autoSave();
   }
 
-  exportDiagram(): void {
+  async captureAndSaveScreenshot(silent: boolean = false): Promise<string | null> {
+    if (!this.canvasRef?.nativeElement) return null;
+    try {
+      if (!silent) {
+        this.showToast('Ekrandaki mimari çizimin görüntüsü yakalanıyor...');
+      }
+
+      const canvasEl = this.canvasRef.nativeElement;
+      const canvas = await html2canvas(canvasEl, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        ignoreElements: (element) => {
+          return element.classList?.contains('canvas-floating-banner') ||
+                 element.classList?.contains('canvas-floating-toast') ||
+                 element.classList?.contains('canvas-controls');
+        }
+      });
+
+      // JPEG at 0.88 — net ve küçük boyutlu, PNG yerine kullan
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+      // Dedicated screenshot keys — Çözüm Önerisi upload keylerini kirletmez
+      const custId = this.customerService.activeCustomerId();
+      const mode = this.architectureMode();
+      localStorage.setItem(`taskforce_arch_ss_${mode}_${custId}`, dataUrl);
+      if (custId === 'cust-sigorta') {
+        localStorage.setItem(`taskforce_arch_ss_${mode}_cust-sigorta`, dataUrl);
+      }
+      localStorage.setItem(`taskforce_arch_ss_${mode}`, dataUrl);
+
+      if (!silent) {
+        this.showToast('✓ Ekran görüntüsü PDF için kaydedildi!');
+      }
+      return dataUrl;
+    } catch (err) {
+      console.error('Screenshot capture failed', err);
+      if (!silent) {
+        this.showToast('Ekran görüntüsü alınırken bir hata oluştu.');
+      }
+      return null;
+    }
+  }
+
+  async exportDiagram(): Promise<void> {
+    try {
+      const dataUrl = await this.captureAndSaveScreenshot(true);
+      if (dataUrl) {
+        const link = document.createElement('a');
+        link.download = `${this.customerService.activeCustomer().name}_${this.architectureMode()}_Mimari_Cizim.png`;
+        link.href = dataUrl;
+        link.click();
+        this.showToast('✓ Ekrandaki mimari çizim yüksek çözünürlüklü PNG olarak indirildi.');
+        return;
+      }
+    } catch (e) {
+      console.warn('Screenshot export failed, fallback to 2d canvas', e);
+    }
+
+    // Fallback 2D canvas export if html2canvas fails
     const canvas = document.createElement('canvas');
     canvas.width = 1000;
     canvas.height = 650;

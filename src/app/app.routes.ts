@@ -17,6 +17,7 @@ import { DevelopmentComponent } from './features/development/development.compone
 import { SolutionProposalComponent } from './features/solution-proposal/solution-proposal.component';
 import { ArchitectureGeneratorComponent } from './features/architecture-generator/architecture-generator.component';
 import { NotesComponent } from './features/notes/notes.component';
+import { RiseScoreComponent } from './features/rise-score/rise-score.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'reports', pathMatch: 'full' },
@@ -58,6 +59,10 @@ export const routes: Routes = [
   { path: 'notes', component: NotesComponent },
   { path: 'notlar', redirectTo: 'notes' },
   { path: 'yorum-notlar', redirectTo: 'notes' },
+  { path: 'rise-score', component: RiseScoreComponent },
+  { path: 'rise-skor-hesaplama', redirectTo: 'rise-score' },
+  { path: 'rise-calculator', redirectTo: 'rise-score' },
+  { path: 'rise-skoru', redirectTo: 'rise-score' },
   { path: 'opportunities', component: OpportunitiesComponent },
   { path: 'workspace', redirectTo: 'reports' },
   { path: 'ai-assistant', redirectTo: 'reports' },

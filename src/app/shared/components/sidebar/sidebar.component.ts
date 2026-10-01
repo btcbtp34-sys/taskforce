@@ -245,6 +245,13 @@ import { NotesService } from '../../../core/services/notes.service';
           <span class="nav-badge highlight-purple" *ngIf="!collapsed">AI</span>
         </a>
 
+        <!-- Rise Skor Hesaplama -->
+        <a routerLink="/rise-score" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Rise Skor Hesaplama' : ''">
+          <div class="nav-icon"><app-icon name="calculator" [size]="17" color="#d97706"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Rise Skor Hesaplama</span>
+          <span class="nav-badge highlight-amber" *ngIf="!collapsed">Skor</span>
+        </a>
+
         <!-- Notlar -->
         <a routerLink="/notes" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Notlar' : ''">
           <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#0284c7"></app-icon></div>
@@ -431,6 +438,12 @@ import { NotesService } from '../../../core/services/notes.service';
           background: #f0f9ff;
           color: #0369a1;
           border: 1px solid #bae6fd;
+        }
+
+        &.highlight-amber {
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
         }
       }
 

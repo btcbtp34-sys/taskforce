@@ -1,0 +1,260 @@
+<div class="rise-score-page">
+  <!-- Toast Notification -->
+  <div class="toast-alert" *ngIf="toastMessage()" role="alert">
+    <app-icon name="check-circle" [size]="16" color="#059669"></app-icon>
+    <span>{{ toastMessage() }}</span>
+  </div>
+
+  <!-- Header Section -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumbs">
+        <span>Hızlı Araçlar</span>
+        <span class="crumb-separator">/</span>
+        <span class="crumb-current">Rise Skor Hesaplama</span>
+      </div>
+      <div class="title-row">
+        <div class="title-icon-badge">
+          <app-icon name="calculator" [size]="22" color="#d97706"></app-icon>
+        </div>
+        <div>
+          <h1 class="page-title">Rise Skor Hesaplama</h1>
+          <p class="page-subtitle">
+            SAP RISE with S/4HANA dönüşüm uygunluk, mimari karmaşıklık ve öncelik skorlama motoru.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="header-top-row">
+        <div class="customer-pill">
+          <app-icon name="user" [size]="14" color="#0284c7"></app-icon>
+          <span>Müşteri:</span>
+          <strong>{{ customerService.activeCustomer().name }}</strong>
+        </div>
+
+        <!-- Sleek Score Badge -->
+        <div class="header-score-pill">
+          <span class="h-score-label">Toplam Skor:</span>
+          <strong class="h-score-val">{{ riseService.totalScore() }} Puan</strong>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <a routerLink="/reports" class="btn btn-reports" title="Yönetici Özetindeki Rise Skorunu Gör">
+          <app-icon name="file-text" [size]="14" color="#0284c7"></app-icon>
+          <span>Yönetici Özetine Git</span>
+        </a>
+
+        <button type="button" class="btn btn-primary" (click)="printPage()" title="Raporu yazdır veya PDF olarak kaydet">
+          <app-icon name="download" [size]="14" color="#ffffff"></app-icon>
+          <span>PDF / Yazdır</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter & Search Bar -->
+  <div class="controls-bar">
+    <div class="controls-left">
+      <span class="list-count-badge">{{ criteria.length }} Kriter</span>
+    </div>
+
+    <div class="search-and-toggle">
+      <div class="search-box">
+        <app-icon name="search" [size]="14" color="#94a3b8"></app-icon>
+        <input 
+          type="text" 
+          [ngModel]="searchQuery()" 
+          (ngModelChange)="searchQuery.set($event)" 
+          placeholder="Başlık veya seçenek ara..." 
+        />
+        <button *ngIf="searchQuery()" (click)="searchQuery.set('')" class="clear-search" title="Temizle">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FULL-WIDTH CLEAN LIST VIEW (Field Type Removed, Compact Dropdowns)         -->
+  <!-- ========================================================================= -->
+  <section class="criteria-list-container">
+    <div class="list-table-header">
+      <div class="col-header col-idx">#</div>
+      <div class="col-header col-info">Başlık &amp; Kriter</div>
+      <div class="col-header col-control">Seçim &amp; Puan Düzenleme</div>
+      <div class="col-header col-score">Puan</div>
+    </div>
+
+    <div class="list-rows-wrapper">
+      <div 
+        *ngFor="let c of criteria; let i = index; trackBy: trackByCriterion" 
+        class="criterion-list-row"
+      >
+        <!-- 1. Index Column -->
+        <div class="col-cell col-idx">
+          <span class="idx-badge">{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
+        </div>
+
+        <!-- 2. Header & Info Column -->
+        <div class="col-cell col-info">
+          <div class="title-with-tags">
+            <span class="category-pill">{{ c.category }}</span>
+          </div>
+          <h3 class="criterion-name">{{ c.title }}</h3>
+          <p class="criterion-desc" *ngIf="c.description">{{ c.description }}</p>
+        </div>
+
+        <!-- 3. Control & Accordion Point Editor Column -->
+        <div class="col-cell col-control">
+          <!-- DROPDOWN TYPE -->
+          <div *ngIf="c.type === 'dropdown'" class="dropdown-control-block">
+            <div class="select-row">
+              <div class="styled-select-wrap">
+                <select 
+                  class="styled-select" 
+                  [ngModel]="c.selectedOptionLabel" 
+                  (ngModelChange)="onDropdownSelect(c, $event)"
+                >
+                  <option *ngFor="let opt of c.options; trackBy: trackByOption" [value]="opt.label">
+                    {{ opt.label }} &nbsp; ({{ opt.points }} Puan)
+                  </option>
+                </select>
+                <span class="select-chevron">▼</span>
+              </div>
+            </div>
+
+            <!-- Accordion Button to Edit Option Points -->
+            <div class="accordion-control-area">
+              <button 
+                type="button" 
+                class="btn-accordion-toggle" 
+                (click)="togglePointsEditor(c.id)"
+                [class.btn-accordion-active]="isEditorOpen(c.id)"
+              >
+                <app-icon name="sliders" [size]="12"></app-icon>
+                <span>Puanları Değiştir</span>
+                <span class="acc-chevron" [class.rotate]="isEditorOpen(c.id)">▼</span>
+              </button>
+
+              <!-- Collapsible Accordion Drawer -->
+              <div class="accordion-drawer" *ngIf="isEditorOpen(c.id)">
+                <div class="chips-list">
+                  <div 
+                    *ngFor="let opt of c.options; trackBy: trackByOption" 
+                    class="point-chip"
+                    [class.chip-active]="opt.label === c.selectedOptionLabel"
+                    (click)="onDropdownSelect(c, opt.label)"
+                    title="Tıklayarak seçin veya kutudan puanı güncelleyin"
+                  >
+                    <span class="chip-name">{{ opt.label }}:</span>
+                    <div class="chip-input-wrap" (click)="$event.stopPropagation()">
+                      <input 
+                        type="number" 
+                        class="chip-input" 
+                        [value]="opt.points" 
+                        (change)="onOptionPointChange(c, opt, $event)"
+                      />
+                      <span class="chip-unit">p</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RADIO BUTTON TYPE -->
+          <div *ngIf="c.type === 'radio'" class="radio-control-block">
+            <div class="radio-buttons-row">
+              <!-- Radio: Evet / Var -->
+              <label 
+                class="radio-btn-card" 
+                [class.checked]="c.radioValue === true"
+                (click)="onRadioChange(c, true)"
+              >
+                <input 
+                  type="radio" 
+                  [name]="'list_radio_' + c.id" 
+                  [checked]="c.radioValue === true" 
+                  (change)="onRadioChange(c, true)"
+                />
+                <span class="r-text">Evet / Var</span>
+              </label>
+
+              <!-- Radio: Hayır / Yok -->
+              <label 
+                class="radio-btn-card" 
+                [class.checked]="c.radioValue === false"
+                (click)="onRadioChange(c, false)"
+              >
+                <input 
+                  type="radio" 
+                  [name]="'list_radio_' + c.id" 
+                  [checked]="c.radioValue === false" 
+                  (change)="onRadioChange(c, false)"
+                />
+                <span class="r-text">Hayır / Yok</span>
+              </label>
+            </div>
+
+            <!-- Accordion Button to Edit Radio Points -->
+            <div class="accordion-control-area">
+              <button 
+                type="button" 
+                class="btn-accordion-toggle" 
+                (click)="togglePointsEditor(c.id)"
+                [class.btn-accordion-active]="isEditorOpen(c.id)"
+              >
+                <app-icon name="sliders" [size]="12"></app-icon>
+                <span>Puanı Değiştir</span>
+                <span class="acc-chevron" [class.rotate]="isEditorOpen(c.id)">▼</span>
+              </button>
+
+              <!-- Collapsible Accordion Drawer -->
+              <div class="accordion-drawer" *ngIf="isEditorOpen(c.id)">
+                <div class="radio-editable-box">
+                  <span class="box-lbl">Kriter Puan Katsayısı:</span>
+                  <div class="input-pts-wrap">
+                    <input 
+                      type="number" 
+                      class="radio-pt-input" 
+                      [value]="c.radioPoints" 
+                      (change)="onRadioPointChange(c, $event)"
+                    />
+                    <span class="pts-text">Puan</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Score Column (Without 'Katkı' text) -->
+        <div class="col-cell col-score">
+          <div class="score-pill-box" [class.score-zero]="getSelectedPoint(c) === 0">
+            <strong class="score-val">+{{ getSelectedPoint(c) }}</strong>
+            <span class="score-unit">Puan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- List Summary Footer -->
+    <div class="list-footer-card">
+      <div class="lf-left">
+        <span class="sync-check">
+          <app-icon name="check-circle" [size]="16" color="#059669"></app-icon>
+          Seçimler ve puanlar <strong>Yönetici Özeti</strong> Rise Skoruna (%{{ riseService.matchScoreForExec() }}) otomatik yansıtılır.
+        </span>
+      </div>
+      <div class="lf-right">
+        <span class="lf-total-label">Toplam Rise Skoru:</span>
+        <span class="lf-total-number">{{ riseService.totalScore() }} Puan</span>
+        <a routerLink="/reports" class="btn btn-primary btn-sm">
+          <span>Yönetici Özetinde Göster</span>
+          <app-icon name="arrow-right" [size]="13" color="#ffffff"></app-icon>
+        </a>
+      </div>
+    </div>
+  </section>
+</div>

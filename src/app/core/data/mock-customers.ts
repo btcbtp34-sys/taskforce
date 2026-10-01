@@ -37,8 +37,8 @@ export const MOCK_CUSTOMERS: Customer[] = [
   },
   {
     id: 'cust-sigorta',
-    name: 'K** E** H**',
-    code: 'K** E** H**',
+    name: 'Kale Endüstri Holding',
+    code: 'KEH',
     sector: '',
     sapUserCount: 450,
     activeUserCount: 380,

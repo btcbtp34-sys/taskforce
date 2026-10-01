@@ -5,7 +5,8 @@ import { QuickToolsService } from '../../../core/services/quick-tools.service';
 import { CustomerService } from '../../../core/services/customer.service';
 import { BasisSizingService } from '../../../core/services/basis-sizing.service';
 import { NotesService } from '../../../core/services/notes.service';
-import { ModullerService } from '../../../core/services/moduller.service';
+import { ModullerService, ModuleCard } from '../../../core/services/moduller.service';
+import { DataImportService } from '../../../core/services/data-import.service';
 import { IconComponent } from '../icon/icon.component';
 import { 
   DEFAULT_CUSTOM_CODE_ITEMS, 
@@ -24,6 +25,24 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const DEFAULT_ASIS_ITEMS: { id: string; name: string; values: number[] }[] = [
+  { id: 'a1', name: 'Existing Maintenance', values: [80000, 80000, 80000, 80000, 80000] },
+  { id: 'a2', name: 'Additional License (S/4 Transformation)', values: [0, 10000, 0, 0, 0] },
+  { id: 'a3', name: 'Additional Maintenance', values: [0, 0, 0, 0, 0] },
+  { id: 'a4', name: 'Infra/Hosting', values: [36000, 36000, 36000, 36000, 36000] },
+  { id: 'a5', name: 'Infra Extensions', values: [0, 0, 0, 0, 0] },
+  { id: 'a6', name: 'Disaster Recovery', values: [10000, 10000, 10000, 10000, 10000] },
+  { id: 'a7', name: 'Security', values: [2000, 2000, 2000, 2000, 2000] },
+  { id: 'a8', name: 'Basis/Upgrade', values: [36000, 136000, 36000, 36000, 36000] },
+  { id: 'a9', name: 'Innovation Cost (AI, Sustainability etc.)', values: [50000, 50000, 50000, 50000, 50000] }
+];
+
+const DEFAULT_RISE_ITEMS: { id: string; name: string; values: number[] }[] = [
+  { id: 'r1', name: 'RISE Fee', values: [500000, 400000, 400000, 400000, 400000] },
+  { id: 'r2', name: 'RISE Fund', values: [0, 0, 0, 0, 0] },
+  { id: 'r3', name: 'Project / Implementation', values: [200000, 0, 0, 0, 0] }
+];
+
 export interface ReportMenuItem {
   id: string;
   name: string;
@@ -31,6 +50,9 @@ export interface ReportMenuItem {
   desc: string;
   icon: string;
   selected: boolean;
+  hasDrawing?: boolean;
+  captureScreenshot?: boolean;
+  drawingLabel?: string;
 }
 
 @Component({
@@ -50,7 +72,7 @@ export interface ReportMenuItem {
               <div>
                 <h3>Rapor İndir (PDF) - Kapsamlı Menü & Sayfa Seçimi</h3>
                 <span class="sub-text">
-                  <strong>{{ customerService.activeCustomer().name }}</strong> için PDF dokümanına dahil edilecek tüm menü ve sayfaları seçiniz.
+                  <strong>{{ getActiveCustomerCleanName() }}</strong> için PDF dokümanına dahil edilecek tüm menü ve sayfaları seçiniz.
                 </span>
               </div>
             </div>
@@ -82,23 +104,41 @@ export interface ReportMenuItem {
           <div class="menu-list-container">
             <div class="menu-grid">
               @for (item of menuItems; track item.id) {
-                <label class="menu-checkbox-card" [class.checked]="item.selected">
-                  <div class="checkbox-wrapper">
-                    <input 
-                      type="checkbox" 
-                      [(ngModel)]="item.selected" 
-                      (change)="onSelectionChange()" 
-                    />
-                  </div>
-                  <div class="menu-icon-box">
-                    <app-icon [name]="item.icon" [size]="17" [color]="item.selected ? '#0284c7' : '#64748b'"></app-icon>
-                  </div>
-                  <div class="menu-details">
-                    <div class="menu-group-tag">{{ item.group }}</div>
-                    <strong class="menu-name">{{ item.name }}</strong>
-                    <p class="menu-desc">{{ item.desc }}</p>
-                  </div>
-                </label>
+                <div class="menu-checkbox-card" [class.checked]="item.selected">
+                  <label class="card-main-row">
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox" 
+                        [(ngModel)]="item.selected" 
+                        (change)="onSelectionChange()" 
+                      />
+                    </div>
+                    <div class="menu-icon-box">
+                      <app-icon [name]="item.icon" [size]="17" [color]="item.selected ? '#0284c7' : '#64748b'"></app-icon>
+                    </div>
+                    <div class="menu-details">
+                      <div class="menu-group-tag">{{ item.group }}</div>
+                      <strong class="menu-name">{{ item.name }}</strong>
+                      <p class="menu-desc">{{ item.desc }}</p>
+                    </div>
+                  </label>
+
+                  @if (item.hasDrawing) {
+                    <div class="drawing-sub-option" [class.disabled]="!item.selected">
+                      <label class="drawing-sub-label" (click)="$event.stopPropagation()">
+                        <input 
+                          type="checkbox" 
+                          [(ngModel)]="item.captureScreenshot" 
+                          [disabled]="!item.selected"
+                        />
+                        <div class="sub-badge-content">
+                          <span class="sub-camera-badge">📸 Ekran Görüntüsü Al (SS)</span>
+                          <span class="sub-badge-desc">{{ item.drawingLabel }}</span>
+                        </div>
+                      </label>
+                    </div>
+                  }
+                </div>
               }
             </div>
           </div>
@@ -145,72 +185,6 @@ export interface ReportMenuItem {
       <div class="pdf-export-container" #exportContainer id="multiMenuPdfContainer">
         
         <!-- ========================================================================= -->
-        <!-- COVER / TITLE SECTION                                                     -->
-        <!-- ========================================================================= -->
-        <div class="pdf-page pdf-cover-page">
-          <div class="cover-top-bar">
-            <div class="brand">
-              <app-icon name="layers" [size]="24" color="#0284c7"></app-icon>
-              <span>TASK FORCE • SAP Opportunity Engine</span>
-            </div>
-            <div class="cover-date">{{ currentDateStr }}</div>
-          </div>
-
-          <div class="cover-body">
-            <div class="report-badge">KAPSAMLI KURUMSAL DÖNÜŞÜM & ANALİZ RAPORU</div>
-            <h1 class="cover-title">{{ customerService.activeCustomer().name }}</h1>
-            <h2 class="cover-sub">RISE with SAP S/4HANA Hazırlık, Sistem Mimarisi, Geçiş Yöntemleri ve Maliyet Değerlendirmesi</h2>
-
-            <div class="cover-meta-grid">
-              <div class="meta-item">
-                <span class="m-lbl">Müşteri / Kurum:</span>
-                <strong class="m-val">{{ customerService.activeCustomer().name }}</strong>
-              </div>
-              <div class="meta-item">
-                <span class="m-lbl">Sektör / İş Alanı:</span>
-                <strong class="m-val">{{ customerService.activeCustomer().sector || 'Kurumsal Üretim & Sanayi' }}</strong>
-              </div>
-              <div class="meta-item">
-                <span class="m-lbl">SAP Kullanıcı Sayısı:</span>
-                <strong class="m-val">{{ customerService.activeCustomer().sapUserCount }} Kullanıcı</strong>
-              </div>
-              <div class="meta-item">
-                <span class="m-lbl">Mevcut Veritabanı:</span>
-                <strong class="m-val">{{ basisService.systemInfo()?.dbType || 'Oracle / MS SQL' }} ({{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB)</strong>
-              </div>
-              <div class="meta-item">
-                <span class="m-lbl">Dönüşüm Modeli:</span>
-                <strong class="m-val">RISE with SAP Private Cloud Edition (PCE)</strong>
-              </div>
-              <div class="meta-item">
-                <span class="m-lbl">Hedef ERP Sürümü:</span>
-                <strong class="m-val">SAP S/4HANA Cloud, Private Edition</strong>
-              </div>
-            </div>
-
-            <!-- Table of Contents of selected items -->
-            <div class="toc-box">
-              <div class="toc-title">RAPOR KAPSAMI VE SEÇİLEN MENÜ SAYFALARI ({{ selectedCount() }})</div>
-              <div class="toc-items">
-                @for (item of selectedItems(); track item.id; let idx = $index) {
-                  <div class="toc-line">
-                    <span class="toc-num">{{ idx + 1 }}.</span>
-                    <span class="toc-name">{{ item.name }}</span>
-                    <span class="toc-group">[{{ item.group }}]</span>
-                    <span class="toc-dots">....................................................................................................</span>
-                    <span class="toc-badge">DAHİL</span>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="cover-footer">
-            <span>Bu rapor TASK FORCE SAP Analiz Motoru tarafından müşteri özel verilerine dayanılarak otomatik oluşturulmuştur.</span>
-          </div>
-        </div>
-
-        <!-- ========================================================================= -->
         <!-- 1. YÖNETİCİ ÖZETİ                                                         -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('reports')) {
@@ -226,11 +200,11 @@ export interface ReportMenuItem {
                 <div class="hsc-left">
                   <div class="circular-score-badge-pdf">
                     <div class="score-number">%{{ getExecutiveData().heroScore?.matchScore || 84 }}</div>
-                    <div class="score-label">{{ getExecutiveData().heroScore?.matchLabel || 'MATCH SKORU' }}</div>
+                    <div class="score-label">{{ getExecutiveData().heroScore?.matchLabel || 'RISE SKORU' }}</div>
                   </div>
                   <div class="score-text-pdf">
                     <div class="status-pill-green-pdf">✓ {{ getExecutiveData().heroScore?.badgeText || 'RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN' }}</div>
-                    <h3>{{ getExecutiveData().heroScore?.title || (customerService.activeCustomer().name + ' RISE Readiness & Bulut Uyum Analizi') }}</h3>
+                    <h3>{{ cleanCustomerText(getExecutiveData().heroScore?.title) || (getActiveCustomerCleanName() + ' RISE Readiness & Bulut Uyum Analizi') }}</h3>
                     <p>{{ getExecutiveData().heroScore?.description }}</p>
                   </div>
                 </div>
@@ -259,7 +233,7 @@ export interface ReportMenuItem {
                 <app-icon name="sparkles" [size]="15" color="#059669"></app-icon>
                 <span>{{ getExecutiveData().objectiveTitle }}</span>
               </div>
-              <p class="section-p">{{ getExecutiveData().objectiveSubtitle }}</p>
+              <p class="section-p">{{ cleanCustomerText(getExecutiveData().objectiveSubtitle) }}</p>
 
               <div class="purpose-grid-pdf">
                 @for (item of getExecutiveData().objectivePillars; track item.id) {
@@ -282,29 +256,12 @@ export interface ReportMenuItem {
               </div>
               <p class="section-p">{{ getExecutiveData().howSubtitle }}</p>
 
-              <div class="how-grid-pdf">
-                @for (item of getExecutiveData().howPillars; track item.id) {
-                  <div class="how-card-pdf">
-                    <div class="hc-head">
-                      <span class="hc-badge">{{ item.badge }}</span>
-                      <h4>{{ item.title }}</h4>
-                    </div>
-                    <ul class="hc-bullets">
-                      @for (b of item.bullets; track b) {
-                        <li><span class="bullet-dot">•</span> {{ b }}</li>
-                      }
-                    </ul>
-                    <div class="hc-foot">{{ item.note }}</div>
-                  </div>
-                }
-              </div>
-
-              <!-- 3. Önerilen Geçiş Yöntemi Hero Kartı -->
+              <!-- 2. Önerilen Geçiş Yöntemi Hero Kartı -->
               <div class="hero-recommendation-card-pdf" style="margin-top: 15px;">
                 <div class="hr-left">
                   <span class="hr-pill">{{ getExecutiveData().recommendedMethod?.badge || getRecommendedData().badge }}</span>
-                  <h2>{{ getExecutiveData().recommendedMethod?.title || getRecommendedData().title }}</h2>
-                  <p>{{ getExecutiveData().recommendedMethod?.description || getRecommendedData().description }}</p>
+                  <h2>{{ cleanCustomerText(getExecutiveData().recommendedMethod?.title || getRecommendedData().title) }}</h2>
+                  <p>{{ cleanCustomerText(getExecutiveData().recommendedMethod?.description || getRecommendedData().description) }}</p>
                 </div>
                 <div class="hr-stats">
                   <div class="stat-box-pdf">
@@ -321,14 +278,6 @@ export interface ReportMenuItem {
                   </div>
                 </div>
               </div>
-
-              <!-- Presales Değerlendirme Notları -->
-              @if (getExecutiveData().salesNotes) {
-                <div class="sales-notes-box-pdf" style="margin-top: 15px;">
-                  <h4>Presales & Satış Strateji Değerlendirmesi:</h4>
-                  <p>{{ getExecutiveData().salesNotes }}</p>
-                </div>
-              }
             </div>
           </div>
         }
@@ -345,64 +294,87 @@ export interface ReportMenuItem {
 
             <div class="section-content-box">
               <div class="analysis-card">
-                <h3>Genel Modül Durumu & Tespit Edilen Bulgular</h3>
-                <p>Aktif SAP ERP sistemindeki işlem hacimleri ve kullanıcı rolleri incelendiğinde; Finans (FI/CO), Satış (SD) ve Satınalma/Stok (MM) operasyon omurgasını oluşturmaktadır. Clean Core prensipleri ile iş süreçlerinin standartlaştırılması hedeflenmektedir.</p>
-                <div class="module-stat-row">
-                  <div class="m-pill"><strong>FI/CO:</strong> %94 Kullanım Oranı • Standarda Uyumlu</div>
-                  <div class="m-pill"><strong>SD:</strong> %88 Kullanım Oranı • Entegrasyon Yoğun</div>
-                  <div class="m-pill"><strong>MM/PP:</strong> %82 Kullanım Oranı • MRP Live ile Hızlanacak</div>
-                  <div class="m-pill"><strong>QM/PM:</strong> %74 Kullanım Oranı • Fiori ile Mobil Uyumlu</div>
-                </div>
+                <h3>Sistem Modül Bulguları & Süreç Dağılımı</h3>
+                <p>{{ getActiveCustomerCleanName() }} SAP sistemine ait modüler süreç analizinde toplam <strong>{{ modullerService.cards().length }} adet</strong> operasyonel bulgu ve iyileştirme alanı tespit edilmiştir.</p>
               </div>
 
-              <!-- Severity Breakdown -->
-              <div class="kpi-mini-grid" style="margin-top: 15px;">
+              <!-- Severity Breakdown (5 KPIs matching UI) -->
+              <div class="kpi-mini-grid" style="margin-top: 10px;">
                 <div class="kpi-box">
-                  <span class="k-label">Toplam İncelenen Kart</span>
+                  <span class="k-label">Genel Toplam</span>
                   <strong class="k-val">{{ modullerService.cards().length }} Adet</strong>
-                  <span class="k-sub">Bulgu & Analiz</span>
+                  <span class="k-sub">Değerlendirme Maddesi</span>
                 </div>
                 <div class="kpi-box">
-                  <span class="k-label">Kritik Seviye</span>
+                  <span class="k-label">Kritik</span>
                   <strong class="k-val text-red">{{ getSeverityCount('Kritik') }} Adet</strong>
                   <span class="k-sub">Öncelikli Eylem</span>
                 </div>
                 <div class="kpi-box">
-                  <span class="k-label">Yüksek Seviye</span>
+                  <span class="k-label">Yüksek</span>
                   <strong class="k-val text-amber">{{ getSeverityCount('Yüksek') }} Adet</strong>
                   <span class="k-sub">İyileştirme Fırsatı</span>
                 </div>
                 <div class="kpi-box">
-                  <span class="k-label">Standart / Önerilen</span>
-                  <strong class="k-val text-emerald">{{ getSeverityCount('Orta') + getSeverityCount('Düşük') }} Adet</strong>
+                  <span class="k-label">Orta</span>
+                  <strong class="k-val text-blue">{{ getSeverityCount('Orta') }} Adet</strong>
+                  <span class="k-sub">Standart Süreç</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="k-label">Düşük</span>
+                  <strong class="k-val text-emerald">{{ getSeverityCount('Düşük') }} Adet</strong>
                   <span class="k-sub">S/4HANA Hazır</span>
                 </div>
               </div>
 
-              <!-- Module Cards Summary -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
+              <!-- Modül Bazlı Dağılım Matrisi -->
+              <div class="sub-block-title" style="margin-top: 10px; margin-bottom: 2px;">
+                <app-icon name="layers" [size]="14" color="#0284c7"></app-icon>
+                <span>Başlık & Modül Bazlı Dağılım Matrisi</span>
+              </div>
+              <div class="module-distribution-pdf-grid">
+                @for (cat of getModuleCategoryBreakdown(); track cat.name) {
+                  <div class="mod-dist-card-pdf">
+                    <div class="mdc-head">
+                      <strong>{{ cat.name }}</strong>
+                      <span class="mdc-total">{{ cat.total }} Bulgu</span>
+                    </div>
+                    <div class="mdc-pills">
+                      <span class="m-chip chip-k" *ngIf="cat.kritik > 0">🔴 {{ cat.kritik }} Kritik</span>
+                      <span class="m-chip chip-y" *ngIf="cat.yuksek > 0">🟠 {{ cat.yuksek }} Yüksek</span>
+                      <span class="m-chip chip-o" *ngIf="cat.orta > 0">🟡 {{ cat.orta }} Orta</span>
+                      <span class="m-chip chip-d" *ngIf="cat.dusuk > 0">🔵 {{ cat.dusuk }} Düşük</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Module Categories Full Breakdown Table -->
+              <div class="sub-block-title" style="margin-top: 10px; margin-bottom: 2px;">
+                <app-icon name="sliders" [size]="14" color="#059669"></app-icon>
+                <span>Modüler Değerlendirme Bulguları ve Süreç Kazanımları (Modül Dağılımı)</span>
+              </div>
+              <div class="table-wrap">
+                <table class="report-data-table compact-pdf-table">
                   <thead>
                     <tr>
-                      <th>Modül / Kategori</th>
-                      <th>Bulgu Başlığı</th>
-                      <th>Önem Seviyesi</th>
-                      <th>Durum</th>
-                      <th>Temel Bulgular & Notlar</th>
+                      <th style="width: 25%;">Modül / Süreç Alanı</th>
+                      <th style="width: 15%;">Toplam Bulgu</th>
+                      <th style="width: 15%;">Kritik Seviye</th>
+                      <th style="width: 15%;">Yüksek Seviye</th>
+                      <th style="width: 15%;">Standart / Uyumlu</th>
+                      <th style="width: 15%;">Dönüşüm Durumu</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (card of getTopModuleCards(8); track card.id) {
+                    @for (cat of getModuleCategoryBreakdown(); track cat.name) {
                       <tr>
-                        <td><strong>{{ card.category }}</strong></td>
-                        <td>{{ card.title }}</td>
-                        <td>
-                          <span class="risk-pill" [ngClass]="card.severity === 'Kritik' ? 'red' : card.severity === 'Yüksek' ? 'amber' : 'blue'">
-                            {{ card.severity }}
-                          </span>
-                        </td>
-                        <td>{{ card.status }}</td>
-                        <td>{{ card.bullets && card.bullets.length > 0 ? card.bullets[0] : (card.footerNote || '—') }}</td>
+                        <td><strong>{{ cat.name }}</strong></td>
+                        <td><strong>{{ cat.total }} Bulgu</strong></td>
+                        <td><span class="risk-pill red">{{ cat.kritik }} Kritik</span></td>
+                        <td><span class="risk-pill amber">{{ cat.yuksek }} Yüksek</span></td>
+                        <td><span class="risk-pill green">{{ cat.orta + cat.dusuk }} Uyumlu</span></td>
+                        <td><span class="text-emerald" style="font-weight: 700;">✓ S/4HANA Hazır</span></td>
                       </tr>
                     }
                   </tbody>
@@ -413,82 +385,65 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- 3. SAP UYGULAMALARI - DETAYLI ANALİZ                                      -->
+        <!-- 3. SAP UYGULAMALARI - DETAYLI MODÜLER SÜREÇ ANALİZİ (TÜM BULGULAR)         -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('modules-detail')) {
-          <div class="pdf-page-section">
-            <div class="section-badge-header">
-              <div class="sb-title">3. SAP UYGULAMALARI - DETAYLI MODÜLER SÜREÇ ANALİZİ</div>
-              <div class="sb-meta">Süreç Kırılımları, İşlem Hacimleri ve S/4HANA Dönüşüm Çözümleri</div>
-            </div>
+          @for (page of getPaginatedDetailedCards(20); track $index) {
+            <div class="pdf-page-section">
+              <div class="section-badge-header">
+                <div class="sb-title">3. SAP UYGULAMALARI - DETAYLI MODÜLER SÜREÇ ANALİZİ (Sayfa {{ $index + 1 }} / {{ getPaginatedDetailedCards(20).length }})</div>
+                <div class="sb-meta">Tüm {{ modullerService.cards().length }} Süreç Bulgusu, Öncelik Seviyeleri ve S/4HANA Dönüşüm Notları</div>
+              </div>
 
-            <div class="section-content-box">
-              <div class="table-wrap">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Modül</th>
-                      <th>Kullanıcı Sayısı</th>
-                      <th>İşlem Hacmi (Aylık)</th>
-                      <th>Tespit Edilen Darboğaz</th>
-                      <th>S/4HANA Çözüm Önerisi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>FI - Mali İşler & Genel Muhasebe</strong></td>
-                      <td>120 Kullanıcı</td>
-                      <td>45.000 Kayıt</td>
-                      <td>Dönem sonu kapanışlarında manuel mutabakat yükü</td>
-                      <td>Universal Journal (ACDOCA) & Otomatik Kapanış Cockpit</td>
-                    </tr>
-                    <tr>
-                      <td><strong>CO - Masraf Yeri & Karlılık (CO-PA)</strong></td>
-                      <td>45 Kullanıcı</td>
-                      <td>28.000 Kayıt</td>
-                      <td>Maliyet dağıtımı hesaplamalarında gece batch gecikmeleri</td>
-                      <td>HANA Gerçek Zamanlı Karlılık Analizi (Account-based CO-PA)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>MM - Malzeme Yönetimi & Satınalma</strong></td>
-                      <td>160 Kullanıcı</td>
-                      <td>85.000 Kayıt</td>
-                      <td>Stok devir hızı ve onay darboğazı</td>
-                      <td>MRP Live & Otomatik Satınalma Sipariş Yönetimi (Fiori)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>SD - Satış Dağıtım & Sevkiyat</strong></td>
-                      <td>190 Kullanıcı</td>
-                      <td>110.000 Kayıt</td>
-                      <td>B2B entegrasyonlarında batch bekleme süreleri</td>
-                      <td>API Tabanlı Sipariş Karşılama & Gelişmiş ATP (aATP)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>PP - Üretim Planlama & Kontrol</strong></td>
-                      <td>75 Kullanıcı</td>
-                      <td>35.000 Kayıt</td>
-                      <td>Kapasite planlama ve üretim çizelgeleme zorlukları</td>
-                      <td>PP/DS (Production Planning and Detailed Scheduling)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>QM - Kalite Yönetimi</strong></td>
-                      <td>40 Kullanıcı</td>
-                      <td>18.000 Kayıt</td>
-                      <td>Kağıt tabanlı kalite onayları ve denetim takibi</td>
-                      <td>Mobil Kalite Kontrol Fiori Uygulamaları & Dijital İmzalar</td>
-                    </tr>
-                    <tr>
-                      <td><strong>PM - Bakım Onarım Yönetimi</strong></td>
-                      <td>35 Kullanıcı</td>
-                      <td>12.000 Kayıt</td>
-                      <td>Arıza bildirimlerinde sahadan gecikmeli kayıt girişi</td>
-                      <td>SAP Service and Asset Manager & Kestirimci Bakım</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="section-content-box">
+                @if ($index === 0) {
+                  <div class="analysis-card" style="margin-bottom: 6px;">
+                    <h3>Detaylı Süreç Değerlendirme & S/4HANA Dönüşüm Çözümleri</h3>
+                    <p>{{ getActiveCustomerCleanName() }} operasyonel süreçlerine yönelik tespit edilen <strong>tüm {{ modullerService.cards().length }} adet</strong> bulgunun eksiksiz dökümü:</p>
+                  </div>
+                }
+
+                <div class="table-wrap">
+                  <table class="report-data-table compact-pdf-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 17%;">Modül / Kategori</th>
+                        <th style="width: 25%;">Süreç / Bulgu Başlığı</th>
+                        <th style="width: 12%;">Önem</th>
+                        <th style="width: 13%;">Durum</th>
+                        <th style="width: 33%;">Süreç Bulguları & Çözüm Notları</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (card of page; track card.id) {
+                        <tr>
+                          <td><strong>{{ card.category }}</strong></td>
+                          <td>{{ card.title }}</td>
+                          <td>
+                            <span class="risk-pill" [ngClass]="card.severity === 'Kritik' ? 'red' : card.severity === 'Yüksek' ? 'amber' : 'blue'">
+                              {{ card.severity }}
+                            </span>
+                          </td>
+                          <td>{{ card.status }}</td>
+                          <td>
+                            @if (card.bullets && card.bullets.length > 0) {
+                              <ul class="table-bullet-list">
+                                @for (b of card.bullets.slice(0, 2); track b) {
+                                  <li>{{ b }}</li>
+                                }
+                              </ul>
+                            } @else {
+                              {{ card.footerNote || '—' }}
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
+          }
         }
 
         <!-- ========================================================================= -->
@@ -505,59 +460,67 @@ export interface ReportMenuItem {
               <div class="kpi-mini-grid">
                 <div class="kpi-box">
                   <span class="k-label">Toplam Z/Y Nesnesi</span>
-                  <strong class="k-val">1.240 Adet</strong>
+                  <strong class="k-val">{{ getCustomCodeStats().total.toLocaleString('tr-TR') }} Adet</strong>
                   <span class="k-sub">Aktif Custom Kod</span>
                 </div>
                 <div class="kpi-box">
                   <span class="k-label">Atıl / Kullanılmayan Kod</span>
-                  <strong class="k-val text-emerald">%38</strong>
+                  <strong class="k-val text-emerald">%{{ getCustomCodeStats().retiredPercent }}</strong>
                   <span class="k-sub">Doğrudan Temizlenebilir</span>
                 </div>
                 <div class="kpi-box">
                   <span class="k-label">Standarda Dönüştürülebilir</span>
-                  <strong class="k-val text-blue">410 Adet</strong>
+                  <strong class="k-val text-blue">{{ getCustomCodeStats().standardConvertible.toLocaleString('tr-TR') }} Adet</strong>
                   <span class="k-sub">S/4HANA Standart Süreci</span>
                 </div>
                 <div class="kpi-box">
                   <span class="k-label">BTP Clean Core Adayı</span>
-                  <strong class="k-val text-purple">125 Adet</strong>
+                  <strong class="k-val text-purple">{{ getCustomCodeStats().btpCandidates.toLocaleString('tr-TR') }} Adet</strong>
                   <span class="k-sub">Side-by-Side Genişletme</span>
                 </div>
               </div>
 
-              <!-- 10 Custom Code Objects Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Nesne Tipi</th>
-                      <th>Kategori</th>
-                      <th>Mevcut Adet</th>
-                      <th>Risk Seviyesi</th>
-                      <th>S/4HANA Clean Core Stratejisi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (item of getCustomCodeItems(); track item.id) {
+              <!-- Custom Code Objects Table -->
+              @if (getCustomCodeItems().length > 0) {
+                <div class="table-wrap" style="margin-top: 15px;">
+                  <table class="report-data-table">
+                    <thead>
                       <tr>
-                        <td><strong>{{ item.name }}</strong></td>
-                        <td>{{ item.category }}</td>
-                        <td><strong>{{ item.count }} Adet</strong></td>
-                        <td>
-                          <span class="risk-pill" [ngClass]="item.level === 'Yüksek' ? 'red' : item.level === 'Orta' ? 'amber' : 'blue'">
-                            {{ item.level }}
-                          </span>
-                        </td>
-                        <td>{{ item.s4Recommendation }}</td>
+                        <th>Nesne Tipi</th>
+                        <th>Kategori</th>
+                        <th>Mevcut Adet</th>
+                        <th>Risk Seviyesi</th>
                       </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      @for (item of getCustomCodeItems(); track item.id) {
+                        <tr>
+                          <td><strong>{{ item.name }}</strong></td>
+                          <td>{{ item.category }}</td>
+                          <td><strong>{{ item.count }} Adet</strong></td>
+                          <td>
+                            <span class="risk-pill" [ngClass]="item.level === 'Yüksek' ? 'red' : item.level === 'Orta' ? 'amber' : 'blue'">
+                              {{ item.level }}
+                            </span>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="empty-state-pdf" style="margin-top: 15px;">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Sistemde kayıtlı özel geliştirme (custom code) verisi bulunmamaktadır.</span>
+                </div>
+              }
             </div>
           </div>
         }
 
+        <!-- ========================================================================= -->
+        <!-- 5. ENTEGRASYON MİMARİSİ (PO / BTP INTEGRATION SUITE)                       -->
+        <!-- ========================================================================= -->
         <!-- ========================================================================= -->
         <!-- 5. ENTEGRASYON MİMARİSİ (PO / BTP INTEGRATION SUITE)                       -->
         <!-- ========================================================================= -->
@@ -569,120 +532,17 @@ export interface ReportMenuItem {
             </div>
 
             <div class="section-content-box">
-              <div class="analysis-card">
-                <h3>SAP Process Orchestration (PO) ➔ Integration Suite Geçişi</h3>
-                <p>SAP PO desteğinin 2027 sonunda sonlanması ile birlikte mevcut canlı entegrasyonlar modernize edilmektedir. Migration Assessment aracı ile arayüzler analiz edilmiş ve SAP Integration Suite (BTP) taşıma haritası oluşturulmuştur.</p>
-                <div class="module-stat-row">
-                  <div class="m-pill"><strong>Canlı Arayüz Sayısı:</strong> 48 Aktif Servis</div>
-                  <div class="m-pill"><strong>BTP Uyum Oranı:</strong> %92 Doğrudan Taşınabilir</div>
-                  <div class="m-pill"><strong>Destek Sonu (EoS):</strong> 31 Aralık 2027</div>
+              @if (getPoDrawing()) {
+                <div class="arch-uploaded-container">
+                  <div class="auc-header">SAP PO / BTP Entegrasyon Mimari Akış Çizimi:</div>
+                  <img [src]="getPoDrawing()" class="pdf-custom-arch-img" alt="PO / BTP Entegrasyon Mimari Çizimi" />
                 </div>
-              </div>
-
-              <!-- VISUAL PO / BTP INTEGRATION TOPOLOGY DIAGRAM -->
-              <div class="arch-schematic-card" style="margin-top: 15px;">
-                <div class="schematic-title">
-                  <app-icon name="bolt" [size]="14" color="#0284c7"></app-icon>
-                  <span>SAP PO / BTP Entegrasyon Akış Topolojisi Şeması</span>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Sistemde SAP PO / BTP entegrasyon akış çizimi bulunmamaktadır.</span>
                 </div>
-
-                <div class="integration-topology-flow">
-                  <!-- Source Column -->
-                  <div class="flow-col source-col">
-                    <div class="col-head">Dış / Kaynak Sistemler</div>
-                    <div class="flow-box">Satış & CRM (Salesforce / Web)</div>
-                    <div class="flow-box">B2B Portalleri & Mobil</div>
-                    <div class="flow-box">Banka Entegrasyonları (MT940)</div>
-                    <div class="flow-box">GİB e-Fatura / e-Defter</div>
-                    <div class="flow-box">Lojistik, WMS & MES</div>
-                  </div>
-
-                  <!-- Connector Arrow -->
-                  <div class="flow-arrow-col">
-                    <span class="proto-tag">REST / SOAP</span>
-                    <span class="arr-icon">➔</span>
-                    <span class="proto-tag">RFC / SFTP</span>
-                  </div>
-
-                  <!-- Integration Hub Column -->
-                  <div class="flow-col hub-col">
-                    <div class="col-head">Merkezi Entegrasyon Katmanı</div>
-                    <div class="hub-main-box">
-                      <div class="hub-title">SAP Process Orchestration (PO 7.5)</div>
-                      <div class="hub-sub">Mevcut Çift Yığın (Dual-Stack) Altyapı</div>
-                      <div class="hub-mig-badge">➔ SAP Integration Suite (BTP)</div>
-                      <div class="hub-desc">Cloud Integration • Open Connectors • API Management • Event Mesh</div>
-                    </div>
-                  </div>
-
-                  <!-- Connector Arrow -->
-                  <div class="flow-arrow-col">
-                    <span class="proto-tag">OData / HTTPS</span>
-                    <span class="arr-icon">➔</span>
-                    <span class="proto-tag">Cloud Connector</span>
-                  </div>
-
-                  <!-- Target Core Column -->
-                  <div class="flow-col target-col">
-                    <div class="col-head">Hedef Dijital Çekirdek</div>
-                    <div class="flow-box core-box">RISE with SAP S/4HANA PCE</div>
-                    <div class="flow-box">SAP Analytics Cloud (SAC)</div>
-                    <div class="flow-box">Bulut İş Ortakları & SaaS</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Live Interfaces Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Entegrasyon Protokolü</th>
-                      <th>Canlı Arayüz Sayısı</th>
-                      <th>Entegrasyon Tipi</th>
-                      <th>BTP Taşıma Uyumu</th>
-                      <th>Geçiş Önceliği</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>REST / OData API</strong></td>
-                      <td>18 Servis</td>
-                      <td>Senkron Mobil / Web Arayüzleri</td>
-                      <td>%100 Doğrudan Cloud Integration Uyumlu</td>
-                      <td>Yüksek Öncelik</td>
-                    </tr>
-                    <tr>
-                      <td><strong>SOAP Web Services</strong></td>
-                      <td>14 Servis</td>
-                      <td>Banka ve e-Fatura WSDL Servisleri</td>
-                      <td>%95 Otomatik Migration Tool ile Taşınabilir</td>
-                      <td>Yüksek Öncelik</td>
-                    </tr>
-                    <tr>
-                      <td><strong>RFC / BAPI Çağrıları</strong></td>
-                      <td>8 Servis</td>
-                      <td>İç Sistem Veri Transferleri</td>
-                      <td>SAP Cloud Connector ile Güvenli Tünel</td>
-                      <td>Orta Öncelik</td>
-                    </tr>
-                    <tr>
-                      <td><strong>SFTP / Flat File</strong></td>
-                      <td>5 Servis</td>
-                      <td>Maaş ve Ekstre Dosya Akışları</td>
-                      <td>BTP SFTP Adapter Akışlarına Taşınacak</td>
-                      <td>Orta Öncelik</td>
-                    </tr>
-                    <tr>
-                      <td><strong>IDoc / EDI</strong></td>
-                      <td>3 Servis</td>
-                      <td>Tedarikçi EDI Mesajlaşmaları</td>
-                      <td>BTP Trading Partner Management (TPM)</td>
-                      <td>Planlı Aşama</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              }
             </div>
           </div>
         }
@@ -698,73 +558,80 @@ export interface ReportMenuItem {
             </div>
 
             <div class="section-content-box">
-              <div class="kpi-mini-grid">
-                <div class="kpi-box">
-                  <span class="k-label">Mevcut Named User</span>
-                  <strong class="k-val">{{ customerService.activeCustomer().sapUserCount }} Kullanıcı</strong>
-                  <span class="k-sub">Professional + Limited</span>
+              @if (basisService.hasUploadedData()) {
+                <div class="kpi-mini-grid">
+                  <div class="kpi-box">
+                    <span class="k-label">Mevcut Toplam Kullanıcı</span>
+                    <strong class="k-val">{{ basisService.fueSummary()?.totalUsers || customerService.activeCustomer().sapUserCount }} Kullanıcı</strong>
+                    <span class="k-sub">Sistem Kullanıcı Envanteri</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Gereken RISE FUE</span>
+                    <strong class="k-val text-blue">{{ basisService.fueSummary()?.calculatedFUE || 0 }} FUE</strong>
+                    <span class="k-sub">Optimize Edilmiş Model</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Professional (Advanced)</span>
+                    <strong class="k-val text-amber">{{ basisService.fueSummary()?.hbCount || 0 }} Kullanıcı</strong>
+                    <span class="k-sub">{{ basisService.fueSummary()?.hbCount || 0 }} FUE (1:1)</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Core / Functional</span>
+                    <strong class="k-val text-emerald">{{ (basisService.fueSummary()?.hcCount || 0) + (basisService.fueSummary()?.hdCount || 0) }} Kullanıcı</strong>
+                    <span class="k-sub">Dönüşüm Avantajı</span>
+                  </div>
                 </div>
-                <div class="kpi-box">
-                  <span class="k-label">Gereken RISE FUE</span>
-                  <strong class="k-val text-blue">142 FUE</strong>
-                  <span class="k-sub">Optimize Edilmiş Model</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Düşük Kullanımlı Kullanıcı</span>
-                  <strong class="k-val text-amber">{{ customerService.activeCustomer().lowUsageUserCount }} Kullanıcı</strong>
-                  <span class="k-sub">Self-Service / Core Adayı</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Tahmini Lisans Tasarrufu</span>
-                  <strong class="k-val text-emerald">€{{ customerService.activeCustomer().estimatedOpportunityValue | number }}</strong>
-                  <span class="k-sub">Yıllık Lisans Avantajı</span>
-                </div>
-              </div>
 
-              <!-- FUE Conversion Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Kullanıcı Kategorisi</th>
-                      <th>Mevcut Kullanıcı</th>
-                      <th>FUE Dönüşüm Katsayısı</th>
-                      <th>Gereken FUE Karşılığı</th>
-                      <th>Optimizasyon Açıklaması</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Advanced User (Tam Yetkili)</strong></td>
-                      <td>65 Kullanıcı</td>
-                      <td>1 : 1</td>
-                      <td>65.0 FUE</td>
-                      <td>Finans, satınalma ve sistem yöneticileri (Tüm ERP yetkisi)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Core User (Standart Yetkili)</strong></td>
-                      <td>180 Kullanıcı</td>
-                      <td>5 : 1 (0.2 FUE)</td>
-                      <td>36.0 FUE</td>
-                      <td>Satış temsilcileri, depo ve operasyon ekipleri</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Self-Service User (Kısıtlı Yetkili)</strong></td>
-                      <td>255 Kullanıcı</td>
-                      <td>30 : 1 (0.033 FUE)</td>
-                      <td>8.5 FUE</td>
-                      <td>İzin, talep onayları, masraf girişi ve rapor izleme</td>
-                    </tr>
-                    <tr class="highlight-total-row">
-                      <td><strong>TOPLAM FUE GEREKSİNİMİ</strong></td>
-                      <td><strong>500 Kullanıcı</strong></td>
-                      <td><strong>Dinamik Havuz</strong></td>
-                      <td><strong class="text-blue">109.5 FUE (+%30 Büyüme Tamponu: 142 FUE)</strong></td>
-                      <td><strong>Atıl lisans maliyetleri ve aşım riski kalıcı olarak sıfırlanır</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                <!-- FUE Conversion Table -->
+                <div class="table-wrap" style="margin-top: 15px;">
+                  <table class="report-data-table">
+                    <thead>
+                      <tr>
+                        <th>Kullanıcı Kategorisi</th>
+                        <th>Mevcut Kullanıcı</th>
+                        <th>FUE Dönüşüm Katsayısı</th>
+                        <th>Gereken FUE Karşılığı</th>
+                        <th>Optimizasyon Açıklaması</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Advanced / Professional User</strong></td>
+                        <td>{{ basisService.fueSummary()?.hbCount || 0 }} Kullanıcı</td>
+                        <td>1 : 1</td>
+                        <td>{{ basisService.fueSummary()?.hbCount || 0 }} FUE</td>
+                        <td>Finans, satınalma ve sistem yöneticileri (Tüm ERP yetkisi)</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Core / Functional User</strong></td>
+                        <td>{{ basisService.fueSummary()?.hcCount || 0 }} Kullanıcı</td>
+                        <td>5 : 1 (0.2 FUE)</td>
+                        <td>{{ ((basisService.fueSummary()?.hcCount || 0) / 5) | number:'1.1-1' }} FUE</td>
+                        <td>Satış temsilcileri, depo ve operasyon ekipleri</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Self-Service / Productivity User</strong></td>
+                        <td>{{ basisService.fueSummary()?.hdCount || 0 }} Kullanıcı</td>
+                        <td>30 : 1 (0.033 FUE)</td>
+                        <td>{{ ((basisService.fueSummary()?.hdCount || 0) / 30) | number:'1.1-1' }} FUE</td>
+                        <td>İzin, talep onayları, masraf girişi ve rapor izleme</td>
+                      </tr>
+                      <tr class="highlight-total-row">
+                        <td><strong>TOPLAM FUE GEREKSİNİMİ</strong></td>
+                        <td><strong>{{ basisService.fueSummary()?.totalUsers || 0 }} Kullanıcı</strong></td>
+                        <td><strong>Dinamik Havuz</strong></td>
+                        <td><strong class="text-blue">{{ basisService.fueSummary()?.calculatedFUE || 0 }} FUE</strong></td>
+                        <td><strong>Atıl lisans maliyetleri ve aşım riski kalıcı olarak sıfırlanır</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>FUE & Lisans analizi için henüz sisteme yüklenmiş veri bulunmamaktadır.</span>
+                </div>
+              }
             </div>
           </div>
         }
@@ -780,49 +647,64 @@ export interface ReportMenuItem {
             </div>
 
             <div class="section-content-box">
-              <div class="table-wrap">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Metrik</th>
-                      <th>Mevcut On-Premise Sistem</th>
-                      <th>RISE with SAP Hedef Sistem (Private Cloud)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Veritabanı Motoru</strong></td>
-                      <td>{{ basisService.systemInfo()?.dbType || 'Oracle / MS SQL RDBMS' }}</td>
-                      <td>SAP HANA 2.0 SPS07 In-Memory DB</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Disk / Veri Boyutu</strong></td>
-                      <td>{{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB (Geleneksel RDBMS)</td>
-                      <td>{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 512 }} GB HANA Bellek (Sıkıştırma Dahil)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>İşlem Gücü (SAPS)</strong></td>
-                      <td>18.000 SAPS (Eski Nesil CPU Donanımı)</td>
-                      <td>24.000 SAPS (Modern Hyperscaler Compute)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Yedeklilik & SLA</strong></td>
-                      <td>Lokal Veri Merkezi / Manuel Failover</td>
-                      <td>%99.7 - %99.9 Bulut SLA + 7/24 Proaktif SAP Yönetimi</td>
-                    </tr>
-                    <tr>
-                      <td><strong>İşletim Sistemi</strong></td>
-                      <td>Windows Server / Standart Linux</td>
-                      <td>SUSE Linux Enterprise Server for SAP (SLES)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Yedekleme & DR</strong></td>
-                      <td>Manuel Günlük Tape / Disk Yedekleri</td>
-                      <td>Otomatik Snapshots + Coğrafi Felaket Kurtarma (DR)</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              @if (basisService.hasUploadedData()) {
+                <div class="table-wrap">
+                  <table class="report-data-table">
+                    <thead>
+                      <tr>
+                        <th>Metrik / Bileşen</th>
+                        <th>Mevcut On-Premise Sistem</th>
+                        <th>RISE with SAP Hedef Sistem (Private Cloud)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (basisService.sizingMatrix().length > 0) {
+                        @for (row of basisService.sizingMatrix(); track row.product) {
+                          <tr>
+                            <td><strong>{{ row.product }}</strong></td>
+                            <td>{{ row.current }}</td>
+                            <td>{{ row.target }}</td>
+                          </tr>
+                        }
+                      } @else {
+                        @if (basisService.systemInfo()?.dbType) {
+                          <tr>
+                            <td><strong>Veritabanı Motoru</strong></td>
+                            <td>{{ basisService.systemInfo()?.dbType }}</td>
+                            <td>SAP HANA 2.0 In-Memory DB</td>
+                          </tr>
+                        }
+                        @if (basisService.systemInfo()?.diskSizeGiB) {
+                          <tr>
+                            <td><strong>Disk / Veri Boyutu</strong></td>
+                            <td>{{ basisService.systemInfo()?.diskSizeGiB }} GB</td>
+                            <td>{{ basisService.memoryDetails()?.anticipatedInitialMemoryGiB || 'Optimize' }} GB HANA Bellek</td>
+                          </tr>
+                        }
+                        @if (basisService.systemInfo()?.operatingSystem) {
+                          <tr>
+                            <td><strong>İşletim Sistemi</strong></td>
+                            <td>{{ basisService.systemInfo()?.operatingSystem }}</td>
+                            <td>SUSE Linux Enterprise Server for SAP (SLES)</td>
+                          </tr>
+                        }
+                        @if (basisService.systemInfo()?.nwRelease) {
+                          <tr>
+                            <td><strong>SAP NetWeaver Sürümü</strong></td>
+                            <td>{{ basisService.systemInfo()?.nwRelease }}</td>
+                            <td>SAP S/4HANA Private Cloud Edition</td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Teknik altyapı ve sistem boyutlandırması (Sizing) için sisteme yüklenmiş veri bulunmamaktadır.</span>
+                </div>
+              }
             </div>
           </div>
         }
@@ -834,111 +716,37 @@ export interface ReportMenuItem {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">8. SİSTEM ORTAMI & MEVCUT AS-IS MİMARİSİ (2027 EoS)</div>
-              <div class="sb-meta">Mevcut Mimari Şeması, Sürüm Uyumluluğu ve Kritik Risk Takvimi</div>
+              <div class="sb-meta">Mevcut Mimari Şeması, Sürüm Uyumluluğu ve RISE with SAP Hedef Topolojisi</div>
             </div>
 
             <div class="section-content-box">
-              <!-- Uploaded Custom AS-IS Drawing if available -->
-              @if (getAsisImage()) {
+              @if (getAsisDrawing() && getRiseStudioDrawing()) {
+                <div class="split-arch-pdf-grid">
+                  <div class="arch-uploaded-container">
+                    <div class="auc-header">Mevcut Durum (AS-IS) Mimari Akış Şeması / Çizimi:</div>
+                    <img [src]="getAsisDrawing()" class="pdf-custom-arch-img-split" alt="AS-IS Mimari Çizimi" />
+                  </div>
+                  <div class="arch-uploaded-container">
+                    <div class="auc-header">RISE with SAP Sistem Ortamı Mimari Çizimi:</div>
+                    <img [src]="getRiseStudioDrawing()" class="pdf-custom-arch-img-split" alt="RISE with SAP Mimari Çizimi" />
+                  </div>
+                </div>
+              } @else if (getAsisDrawing()) {
                 <div class="arch-uploaded-container">
-                  <div class="auc-header">Mevcut Mimari (AS-IS) Özel Çizim Görseli:</div>
-                  <img [src]="getAsisImage()" class="pdf-custom-arch-img" alt="AS-IS Mimari Çizimi" />
+                  <div class="auc-header">Mevcut Durum (AS-IS) Mimari Akış Şeması / Çizimi:</div>
+                  <img [src]="getAsisDrawing()" class="pdf-custom-arch-img" alt="AS-IS Mimari Çizimi" />
+                </div>
+              } @else if (getRiseStudioDrawing()) {
+                <div class="arch-uploaded-container">
+                  <div class="auc-header">RISE with SAP Sistem Ortamı Mimari Çizimi:</div>
+                  <img [src]="getRiseStudioDrawing()" class="pdf-custom-arch-img" alt="RISE with SAP Mimari Çizimi" />
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Mevcut durum (AS-IS) veya RISE with SAP mimari akış şeması / çizimi bulunmamaktadır.</span>
                 </div>
               }
-
-              <!-- Visual AS-IS Architecture Diagram -->
-              <div class="arch-schematic-card">
-                <div class="schematic-title">
-                  <app-icon name="alert" [size]="14" color="#d97706"></app-icon>
-                  <span>Mevcut Durum (AS-IS) Altyapı Akış Şeması</span>
-                </div>
-
-                <div class="asis-topology-flow">
-                  <!-- Tier 1: Clients -->
-                  <div class="asis-tier-card">
-                    <div class="tier-tag">Kullanıcı Katmanı</div>
-                    <div class="tier-title">SAP GUI 7.70 / WebGUI</div>
-                    <div class="tier-detail">{{ customerService.activeCustomer().sapUserCount }} Masaüstü İstemci • VPN / LAN Bağlantısı</div>
-                  </div>
-
-                  <div class="asis-arrow-down">▼ Standart RFC / Diag Protokolü</div>
-
-                  <!-- Tier 2: Application -->
-                  <div class="asis-tier-card">
-                    <div class="tier-tag">Uygulama Sunucuları (App Servers)</div>
-                    <div class="tier-title">SAP ECC 6.0 EHP 7/8 (NetWeaver 7.50)</div>
-                    <div class="tier-detail">ABAP Stack • 1.240 Custom Z-Nesnesi • On-Premise Veri Merkezi Altyapısı</div>
-                  </div>
-
-                  <div class="asis-arrow-down">▼ Veritabanı Sürücüsü (SQL Net)</div>
-
-                  <!-- Tier 3: Database -->
-                  <div class="asis-tier-card db-card">
-                    <div class="tier-tag">Veritabanı Katmanı</div>
-                    <div class="tier-title">{{ basisService.systemInfo()?.dbType || 'Oracle 19c / MS SQL Server' }} (RDBMS)</div>
-                    <div class="tier-detail">{{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB Klasik Disk Alanı • In-Memory Olmayan Geleneksel Mimari</div>
-                  </div>
-                </div>
-
-                <!-- 2027 EoS Callout Banner -->
-                <div class="eos-callout-banner">
-                  <div class="eos-badge">31 ARALIK 2027</div>
-                  <div class="eos-body">
-                    <strong>Kritik Destek Bitiş (End of Support) Uyarısı:</strong>
-                    <span>SAP ECC 6.0 ana akım desteği 2027 yılı sonunda sona erecektir. Bu tarihten sonra güvenlik yamaları, e-Fatura/e-Defter yasal regülasyon uyarlamaları ve teknik destek ek maliyetlere tabi olacak ve ciddi operasyonel risk oluşturacaktır.</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- System Inventory Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Sunucu / Rol</th>
-                      <th>İşletim Sistemi</th>
-                      <th>Veritabanı</th>
-                      <th>SAP Versiyonu</th>
-                      <th>EoS Durumu</th>
-                      <th>RISE Bulut Karşılığı</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>ECC Üretim (PRD)</strong></td>
-                      <td>SUSE Linux / Windows</td>
-                      <td>{{ basisService.systemInfo()?.dbType || 'Oracle 19c' }}</td>
-                      <td>ECC 6.0 EHP8</td>
-                      <td><span class="risk-pill red">2027 EoS</span></td>
-                      <td>S/4HANA PCE (HANA 2.0 In-Memory)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>ECC Test / QA</strong></td>
-                      <td>SUSE Linux / Windows</td>
-                      <td>{{ basisService.systemInfo()?.dbType || 'Oracle 19c' }}</td>
-                      <td>ECC 6.0 EHP8</td>
-                      <td><span class="risk-pill red">2027 EoS</span></td>
-                      <td>S/4HANA PCE QA Sistemi</td>
-                    </tr>
-                    <tr>
-                      <td><strong>ECC Geliştirme (DEV)</strong></td>
-                      <td>SUSE Linux / Windows</td>
-                      <td>{{ basisService.systemInfo()?.dbType || 'Oracle 19c' }}</td>
-                      <td>ECC 6.0 EHP8</td>
-                      <td><span class="risk-pill red">2027 EoS</span></td>
-                      <td>S/4HANA PCE DEV (Clean Core)</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Process Orchestration (PO)</strong></td>
-                      <td>Red Hat / SUSE</td>
-                      <td>SAP MaxDB / Oracle</td>
-                      <td>PO 7.50</td>
-                      <td><span class="risk-pill red">2027 EoS</span></td>
-                      <td>SAP BTP Integration Suite</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         }
@@ -954,101 +762,63 @@ export interface ReportMenuItem {
             </div>
 
             <div class="section-content-box">
-              <div class="kpi-mini-grid">
-                <div class="kpi-box">
-                  <span class="k-label">Toplam Veritabanı</span>
-                  <strong class="k-val">{{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB</strong>
-                  <span class="k-sub">Ham Veri Hacmi</span>
+              @if (basisService.hasUploadedData() && basisService.largestTables().length > 0) {
+                <div class="kpi-mini-grid">
+                  <div class="kpi-box">
+                    <span class="k-label">Toplam Tablo Hacmi</span>
+                    <strong class="k-val">{{ getLargestTablesTotalVolume() }} GB</strong>
+                    <span class="k-sub">İncelenen Tablolar</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">İncelenen Tablo Sayısı</span>
+                    <strong class="k-val text-blue">{{ basisService.largestTables().length }} Adet</strong>
+                    <span class="k-sub">DVM Kapsamı</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">En Büyük Tablo</span>
+                    <strong class="k-val text-amber">{{ basisService.largestTables()[0].name }}</strong>
+                    <span class="k-sub">{{ basisService.largestTables()[0].sizeGiB }} GB</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Arşivleme Potansiyeli</span>
+                    <strong class="k-val text-emerald">{{ basisService.largestTables()[0].archivingPotential || '%40 - %50' }}</strong>
+                    <span class="k-sub">Soğuk Veri / DVM</span>
+                  </div>
                 </div>
-                <div class="kpi-box">
-                  <span class="k-label">Arşivlenebilir Hacim</span>
-                  <strong class="k-val text-emerald">%35 - %45</strong>
-                  <span class="k-sub">Soğuk Veri / Geçmiş Kayıt</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">HANA Bellek Tasarrufu</span>
-                  <strong class="k-val text-blue">~350 GB</strong>
-                  <span class="k-sub">Hedef Sizing İndirimi</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Yıllık Altyapı Tasarrufu</span>
-                  <strong class="k-val text-amber">€32.000</strong>
-                  <span class="k-sub">Daha Düşük TCO Dilimi</span>
-                </div>
-              </div>
 
-              <!-- Top 10 Tables Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Tablo Adı</th>
-                      <th>Modül & İşlev</th>
-                      <th>Mevcut Boyut</th>
-                      <th>Arşivleme / DVM Stratejisi</th>
-                      <th>HANA Bellek Tasarrufu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>BSIS / BSAS</strong></td>
-                      <td>FI - Muhasebe Açık Kalemler</td>
-                      <td>148 GB</td>
-                      <td>2 yıl öncesi açık kalemlerin arşivlenmesi</td>
-                      <td>~95 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>BSEG / BKPF</strong></td>
-                      <td>FI - Muhasebe Belge Satırları</td>
-                      <td>125 GB</td>
-                      <td>Universal Journal (ACDOCA) sıkıştırması</td>
-                      <td>~75 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>COEP</strong></td>
-                      <td>CO - Masraf Yeri Hareketleri</td>
-                      <td>98 GB</td>
-                      <td>ACDOCA tekil tabloya geçiş & soğuk veri</td>
-                      <td>~60 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>MLCR / MLIT</strong></td>
-                      <td>MM - Malzeme Defteri Değerleri</td>
-                      <td>84 GB</td>
-                      <td>HANA sütun bazlı sıkıştırma</td>
-                      <td>~50 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>EDI40 / EDIDC</strong></td>
-                      <td>BC - IDoc Veri Kayıtları</td>
-                      <td>72 GB</td>
-                      <td>Başarılı ve eski IDoc'ların silinmesi</td>
-                      <td>~65 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>CKIS / KEPH</strong></td>
-                      <td>CO - Maliyet Hesaplama Kalemleri</td>
-                      <td>56 GB</td>
-                      <td>Eski maliyet varyantlarının temizliği</td>
-                      <td>~35 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>VBAP / VBAK</strong></td>
-                      <td>SD - Satış Siparişi Kalemleri</td>
-                      <td>52 GB</td>
-                      <td>Kapanmış geçmiş siparişlerin arşivlenmesi</td>
-                      <td>~30 GB Tasarruf</td>
-                    </tr>
-                    <tr>
-                      <td><strong>MARA / MARC</strong></td>
-                      <td>MM - Malzeme Ana Verileri</td>
-                      <td>38 GB</td>
-                      <td>Atıl ve kullanım dışı malzemelerin temizliği</td>
-                      <td>~15 GB Tasarruf</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                <!-- Tables Table -->
+                <div class="table-wrap" style="margin-top: 15px;">
+                  <table class="report-data-table">
+                    <thead>
+                      <tr>
+                        <th>Tablo Adı</th>
+                        <th>Modül & Tanım</th>
+                        <th>Mevcut Boyut</th>
+                        <th>Arşivleme / DVM Stratejisi</th>
+                        <th>Tasarruf Potansiyeli</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (table of basisService.largestTables().slice(0, 10); track table.name) {
+                        <tr>
+                          <td><strong>{{ table.name }}</strong></td>
+                          <td>{{ table.module ? (table.module + ' - ' + (table.desc || '')) : (table.desc || '—') }}</td>
+                          <td><strong>{{ table.sizeGiB }} GB</strong></td>
+                          <td>{{ table.recommendation || 'DVM arşivleme stratejisi uygulanmalı' }}</td>
+                          <td>
+                            <span class="risk-pill green">{{ table.archivingPotential || '%40 - %50 Arşivleme' }}</span>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Veritabanı en büyük tablolar ve DVM (Veri Hacmi Yönetimi) analizi için henüz sisteme yüklenmiş veri bulunmamaktadır.</span>
+                </div>
+              }
             </div>
           </div>
         }
@@ -1099,139 +869,49 @@ export interface ReportMenuItem {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">11. ÇÖZÜM ÖNERİSİ: 2. HEDEF MİMARİ (RISE WITH SAP PCE)</div>
-              <div class="sb-meta">Bulut Hedef Mimari Şeması ve 3. Parti Entegrasyon Haritası</div>
+              <div class="sb-meta">Mevcut Altyapı Topolojisi vs Bulut Hedef Mimarisi Karşılaştırması</div>
             </div>
 
             <div class="section-content-box">
-              <!-- Uploaded Custom TO-BE Drawing if available -->
-              @if (getTobeImage()) {
+              @if (getSolutionTobeImage() && getSolutionAsisImage()) {
+                <div class="split-arch-pdf-grid">
+                  <div class="arch-uploaded-container">
+                    <div class="auc-header">Çözüm Önerisi - Mevcut Altyapı (AS-IS) Görseli:</div>
+                    <img [src]="getSolutionAsisImage()" class="pdf-custom-arch-img-split" alt="Mevcut Mimari Görseli" />
+                  </div>
+                  <div class="arch-uploaded-container">
+                    <div class="auc-header">RISE with SAP PCE Bulut Hedef Mimarisi Görseli:</div>
+                    <img [src]="getSolutionTobeImage()" class="pdf-custom-arch-img-split" alt="Hedef Mimari Görseli" />
+                  </div>
+                </div>
+              } @else if (getSolutionTobeImage()) {
                 <div class="arch-uploaded-container">
-                  <div class="auc-header">Hedef Mimari (TO-BE) Özel Çizim Görseli:</div>
-                  <img [src]="getTobeImage()" class="pdf-custom-arch-img" alt="TO-BE Hedef Mimari Çizimi" />
+                  <div class="auc-header">RISE with SAP PCE Bulut Hedef Mimarisi Görseli:</div>
+                  <img [src]="getSolutionTobeImage()" class="pdf-custom-arch-img" alt="Hedef Mimari Görseli" />
+                </div>
+              } @else if (getSolutionAsisImage()) {
+                <div class="arch-uploaded-container">
+                  <div class="auc-header">Çözüm Önerisi - Mevcut Altyapı (AS-IS) Görseli:</div>
+                  <img [src]="getSolutionAsisImage()" class="pdf-custom-arch-img" alt="Mevcut Mimari Görseli" />
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Çözüm Önerisi hedef veya mevcut mimari için sisteme yüklenmiş görsel bulunmamaktadır.</span>
                 </div>
               }
-
-              <!-- 4-Tier Target Architecture Schematic Diagram -->
-              <div class="arch-schematic-card">
-                <div class="schematic-title">
-                  <app-icon name="sparkles" [size]="14" color="#059669"></app-icon>
-                  <span>RISE with SAP S/4HANA Private Cloud Edition 4 Katmanlı Hedef Mimari Şeması</span>
-                </div>
-
-                <div class="tobe-architecture-diagram">
-                  <!-- Tier 1 -->
-                  <div class="tobe-tier-row tier-presentation">
-                    <div class="tier-label">1. Sunum & Deneyim Katmanı</div>
-                    <div class="tier-content-grid">
-                      <div class="tobe-node-pill"><strong>SAP Fiori Apps:</strong> Rol Tabanlı Modern Arayüz</div>
-                      <div class="tobe-node-pill"><strong>SAP Joule:</strong> Kurumsal Üretken Yapay Zeka</div>
-                      <div class="tobe-node-pill"><strong>SAP Mobile Start:</strong> Mobil Süreç Erişimi</div>
-                      <div class="tobe-node-pill"><strong>SAP Build Work Zone:</strong> Birleşik Kullanıcı Portali</div>
-                    </div>
-                  </div>
-
-                  <div class="tobe-flow-divider">▼ Güvenli Bulut Bağlantısı & Single Sign-On (SSO)</div>
-
-                  <!-- Tier 2 -->
-                  <div class="tobe-tier-row tier-core">
-                    <div class="tier-label">2. Dijital Çekirdek (Enterprise Digital Core)</div>
-                    <div class="core-highlight-box">
-                      <div class="ch-title">RISE with SAP S/4HANA Private Cloud Edition (PCE)</div>
-                      <div class="ch-specs">In-Memory SAP HANA 2.0 SPS07 Veritabanı • Clean Core Standart Genişletme Çerçevesi • Universal Journal (ACDOCA)</div>
-                    </div>
-                  </div>
-
-                  <div class="tobe-flow-divider">▼ Event Mesh, REST / OData API & SAP Cloud Connector</div>
-
-                  <!-- Tier 3 -->
-                  <div class="tobe-tier-row tier-btp">
-                    <div class="tier-label">3. Entegrasyon & İnovasyon Platformu (SAP BTP)</div>
-                    <div class="tier-content-grid">
-                      <div class="tobe-node-pill"><strong>SAP Integration Suite:</strong> Cloud Integration & API Hub</div>
-                      <div class="tobe-node-pill"><strong>SAP Analytics Cloud (SAC):</strong> Gerçek Zamanlı BI & Tahmin</div>
-                      <div class="tobe-node-pill"><strong>SAP Build:</strong> No-Code / Low-Code Süreç Otomasyonu</div>
-                      <div class="tobe-node-pill"><strong>Side-by-Side ABAP:</strong> Bulut Uyumlu Genişletmeler</div>
-                    </div>
-                  </div>
-
-                  <div class="tobe-flow-divider">▼ Yönetilen Hyperscaler Altyapı Protokolü</div>
-
-                  <!-- Tier 4 -->
-                  <div class="tobe-tier-row tier-infra">
-                    <div class="tier-label">4. Güvenli Bulut Altyapısı (Hyperscaler IaaS)</div>
-                    <div class="infra-flex-row">
-                      <div class="infra-badge">Microsoft Azure / AWS / GCP</div>
-                      <div class="infra-badge green">%99.9 Bulut SLA Garantisi</div>
-                      <div class="infra-badge">Coğrafi Felaket Kurtarma (DR)</div>
-                      <div class="infra-badge">7/24 Proaktif SAP Güvenlik ve Yama Yönetimi</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 3rd Party Integrations Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Sistem & Alan</th>
-                      <th>Kategori</th>
-                      <th>Mevcut Protokol</th>
-                      <th>Hedef BTP Entegrasyon Stratejisi</th>
-                      <th>Kritiklik</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Satış & Müşteri CRM</strong></td>
-                      <td>Satış & CRM</td>
-                      <td>RFC / SOAP</td>
-                      <td>SAP BTP Open Connectors & REST OData API</td>
-                      <td><span class="risk-pill red">KRİTİK</span></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Bankalar & Finans Kuruluşları</strong></td>
-                      <td>Finans & Bankacılık</td>
-                      <td>SFTP (MT940/CAMT)</td>
-                      <td>SAP Multi-Bank Connectivity (MBC) & BTP Secure Flow</td>
-                      <td><span class="risk-pill red">KRİTİK</span></td>
-                    </tr>
-                    <tr>
-                      <td><strong>GİB e-Fatura / e-Defter</strong></td>
-                      <td>Yasal & Regülasyon</td>
-                      <td>SOAP Web Services</td>
-                      <td>SAP Document and Reporting Compliance (DRC)</td>
-                      <td><span class="risk-pill red">KRİTİK</span></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Depo Yönetimi (WMS) & MES</strong></td>
-                      <td>Lojistik & Üretim</td>
-                      <td>IDoc / RFC</td>
-                      <td>Standardize REST API & BTP Event Mesh</td>
-                      <td><span class="risk-pill amber">YÜKSEK</span></td>
-                    </tr>
-                    <tr>
-                      <td><strong>İK & Bordro Sistemleri</strong></td>
-                      <td>İnsan Kaynakları</td>
-                      <td>Flat File / SFTP</td>
-                      <td>BTP Cloud Integration & API Gateway</td>
-                      <td><span class="risk-pill blue">ORTA</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         }
 
         <!-- ========================================================================= -->
-        <!-- 12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ             -->
+        <!-- 12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ                                      -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('solution-methods')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ</div>
-              <div class="sb-meta">Brownfield, Lift & Shift, Selective Data Transition ve Greenfield Analizi</div>
+              <div class="sb-title">12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ ANALİZİ</div>
+              <div class="sb-meta">Brownfield, Lift & Shift, Selective Data Transition ve Greenfield Stratejisi</div>
             </div>
 
             <div class="section-content-box">
@@ -1262,69 +942,6 @@ export interface ReportMenuItem {
                   </div>
                 }
               </div>
-
-              <!-- Comprehensive Comparison Matrix Table -->
-              <div class="table-wrap" style="margin-top: 20px;">
-                <div class="schematic-title" style="margin-bottom: 8px;">
-                  <app-icon name="sliders" [size]="14" color="#0284c7"></app-icon>
-                  <span>Geçiş Yöntemleri Karşılaştırma Matrisi Tablosu</span>
-                </div>
-                <table class="report-data-table matrix-table">
-                  <thead>
-                    <tr>
-                      <th>Değerlendirme Kriteri</th>
-                      <th class="th-rec">Brownfield (Önerilen)</th>
-                      <th>Lift & Shift</th>
-                      <th>Selective Data Transition</th>
-                      <th>Greenfield (Yeni Kurulum)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Proje Süresi</strong></td>
-                      <td class="td-rec"><strong>6 Ay</strong></td>
-                      <td>3 - 6 Ay</td>
-                      <td>12 Ay</td>
-                      <td>12 - 18 Ay</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Geçmiş Veri Korunumu</strong></td>
-                      <td class="td-rec"><strong>%100 Tam Tarihçe</strong></td>
-                      <td>%100 Korunur</td>
-                      <td>Seçilen Şirket Kodu / Yıllar</td>
-                      <td>Sadece Açılış Bakiyeleri</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Maliyet & Danışmanlık Eforu</strong></td>
-                      <td class="td-rec"><strong>Düşük - Orta (Optimum)</strong></td>
-                      <td>Düşük (Geçici)</td>
-                      <td>Yüksek (Özel Tool Lisansı)</td>
-                      <td>En Yüksek Maliyet & Efor</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Değişim Yönetimi Riski</strong></td>
-                      <td class="td-rec"><strong>Düşük Risk</strong></td>
-                      <td>Çok Düşük</td>
-                      <td>Orta - Yüksek</td>
-                      <td>Yüksek Değişim Riski</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Clean Core & BTP Uyumu</strong></td>
-                      <td class="td-rec"><strong>Yüksek (Sadeleştirme ile)</strong></td>
-                      <td>Düşük (ECC Kalır)</td>
-                      <td>Orta Seviye</td>
-                      <td>%100 Standart Başlangıç</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Genel Tavsiye Durumu</strong></td>
-                      <td class="td-rec"><span class="risk-pill green">⭐ Tavsiye Edilen Çözüm</span></td>
-                      <td><span class="risk-pill blue">Alternatif (Geçici)</span></td>
-                      <td><span class="risk-pill amber">Kısmen Uygun</span></td>
-                      <td><span class="risk-pill red">Uygun Değil</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         }
@@ -1332,78 +949,89 @@ export interface ReportMenuItem {
         <!-- ========================================================================= -->
         <!-- 13. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI)                                -->
         <!-- ========================================================================= -->
+        <!-- ========================================================================= -->
+        <!-- 13. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI)                                -->
+        <!-- ========================================================================= -->
         @if (isItemIncluded('business-case')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">13. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI SİMÜLASYONU)</div>
-              <div class="sb-meta">5 Yıllık Karşılaştırmalı Finansal Model ve Yatırım Getirisi</div>
+              <div class="sb-meta">{{ hasTcoData() ? getTcoData().years.length + ' Yıllık Karşılaştırmalı Finansal Model ve Yatırım Getirisi' : '5 Yıllık Karşılaştırmalı Finansal Model ve Yatırım Getirisi' }}</div>
             </div>
 
             <div class="section-content-box">
-              <div class="kpi-mini-grid">
-                <div class="kpi-box">
-                  <span class="k-label">5 Yıllık Tasarruf Oranı</span>
-                  <strong class="k-val text-emerald">%24.8</strong>
-                  <span class="k-sub">On-Premise vs RISE Bulut</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Yatırımın Geri Dönüşü (ROI)</span>
-                  <strong class="k-val text-blue">14 Ay</strong>
-                  <span class="k-sub">Proje Maliyetini Amorti Etme</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Öngörülen 5 Yıllık Net Fayda</span>
-                  <strong class="k-val text-purple">€385.000+</strong>
-                  <span class="k-sub">CapEx + OpEx Birleşik Kazanç</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Finansman Modeli</span>
-                  <strong class="k-val">OpEx Tabanlı</strong>
-                  <span class="k-sub">Öngörülebilir Yıllık Abonelik</span>
-                </div>
-              </div>
+              @if (hasTcoData()) {
+                @if (getTcoImage()) {
+                  <div class="tco-image-box-pdf">
+                    <div class="auc-header">TCO / Finansal Simülasyon Ekran Görüntüsü:</div>
+                    <img [src]="getTcoImage()" class="pdf-tco-img" alt="TCO Simülasyonu" />
+                  </div>
+                }
 
-              <!-- 5-Year Simulation Table -->
-              <div class="table-wrap" style="margin-top: 15px;">
-                <table class="report-data-table">
-                  <thead>
-                    <tr>
-                      <th>Finansal Kalem (EUR)</th>
-                      <th>1. Yıl</th>
-                      <th>2. Yıl</th>
-                      <th>3. Yıl</th>
-                      <th>4. Yıl</th>
-                      <th>5. Yıl</th>
-                      <th>5 Yıllık Toplam</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>AS-IS On-Premise (Bakım + Altyapı + Operasyon)</strong></td>
-                      <td>€216.000</td>
-                      <td>€316.000</td>
-                      <td>€216.000</td>
-                      <td>€216.000</td>
-                      <td>€216.000</td>
-                      <td><strong class="text-amber">€1.180.000</strong></td>
-                    </tr>
-                    <tr>
-                      <td><strong>RISE with SAP (Bulut Abonelik + Dönüşüm)</strong></td>
-                      <td>€700.000</td>
-                      <td>€400.000</td>
-                      <td>€400.000</td>
-                      <td>€400.000</td>
-                      <td>€400.000</td>
-                      <td><strong class="text-blue">€2.300.000</strong></td>
-                    </tr>
-                    <tr class="highlight-total-row">
-                      <td><strong>NET STRATEJİK FAYDA / TCO KAZANIMI</strong></td>
-                      <td colspan="5">Donanım yenileme amortismanı sıfırlanır, operasyonel efor inovasyona kayar</td>
-                      <td><strong class="text-emerald">Öngörülebilir Nakit Akışı</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                <div class="kpi-mini-grid">
+                  <div class="kpi-box">
+                    <span class="k-label">{{ getTcoData().years.length }} Yıllık AS-IS Toplamı</span>
+                    <strong class="k-val text-amber">€{{ getTcoData().asisTotal | number:'1.2-2' }}</strong>
+                    <span class="k-sub">On-Premise Giderleri</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">{{ getTcoData().years.length }} Yıllık RISE Toplamı</span>
+                    <strong class="k-val text-blue">€{{ getTcoData().riseTotal | number:'1.2-2' }}</strong>
+                    <span class="k-sub">Bulut Abonelik & Proje</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Net Finansal Fark</span>
+                    <strong class="k-val text-purple">€{{ getTcoData().diff | number:'1.2-2' }}</strong>
+                    <span class="k-sub">AS-IS vs RISE Farkı</span>
+                  </div>
+                  <div class="kpi-box">
+                    <span class="k-label">Finansman Modeli</span>
+                    <strong class="k-val text-emerald">OpEx Tabanlı</strong>
+                    <span class="k-sub">Öngörülebilir Yıllık Model</span>
+                  </div>
+                </div>
+
+                <!-- N-Year Simulation Table from System -->
+                <div class="table-wrap" style="margin-top: 10px;">
+                  <table class="report-data-table compact-pdf-table">
+                    <thead>
+                      <tr>
+                        <th>Finansal Kalem (EUR)</th>
+                        @for (yr of getTcoData().years; track yr) {
+                          <th>{{ yr }}</th>
+                        }
+                        <th>Toplam ({{ getTcoData().years.length }} Yıl)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>AS-IS On-Premise (Mevcut Durum Giderleri)</strong></td>
+                        @for (sum of getTcoData().asisYearSums; track $index) {
+                          <td>€{{ sum | number:'1.2-2' }}</td>
+                        }
+                        <td><strong class="text-amber">€{{ getTcoData().asisTotal | number:'1.2-2' }}</strong></td>
+                      </tr>
+                      <tr>
+                        <td><strong>RISE with SAP (Bulut Abonelik & Dönüşüm)</strong></td>
+                        @for (sum of getTcoData().riseYearSums; track $index) {
+                          <td>€{{ sum | number:'1.2-2' }}</td>
+                        }
+                        <td><strong class="text-blue">€{{ getTcoData().riseTotal | number:'1.2-2' }}</strong></td>
+                      </tr>
+                      <tr class="highlight-total-row">
+                        <td><strong>NET STRATEJİK FAYDA / TCO KAZANIMI</strong></td>
+                        <td [attr.colspan]="getTcoData().years.length">Donanım yenileme amortismanı sıfırlanır, operasyonel efor inovasyona kayar</td>
+                        <td><strong class="text-emerald">Öngörülebilir Nakit Akışı</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="empty-state-pdf">
+                  <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+                  <span>Bu müşteri için henüz sisteme kaydedilmiş TCO (Toplam Sahip Olma Maliyeti) finansal simülasyon verisi bulunmamaktadır.</span>
+                </div>
+              }
             </div>
           </div>
         }
@@ -1603,13 +1231,11 @@ export interface ReportMenuItem {
 
     .menu-checkbox-card {
       display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
+      flex-direction: column;
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       padding: 0.85rem;
-      cursor: pointer;
       transition: all 0.15s ease;
 
       &:hover {
@@ -1620,6 +1246,14 @@ export interface ReportMenuItem {
       &.checked {
         border-color: #0284c7;
         background: #f0f9ff;
+      }
+
+      .card-main-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+        width: 100%;
       }
 
       .checkbox-wrapper {
@@ -1666,6 +1300,62 @@ export interface ReportMenuItem {
           font-size: 0.72rem;
           color: #64748b;
           line-height: 1.35;
+        }
+      }
+
+      .drawing-sub-option {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed #cbd5e1;
+        width: 100%;
+
+        &.disabled {
+          opacity: 0.45;
+          pointer-events: none;
+        }
+
+        .drawing-sub-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          background: #ffffff;
+          padding: 6px 10px;
+          border-radius: 6px;
+          border: 1px solid #7dd3fc;
+          box-shadow: 0 1px 3px rgba(2, 132, 199, 0.05);
+          transition: all 0.15s ease;
+
+          &:hover {
+            border-color: #0284c7;
+            background: #e0f2fe;
+          }
+
+          input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: #0284c7;
+            cursor: pointer;
+            flex-shrink: 0;
+          }
+
+          .sub-badge-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+
+            .sub-camera-badge {
+              font-size: 0.73rem;
+              font-weight: 700;
+              color: #0369a1;
+            }
+
+            .sub-badge-desc {
+              font-size: 0.67rem;
+              color: #475569;
+              line-height: 1.25;
+            }
+          }
         }
       }
     }
@@ -1811,12 +1501,12 @@ export interface ReportMenuItem {
 
     /* RENDERED IN DOM VIEWPORT FOR FLAWLESS HTML2CANVAS CONVERSION */
     .hidden-pdf-document-wrapper {
-      position: fixed;
+      position: absolute;
       left: 0;
       top: 0;
       width: 860px;
       background: #ffffff;
-      z-index: 10000;
+      z-index: 100;
       pointer-events: none;
       box-shadow: 0 0 40px rgba(0,0,0,0.1);
     }
@@ -2009,12 +1699,15 @@ export interface ReportMenuItem {
         }
       }
 
-      /* GENERAL PDF PAGE SECTION */
+      /* GENERAL PDF PAGE SECTION - EXACT A4 RATIO (840 x 1188) */
       .pdf-page-section {
-        padding: 35px 40px;
+        width: 840px;
+        min-height: 1188px;
+        max-height: 1188px;
+        padding: 28px 36px;
         box-sizing: border-box;
         page-break-after: always;
-        min-height: 1080px;
+        overflow: hidden;
         background: #ffffff;
         border-bottom: 1px dashed #cbd5e1;
 
@@ -2022,9 +1715,9 @@ export interface ReportMenuItem {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-bottom: 12px;
+          padding-bottom: 10px;
           border-bottom: 2px solid #0284c7;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
 
           .sb-title {
             font-size: 15px;
@@ -2043,7 +1736,7 @@ export interface ReportMenuItem {
         .section-content-box {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .section-p {
@@ -2061,6 +1754,149 @@ export interface ReportMenuItem {
           font-weight: 800;
           color: #0f172a;
         }
+      }
+
+      .split-arch-pdf-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+
+        .arch-uploaded-container {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 8px;
+          width: 100%;
+
+          .auc-header {
+            font-size: 11px;
+            font-weight: 800;
+            color: #1e293b;
+          }
+        }
+
+        .pdf-custom-arch-img-split {
+          width: 100%;
+          height: 440px;
+          max-height: 440px;
+          object-fit: contain;
+          background: #ffffff;
+          border-radius: 6px;
+        }
+      }
+
+      .module-distribution-pdf-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        width: 100%;
+
+        .mod-dist-card-pdf {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 6px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+
+          .mdc-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            strong {
+              font-size: 10.5px;
+              color: #0f172a;
+              font-weight: 800;
+            }
+
+            .mdc-total {
+              font-size: 9.5px;
+              color: #0284c7;
+              font-weight: 700;
+              background: #e0f2fe;
+              padding: 1px 5px;
+              border-radius: 8px;
+            }
+          }
+
+          .mdc-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+
+            .m-chip {
+              font-size: 8.5px;
+              font-weight: 700;
+              padding: 1px 4px;
+              border-radius: 3px;
+
+              &.chip-k { background: #fee2e2; color: #b91c1c; }
+              &.chip-y { background: #fef3c7; color: #b45309; }
+              &.chip-o { background: #fef9c3; color: #854d0e; }
+              &.chip-d { background: #e0f2fe; color: #0369a1; }
+            }
+          }
+        }
+      }
+
+      .tco-image-box-pdf {
+        width: 100%;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px;
+        margin-bottom: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .auc-header {
+          font-size: 11px;
+          font-weight: 800;
+          color: #1e293b;
+        }
+
+        .pdf-tco-img {
+          width: 100%;
+          max-height: 220px;
+          object-fit: contain;
+          border-radius: 4px;
+        }
+      }
+
+      .compact-pdf-table {
+        font-size: 10.5px;
+        th {
+          padding: 6px 8px;
+          font-size: 11px;
+        }
+        td {
+          padding: 5px 8px;
+          font-size: 10.5px;
+          line-height: 1.3;
+        }
+        .table-bullet-list {
+          margin: 0;
+          padding-left: 12px;
+          li {
+            font-size: 10px;
+            line-height: 1.25;
+          }
+        }
+      }
+
+      .table-note-footer {
+        font-size: 10px;
+        font-style: italic;
+        color: #64748b;
+        margin-top: 4px;
+        text-align: right;
       }
 
       /* EXECUTIVE SUMMARY HERO CARD PDF STYLES */
@@ -3069,11 +2905,40 @@ export interface ReportMenuItem {
 
         .pdf-custom-arch-img {
           width: 100%;
-          max-height: 280px;
+          max-height: 440px;
           object-fit: contain;
-          border-radius: 4px;
+          border-radius: 6px;
           background: #ffffff;
+          image-rendering: -webkit-optimize-contrast;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
         }
+      }
+
+      .empty-state-pdf {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 24px 16px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+        color: #64748b;
+        font-size: 10.5px;
+        font-weight: 600;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+
+      .table-bullet-list {
+        margin: 0;
+        padding-left: 14px;
+        font-size: 9px;
+        color: #475569;
+        line-height: 1.35;
       }
     }
 
@@ -3098,6 +2963,7 @@ export class QuickPdfExportModalComponent {
   basisService = inject(BasisSizingService);
   notesService = inject(NotesService);
   modullerService = inject(ModullerService);
+  importService = inject(DataImportService);
 
   @ViewChild('exportContainer') exportContainer?: ElementRef<HTMLElement>;
 
@@ -3113,7 +2979,7 @@ export class QuickPdfExportModalComponent {
       id: 'reports',
       name: '1. Yönetici Özeti',
       group: 'ÖZET',
-      desc: 'RISE Match Skoru, Bulut Uyumu, 1. Amaç (8 Sütun), 2. Nasıl Yapıyoruz (4 Aşama) ve Notlar',
+      desc: 'RISE Skoru, Bulut Uyumu, 1. Amaç (8 Sütun), 2. Nasıl Yapıyoruz (4 Aşama) ve Notlar',
       icon: 'file-text',
       selected: true
     },
@@ -3147,7 +3013,10 @@ export class QuickPdfExportModalComponent {
       group: 'SAP UYGULAMALARI',
       desc: 'SAP PO ➔ BTP Integration Suite akış topolojisi şeması ve canlı servisler tablosu',
       icon: 'bolt',
-      selected: true
+      selected: true,
+      hasDrawing: true,
+      captureScreenshot: true,
+      drawingLabel: 'PO Entegrasyon Akış Çiziminin Ekran Görüntüsünü (SS) Dahil Et'
     },
     {
       id: 'analytics',
@@ -3171,7 +3040,10 @@ export class QuickPdfExportModalComponent {
       group: 'TEKNİK ALTYAPI',
       desc: 'Mevcut AS-IS 3 katmanlı mimari şeması, sunucu envanteri ve 2027 EoS risk takvimi',
       icon: 'shield',
-      selected: true
+      selected: true,
+      hasDrawing: true,
+      captureScreenshot: true,
+      drawingLabel: 'Sistem Ortamı Mimari Çizimini (AS-IS / RISE) Dahil Et'
     },
     {
       id: 'largest-tables',
@@ -3193,9 +3065,12 @@ export class QuickPdfExportModalComponent {
       id: 'solution-architecture',
       name: '11. Hedef Mimari (RISE PCE)',
       group: 'ÇÖZÜM ÖNERİSİ',
-      desc: 'RISE with SAP PCE 4 katmanlı bulut mimarisi şeması ve 3. parti entegrasyon haritası',
+      desc: 'RISE with SAP PCE 4 katmanlı bulut mimarisi şeması ve müşteri görseli',
       icon: 'sparkles',
-      selected: true
+      selected: true,
+      hasDrawing: true,
+      captureScreenshot: true,
+      drawingLabel: 'Çözüm Önerisi Mimari Görsellerini (AS-IS / RISE) Dahil Et'
     },
     {
       id: 'solution-methods',
@@ -3259,15 +3134,81 @@ export class QuickPdfExportModalComponent {
     }
   }
 
+  getActiveCustomerCleanName(): string {
+    const cust = this.customerService.activeCustomer();
+    const name = cust?.name || '';
+    if (name.includes('*') || cust?.id === 'cust-sigorta' || !name) {
+      return 'Kale Endüstri Holding';
+    }
+    return name;
+  }
+
+  cleanCustomerText(text?: string): string {
+    return this.customerService.cleanCustomerText(text, this.getActiveCustomerCleanName());
+  }
+
   getExecutiveData(): ExecutiveSummaryData {
-    const custId = this.customerService.activeCustomer()?.id || 'default';
-    const custName = this.customerService.activeCustomer()?.name || '';
+    const cust = this.customerService.activeCustomer();
+    const custId = cust?.id || 'default';
+    const custName = this.getActiveCustomerCleanName();
     try {
       const raw = localStorage.getItem(`task_force_exec_summary_${custId}`);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const data = JSON.parse(raw);
+        const cleanStr = (s?: string) => {
+          if (!s) return s;
+          return this.cleanCustomerText(s);
+        };
+        if (data.heroScore?.title) {
+          data.heroScore.title = cleanStr(data.heroScore.title);
+          if (data.heroScore.title.includes('**')) {
+            data.heroScore.title = `${custName} RISE Readiness & Bulut Uyum Analizi`;
+          }
+        }
+        if (data.objectiveSubtitle) {
+          data.objectiveSubtitle = cleanStr(data.objectiveSubtitle);
+          if (data.objectiveSubtitle.includes('**')) {
+            data.objectiveSubtitle = `${custName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`;
+          }
+        }
+        if (data.heroScore?.description) {
+          data.heroScore.description = cleanStr(data.heroScore.description);
+        }
+        if (data.recommendedMethod) {
+          if (data.recommendedMethod.title) {
+            data.recommendedMethod.title = cleanStr(data.recommendedMethod.title);
+          }
+          if (data.recommendedMethod.description) {
+            data.recommendedMethod.description = cleanStr(data.recommendedMethod.description);
+            if (data.recommendedMethod.description.includes('**')) {
+              data.recommendedMethod.description = `${custName} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`;
+            }
+          }
+        }
+        return data;
+      }
     } catch (e) {}
     return getDefaultExecutiveData(custName);
   }
+
+  getDetailedModuleCards(): ModuleCard[] {
+    const cards = this.modullerService.cards();
+    if (!cards || cards.length === 0) return [];
+    const severityOrder: Record<string, number> = { 'Kritik': 0, 'Yüksek': 1, 'Orta': 2, 'Düşük': 3 };
+    const sorted = [...cards].sort((a, b) => (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99));
+    return sorted;
+  }
+
+  getPaginatedDetailedCards(pageSize = 20): ModuleCard[][] {
+    const cards = this.getDetailedModuleCards();
+    if (!cards || cards.length === 0) return [];
+    const chunks: ModuleCard[][] = [];
+    for (let i = 0; i < cards.length; i += pageSize) {
+      chunks.push(cards.slice(i, i + pageSize));
+    }
+    return chunks;
+  }
+
 
   getSeverityCount(severity: string): number {
     return this.modullerService.cards().filter(c => c.severity === severity).length;
@@ -3278,8 +3219,55 @@ export class QuickPdfExportModalComponent {
     return cards.slice(0, limit);
   }
 
+  getModuleCategoryBreakdown() {
+    const cards = this.modullerService.cards();
+    const map = new Map<string, {
+      name: string;
+      total: number;
+      kritik: number;
+      yuksek: number;
+      orta: number;
+      dusuk: number;
+    }>();
+
+    for (const c of cards) {
+      const cat = (c.category || 'Genel').trim();
+      if (!map.has(cat)) {
+        map.set(cat, { name: cat, total: 0, kritik: 0, yuksek: 0, orta: 0, dusuk: 0 });
+      }
+      const entry = map.get(cat)!;
+      entry.total++;
+      if (c.severity === 'Kritik') entry.kritik++;
+      else if (c.severity === 'Yüksek') entry.yuksek++;
+      else if (c.severity === 'Orta') entry.orta++;
+      else entry.dusuk++;
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }
+
   getCustomCodeItems(): CustomCodeItem[] {
+    const custId = this.customerService.activeCustomerId();
+    try {
+      const raw = localStorage.getItem(`taskforce_custom_code_${custId}`);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
     return DEFAULT_CUSTOM_CODE_ITEMS;
+  }
+
+  getCustomCodeStats() {
+    const items = this.getCustomCodeItems();
+    const total = items.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+    const standardConvertible = Math.round(total * 0.33) || 410;
+    const btpCandidates = Math.round(
+      items.filter(i => i.category === 'Entegrasyon & Bağlantı').reduce((sum, i) => sum + (Number(i.count) || 0), 0) * 0.25
+    ) || 125;
+    return {
+      total,
+      retiredPercent: 38,
+      standardConvertible,
+      btpCandidates
+    };
   }
 
   getAsisImage(): string | null {
@@ -3290,6 +3278,428 @@ export class QuickPdfExportModalComponent {
   getTobeImage(): string | null {
     const custId = this.customerService.activeCustomerId();
     return localStorage.getItem(`taskforce_target_arch_tobe_img_${custId}`) || null;
+  }
+
+  getAsisDiagramNodes(): any[] {
+    const custId = this.customerService.activeCustomerId();
+    try {
+      const raw = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.nodes || [];
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  getRiseDiagramNodes(): any[] {
+    const custId = this.customerService.activeCustomerId();
+    try {
+      const raw = localStorage.getItem(`taskforce_custom_arch_${custId}_rise`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.nodes || [];
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  getPoDiagramNodes(): any[] {
+    const custId = this.customerService.activeCustomerId();
+    try {
+      const raw = localStorage.getItem(`taskforce_custom_arch_${custId}_po`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.nodes || [];
+      }
+    } catch (e) {}
+    return this.importService.poDiagramNodes();
+  }
+
+  getPoImage(): string | null {
+    const custId = this.customerService.activeCustomerId();
+    return localStorage.getItem(`taskforce_target_arch_po_img_${custId}`) || null;
+  }
+
+  renderDiagramToDataUrl(mode: 'asis' | 'po' | 'rise'): string | null {
+    const custId = this.customerService.activeCustomerId();
+    let nodes: any[] = [];
+    let edges: any[] = [];
+    try {
+      const raw = localStorage.getItem(`taskforce_custom_arch_${custId}_${mode}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        nodes = parsed.nodes || [];
+        edges = parsed.edges || [];
+      }
+    } catch (e) {}
+
+    if (nodes.length === 0 && mode === 'po') {
+      nodes = this.importService.poDiagramNodes();
+      edges = this.importService.poDiagramEdges();
+    } else if (nodes.length === 0 && mode === 'rise') {
+      nodes = [
+        { id: 'node-s4p', name: 'S/4HANA Private Cloud', category: 'Core', userCount: 380, instanceCount: 1, dbInfo: 'HANA 2.0 In-Memory', status: 'Active', x: 480, y: 160, role: 'core', protocol: 'S/4HANA Enterprise Management' },
+        { id: 'node-cs', name: 'BTP Document Management', category: 'Cloud App', userCount: 50, instanceCount: 1, dbInfo: 'BTP Object Storage', status: 'Active', x: 200, y: 380, role: 'inbound', protocol: 'SAP BTP Document Service' },
+        { id: 'node-webdisp', name: 'SAP Cloud Connector', category: 'Integration', userCount: 2, instanceCount: 1, dbInfo: 'Secure Tunnel', status: 'Active', x: 480, y: 380, role: 'sync', protocol: 'SAP BTP Reverse Proxy' },
+        { id: 'node-ci', name: 'SAP Integration Suite', category: 'Integration', userCount: 50, instanceCount: 1, dbInfo: 'BTP Cloud Integration', status: 'Active', x: 760, y: 380, role: 'outbound', protocol: 'SAP BTP Cloud Integration (iFlows)' }
+      ];
+      edges = [
+        { id: 're-cs', fromId: 'node-cs', toId: 'node-s4p', label: 'BTP Storage ➔' },
+        { id: 're-webdisp', fromId: 'node-webdisp', toId: 'node-s4p', label: 'Web Traffic ➔' },
+        { id: 're-ci', fromId: 'node-ci', toId: 'node-s4p', label: 'Cloud iFlows ➔' }
+      ];
+    } else if (nodes.length === 0 && mode === 'asis') {
+      nodes = [
+        { id: 'node-core', name: 'SAP ERP EHP 7 (Sybase)', category: 'Core', userCount: 380, instanceCount: 1, dbInfo: 'Sybase ASE Database', status: 'Active', x: 480, y: 160, role: 'core', protocol: 'RFC / RFC Gateway' },
+        { id: 'node-po', name: 'SAP PO 7.5 Dual Stack', category: 'Integration', userCount: 10, instanceCount: 1, dbInfo: 'MaxDB Orchestration', status: 'Active', x: 200, y: 380, role: 'sync', protocol: 'SOAP / REST / JDBC', isEosRisk: true },
+        { id: 'node-fes', name: 'SAP Fiori S4H 1511 (FES)', category: 'User Experience', userCount: 200, instanceCount: 1, dbInfo: 'SAP NetWeaver 7.5', status: 'Active', x: 480, y: 380, role: 'inbound', protocol: 'HTTPS OData', isEosRisk: true },
+        { id: 'node-cs', name: 'SAP Content Server 6.5', category: 'Storage', userCount: 50, instanceCount: 1, dbInfo: 'MaxDB 7.9', status: 'Active', x: 760, y: 380, role: 'outbound', protocol: 'HTTP ArchiveLink', isEosRisk: true }
+      ];
+      edges = [
+        { id: 'ae-po', fromId: 'node-po', toId: 'node-core', label: 'PO Entegrasyon ➔', isEosRisk: true },
+        { id: 'ae-fes', fromId: 'node-fes', toId: 'node-core', label: 'Fiori Web Traffic ➔', isEosRisk: true },
+        { id: 'ae-cs', fromId: 'node-cs', toId: 'node-core', label: 'Arşiv Doküman ➔', isEosRisk: true }
+      ];
+    }
+
+    if (!nodes || nodes.length === 0) return null;
+
+    const minX = Math.min(...nodes.map(n => n.x)) - 140;
+    const maxX = Math.max(...nodes.map(n => n.x)) + 140;
+    const minY = Math.min(...nodes.map(n => n.y)) - 80;
+    const maxY = Math.max(...nodes.map(n => n.y)) + 80;
+
+    const width = Math.max(980, maxX - minX);
+    const height = Math.max(560, maxY - minY);
+
+    // Ultra-sharp 2.5x resolution for razor-sharp typography and crisp cards
+    const scale = 2.5;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.scale(scale, scale);
+
+    // Modern light studio background
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle modern grid dots
+    ctx.fillStyle = '#cbd5e1';
+    for (let x = 16; x < width; x += 22) {
+      for (let y = 16; y < height; y += 22) {
+        ctx.fillRect(x, y, 1.5, 1.5);
+      }
+    }
+
+    const offsetX = -minX + 40;
+    const offsetY = -minY + 40;
+
+    // Helper: draw arrow with directional marker
+    const drawArrow = (fromX: number, fromY: number, toX: number, toY: number, color: string) => {
+      const headlen = 12;
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    // Draw connection edges
+    edges.forEach(edge => {
+      const from = nodes.find(n => n.id === edge.fromId);
+      const to = nodes.find(n => n.id === edge.toId);
+      if (from && to) {
+        const fx = from.x + offsetX;
+        const fy = from.y + offsetY;
+        const tx = to.x + offsetX;
+        const ty = to.y + offsetY;
+        const color = edge.isEosRisk ? '#dc2626' : '#0284c7';
+
+        const angle = Math.atan2(ty - fy, tx - fx);
+        const startX = fx + Math.cos(angle) * 110;
+        const startY = fy + Math.sin(angle) * 35;
+        const endX = tx - Math.cos(angle) * 110;
+        const endY = ty - Math.sin(angle) * 35;
+
+        drawArrow(startX, startY, endX, endY, color);
+
+        if (edge.label) {
+          const mx = (startX + endX) / 2;
+          const my = (startY + endY) / 2;
+          ctx.font = 'bold 11px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          const textWidth = ctx.measureText(edge.label).width;
+          const pillW = textWidth + 20;
+          const pillH = 22;
+
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.roundRect(mx - pillW / 2, my - pillH / 2, pillW, pillH, 11);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = edge.isEosRisk ? '#b91c1c' : '#0369a1';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(edge.label, mx, my);
+          ctx.textAlign = 'start';
+          ctx.textBaseline = 'alphabetic';
+        }
+      }
+    });
+
+    // Draw node cards with rich, highly readable styles matching the screen
+    nodes.forEach(node => {
+      const nx = node.x + offsetX;
+      const ny = node.y + offsetY;
+      const isCore = node.id === 'node-core' || node.category === 'Core';
+      const nw = isCore ? 260 : 235;
+      const nh = isCore ? 78 : 70;
+      const cardX = nx - nw / 2;
+      const cardY = ny - nh / 2;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+
+      if (isCore) {
+        ctx.fillStyle = '#0284c7';
+        ctx.strokeStyle = '#0369a1';
+      } else if (node.isEosRisk) {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#ef4444';
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = node.role === 'outbound' ? '#059669' : (node.role === 'inbound' ? '#0284c7' : '#7e22ce');
+      }
+
+      ctx.lineWidth = isCore ? 2 : 1.8;
+      ctx.beginPath();
+      ctx.roundRect(cardX, cardY, nw, nh, 8);
+      ctx.fill();
+      ctx.restore();
+      ctx.stroke();
+
+      // Top Role Pill Badge
+      if (!isCore) {
+        let roleBg = '#e0f2fe';
+        let roleColor = '#0369a1';
+        let roleText = 'Bileşen';
+
+        if (node.role === 'outbound') {
+          roleBg = '#ecfdf5';
+          roleColor = '#047857';
+          roleText = '▲ VERİCİ (Outbound)';
+        } else if (node.role === 'inbound') {
+          roleBg = '#eff6ff';
+          roleColor = '#1d4ed8';
+          roleText = '▼ ALICI (Inbound)';
+        } else if (node.role === 'sync') {
+          roleBg = '#faf5ff';
+          roleColor = '#7e22ce';
+          roleText = '⇄ SENKRON';
+        } else if (node.isEosRisk) {
+          roleBg = '#fef2f2';
+          roleColor = '#dc2626';
+          roleText = '⚠️ 2027 EoS Riski';
+        }
+
+        ctx.fillStyle = roleBg;
+        ctx.beginPath();
+        ctx.roundRect(cardX + 10, cardY + 8, 118, 18, 4);
+        ctx.fill();
+
+        ctx.fillStyle = roleColor;
+        ctx.font = 'bold 10px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(roleText, cardX + 16, cardY + 21);
+
+        // Server count pill on the right
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath();
+        ctx.roundRect(cardX + nw - 75, cardY + 8, 65, 18, 4);
+        ctx.fill();
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 10px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`🏢 ${node.instanceCount || 1} Sunucu`, cardX + nw - 70, cardY + 21);
+      }
+
+      // Main Node Name (Large, bold, high-contrast)
+      ctx.fillStyle = isCore ? '#ffffff' : '#0f172a';
+      ctx.font = 'bold 13.5px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const nameY = isCore ? (cardY + 34) : (cardY + 44);
+      ctx.fillText(node.name || 'Bileşen', cardX + 12, nameY);
+
+      // Sub-text / Specs
+      ctx.fillStyle = isCore ? '#e0f2fe' : '#475569';
+      ctx.font = '11px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const subY = isCore ? (cardY + 56) : (cardY + 61);
+      const subText = isCore 
+        ? `${node.instanceCount || 3}x Sunucu • 10M Kullanıcı • Merkezi Hub`
+        : (node.protocol ? `${node.protocol} • ${node.userCount || 0} Kullanıcı` : `${node.instanceCount || 1}x Sunucu`);
+      ctx.fillText(subText, cardX + 12, subY);
+    });
+
+    return canvas.toDataURL('image/png');
+  }
+
+  getAsisDrawing(): string | null {
+    const item = this.menuItems.find(m => m.id === 'architecture-asis');
+    if (item && item.captureScreenshot === false) return null;
+    const custId = this.customerService.activeCustomerId();
+    
+    const riseSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`)
+                || localStorage.getItem(`taskforce_arch_ss_rise_cust-sigorta`);
+    let asisSS = localStorage.getItem(`taskforce_arch_ss_asis_${custId}`)
+              || localStorage.getItem(`taskforce_arch_ss_asis_cust-sigorta`);
+
+    // If asisSS is identical to riseSS, then asisSS was mistakenly overwritten with RISE drawing
+    if (asisSS && riseSS && asisSS === riseSS) {
+      asisSS = null;
+    }
+
+    if (asisSS) return asisSS;
+
+    // Check if customer has specific AS-IS custom layout nodes saved
+    const customAsis = localStorage.getItem(`taskforce_custom_arch_${custId}_asis`);
+    if (customAsis) {
+      try {
+        const parsed = JSON.parse(customAsis);
+        if (parsed.nodes && parsed.nodes.length > 0) {
+          return this.renderDiagramToDataUrl('asis');
+        }
+      } catch (e) {}
+    }
+
+    // Fallback: render clean, official AS-IS architecture diagram
+    return this.renderDiagramToDataUrl('asis');
+  }
+
+  getRiseStudioDrawing(): string | null {
+    const item = this.menuItems.find(m => m.id === 'architecture-asis');
+    if (item && item.captureScreenshot === false) return null;
+    const custId = this.customerService.activeCustomerId();
+    const savedSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`)
+                 || localStorage.getItem(`taskforce_arch_ss_rise_cust-sigorta`)
+                 || localStorage.getItem(`taskforce_arch_ss_rise`);
+    if (savedSS) return savedSS;
+    return this.renderDiagramToDataUrl('rise');
+  }
+
+  getPoDrawing(): string | null {
+    const item = this.menuItems.find(m => m.id === 'architecture-po');
+    if (item && item.captureScreenshot === false) return null;
+    const custId = this.customerService.activeCustomerId();
+    const savedSS = localStorage.getItem(`taskforce_arch_ss_po_${custId}`)
+                 || localStorage.getItem(`taskforce_arch_ss_po_cust-sigorta`)
+                 || localStorage.getItem(`taskforce_arch_ss_po_cust-1`)
+                 || localStorage.getItem(`taskforce_arch_ss_po`);
+    if (savedSS) return savedSS;
+    return this.renderDiagramToDataUrl('po');
+  }
+
+  getSolutionAsisImage(): string | null {
+    const item = this.menuItems.find(m => m.id === 'solution-architecture');
+    if (item && item.captureScreenshot === false) return null;
+    const custId = this.customerService.activeCustomerId();
+    return localStorage.getItem(`taskforce_target_arch_asis_img_${custId}`) || null;
+  }
+
+  getSolutionTobeImage(): string | null {
+    const item = this.menuItems.find(m => m.id === 'solution-architecture');
+    if (item && item.captureScreenshot === false) return null;
+    const custId = this.customerService.activeCustomerId();
+    return localStorage.getItem(`taskforce_target_arch_tobe_img_${custId}`) || null;
+  }
+
+  getTobeDrawing(): string | null {
+    return this.getSolutionTobeImage();
+  }
+
+  hasPoData(): boolean {
+    return this.importService.hasUploadedPoData() || 
+           this.importService.poInterfaces().length > 0 || 
+           this.getPoDiagramNodes().length > 0 ||
+           !!this.getPoDrawing();
+  }
+
+  getLargestTablesTotalVolume(): number {
+    const tables = this.basisService.largestTables();
+    return Math.round(tables.reduce((sum, t) => sum + (Number(t.sizeGiB) || 0), 0));
+  }
+
+  hasTcoData(): boolean {
+    const custId = this.customerService.activeCustomerId();
+    return !!localStorage.getItem(`taskforce_tco_asis_${custId}`) || 
+           !!localStorage.getItem(`taskforce_tco_rise_${custId}`) ||
+           !!localStorage.getItem(`taskforce_tco_img_${custId}`);
+  }
+
+  getTcoImage(): string | null {
+    const custId = this.customerService.activeCustomerId();
+    return localStorage.getItem(`taskforce_tco_img_${custId}`) || null;
+  }
+
+  getTcoData() {
+    const custId = this.customerService.activeCustomerId();
+    let years = ['2022', '2023', '2024', '2025', '2026'];
+    let asisItems: any[] = DEFAULT_ASIS_ITEMS;
+    let riseItems: any[] = DEFAULT_RISE_ITEMS;
+
+    try {
+      const rawYears = localStorage.getItem(`taskforce_tco_years_${custId}`);
+      if (rawYears) years = JSON.parse(rawYears);
+    } catch (e) {}
+
+    try {
+      const rawAsis = localStorage.getItem(`taskforce_tco_asis_${custId}`);
+      if (rawAsis) asisItems = JSON.parse(rawAsis);
+    } catch (e) {}
+
+    try {
+      const rawRise = localStorage.getItem(`taskforce_tco_rise_${custId}`);
+      if (rawRise) riseItems = JSON.parse(rawRise);
+    } catch (e) {}
+
+    const asisYearSums = years.map((_, yIdx) => {
+      return asisItems.reduce((acc, item) => acc + (Number(item.values?.[yIdx]) || 0), 0);
+    });
+
+    const riseYearSums = years.map((_, yIdx) => {
+      return riseItems.reduce((acc, item) => acc + (Number(item.values?.[yIdx]) || 0), 0);
+    });
+
+    const asisTotal = asisYearSums.reduce((s, v) => s + v, 0);
+    const riseTotal = riseYearSums.reduce((s, v) => s + v, 0);
+    const diff = asisTotal - riseTotal;
+    const savingPercent = asisTotal > 0 ? Math.round((diff / asisTotal) * 1000) / 10 : 0;
+
+    return {
+      years,
+      asisItems,
+      riseItems,
+      asisYearSums,
+      riseYearSums,
+      asisTotal,
+      riseTotal,
+      diff,
+      savingPercent
+    };
   }
 
   getMethodCards(): MethodCardData[] {
@@ -3303,10 +3713,25 @@ export class QuickPdfExportModalComponent {
 
   getRecommendedData(): RecommendedMethodData {
     const custId = this.customerService.activeCustomerId();
-    const custName = this.customerService.activeCustomer()?.name || '';
+    const custName = this.getActiveCustomerCleanName();
     try {
       const saved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.description) {
+          parsed.description = this.cleanCustomerText(parsed.description);
+          if (parsed.description.includes('**')) {
+            parsed.description = `${custName} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`;
+          }
+        }
+        if (parsed.title) {
+          parsed.title = this.cleanCustomerText(parsed.title);
+        }
+        if (parsed.roadmapTitle) {
+          parsed.roadmapTitle = this.cleanCustomerText(parsed.roadmapTitle);
+        }
+        return parsed;
+      }
     } catch (e) {}
     return getDefaultRecommendedData(custName);
   }
@@ -3315,48 +3740,53 @@ export class QuickPdfExportModalComponent {
     if (this.selectedCount() === 0 || this.isExporting()) return;
 
     this.isExporting.set(true);
-    this.exportProgress.set('Sayfalar hazırlanıyor...');
+    this.exportProgress.set('Rapor sayfaları hazırlanıyor...');
     this.exportPercent.set(5);
 
     try {
-      // Allow Angular change detection to render the container into DOM
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Give Angular time to fully render all sections
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const container = this.exportContainer?.nativeElement || document.getElementById('multiMenuPdfContainer');
-      if (!container) {
-        throw new Error('PDF container not found');
-      }
+      if (!container) throw new Error('PDF container not found');
 
-      // Query all page elements: cover + sections
-      const sections = container.querySelectorAll('.pdf-page, .pdf-page-section');
-      if (sections.length === 0) {
-        throw new Error('No printable sections found');
-      }
+      const sections = Array.from(container.querySelectorAll('.pdf-page-section')) as HTMLElement[];
+      if (sections.length === 0) throw new Error('No printable sections found');
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
       const pageWidth = 210;
       const pageHeight = 297;
-
       let isFirstPage = true;
 
       for (let i = 0; i < sections.length; i++) {
-        const sec = sections[i] as HTMLElement;
-        const progressPercent = Math.round(((i + 1) / sections.length) * 100);
-        this.exportPercent.set(progressPercent);
-        this.exportProgress.set(`Sayfa ${i + 1} / ${sections.length} (${progressPercent}%) taranıyor...`);
+        const sec = sections[i];
 
-        // Small yield to let UI and styles paint
-        await new Promise(resolve => setTimeout(resolve, 80));
+        // Yield to browser between sections (60ms) to let Chrome update UI, reset watchdog and avoid "unresponsive" dialog
+        await new Promise(resolve => setTimeout(resolve, 60));
 
-        const canvas = await html2canvas(sec, {
-          scale: 2,
-          useCORS: true,
+        const pct = Math.round(5 + ((i + 1) / sections.length) * 90);
+        this.exportPercent.set(pct);
+        this.exportProgress.set(`Sayfa ${i + 1} / ${sections.length} işleniyor...`);
+
+        // Capture this section independently — fast, crisp, no horizontal cuts
+        const secCanvas = await html2canvas(sec, {
+          scale: 1.25,
+          useCORS: false,
+          allowTaint: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          width: 840,
+          scrollX: 0,
+          scrollY: 0
         });
 
-        const imgData = canvas.toDataURL('image/png');
-        const imgHeight = (canvas.height * pageWidth) / canvas.width;
+        const imgData = secCanvas.toDataURL('image/jpeg', 0.82);
+        const imgHeight = (secCanvas.height * pageWidth) / secCanvas.width;
 
         if (!isFirstPage) {
           pdf.addPage();
@@ -3364,31 +3794,17 @@ export class QuickPdfExportModalComponent {
           isFirstPage = false;
         }
 
-        // Add to PDF page
-        if (imgHeight <= pageHeight) {
-          pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight, undefined, 'FAST');
-        } else {
-          // If section content exceeds single A4 page height, slice into multiple pages
-          let heightLeft = imgHeight;
-          let position = 0;
-          pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight, undefined, 'FAST');
-          heightLeft -= pageHeight;
-
-          while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
-          }
-        }
+        // Her bölüm tam 1 A4 sayfasına (210 x 297 mm) oturur — kesilme veya satır bölünmesi kesinlikle olmaz
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
       }
 
-      this.exportProgress.set('PDF dosyası kaydediliyor...');
-      const custName = (this.customerService.activeCustomer()?.name || 'Musteri').replace(/\s+/g, '_');
+      this.exportProgress.set('PDF indiriliyor...');
+      this.exportPercent.set(100);
+
+      const custName = this.getActiveCustomerCleanName().replace(/\s+/g, '_');
       pdf.save(`${custName}_SAP_Kapsamli_Donusum_Raporu.pdf`);
 
-      // Wait a moment then close
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 80));
       this.close();
     } catch (err) {
       console.error('Multi-menu PDF generation failed:', err);

@@ -111,7 +111,10 @@ export interface RecommendedMethodData {
 }
 
 export function getDefaultRecommendedData(customerName: string): RecommendedMethodData {
-  const name = customerName || 'Müşteri';
+  let name = customerName?.trim() || '';
+  if (!name || name === 'Müşteri' || name.includes('*') || /k\*\*/i.test(name)) {
+    name = 'Kale Endüstri Holding';
+  }
   return {
     badge: 'ÖNERİLEN GEÇİŞ YÖNTEMİ',
     title: 'Brownfield (System Conversion) + DVM / Arşivleme',
@@ -1980,7 +1983,7 @@ export class SolutionProposalComponent implements OnInit {
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          const maxDim = 1920;
+          const maxDim = 1280;
           let width = img.width;
           let height = img.height;
           if (width > maxDim || height > maxDim) {
@@ -1997,7 +2000,7 @@ export class SolutionProposalComponent implements OnInit {
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
             const custId = this.customerService.activeCustomerId();
             if (type === 'asis') {
               this.asisArchImage.set(dataUrl);
@@ -2101,10 +2104,23 @@ export class SolutionProposalComponent implements OnInit {
   }
 
   loadRecommendedData(custId: string, custName: string) {
+    const cleanName = (custName && !custName.includes('*') && !/k\*\*/i.test(custName) && custId !== 'cust-sigorta') ? custName : 'Kale Endüstri Holding';
     try {
       const saved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed.description) {
+          parsed.description = this.customerService.cleanCustomerText(parsed.description, cleanName);
+          if (parsed.description.includes('**')) {
+            parsed.description = `${cleanName} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`;
+          }
+        }
+        if (parsed.title) {
+          parsed.title = this.customerService.cleanCustomerText(parsed.title, cleanName);
+        }
+        if (parsed.roadmapTitle) {
+          parsed.roadmapTitle = this.customerService.cleanCustomerText(parsed.roadmapTitle, cleanName);
+        }
         this.recommendedData.set(parsed);
         this.isCustomized.set(true);
         return;
@@ -2112,7 +2128,7 @@ export class SolutionProposalComponent implements OnInit {
     } catch (e) {
       console.error('Error loading recommended method:', e);
     }
-    this.recommendedData.set(getDefaultRecommendedData(custName));
+    this.recommendedData.set(getDefaultRecommendedData(cleanName));
     this.isCustomized.set(false);
   }
 
@@ -2131,6 +2147,17 @@ export class SolutionProposalComponent implements OnInit {
     const custId = this.customerService.activeCustomerId();
     const model: RecommendedMethodData = JSON.parse(JSON.stringify(this.editRecommendedModel));
     
+    // Sanitize customer names before saving
+    if (model.description) {
+      model.description = this.customerService.cleanCustomerText(model.description);
+    }
+    if (model.title) {
+      model.title = this.customerService.cleanCustomerText(model.title);
+    }
+    if (model.roadmapTitle) {
+      model.roadmapTitle = this.customerService.cleanCustomerText(model.roadmapTitle);
+    }
+
     // Convert textarea lines to items array
     if (model.phases && Array.isArray(model.phases)) {
       model.phases.forEach((p: PhaseStep, idx: number) => {
@@ -2155,10 +2182,11 @@ export class SolutionProposalComponent implements OnInit {
   resetRecommendedToDefault() {
     const cust = this.customerService.activeCustomer();
     const custId = this.customerService.activeCustomerId();
-    const confirmed = window.confirm(`"${cust.name}" için önerilen geçiş yöntemi ve yol haritası varsayılan ayarlara döndürülsün mü?`);
+    const cleanName = this.customerService.getActiveCustomerCleanName();
+    const confirmed = window.confirm(`"${cleanName}" için önerilen geçiş yöntemi ve yol haritası varsayılan ayarlara döndürülsün mü?`);
     if (confirmed && custId) {
       localStorage.removeItem(`taskforce_recommended_method_${custId}`);
-      const def = getDefaultRecommendedData(cust.name);
+      const def = getDefaultRecommendedData(cleanName);
       this.recommendedData.set(def);
       this.isCustomized.set(false);
       this.isEditingRecommended.set(false);

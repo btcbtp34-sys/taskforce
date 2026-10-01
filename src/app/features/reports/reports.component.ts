@@ -6,6 +6,7 @@ import { CustomerService } from '../../core/services/customer.service';
 import { BasisSizingService } from '../../core/services/basis-sizing.service';
 import { NotesService } from '../../core/services/notes.service';
 import { QuickToolsService } from '../../core/services/quick-tools.service';
+import { RiseScoreService } from '../../core/services/rise-score.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -70,11 +71,15 @@ export interface ExecutiveSummaryData {
 }
 
 export function getDefaultHeroScore(customerName: string): HeroScoreData {
+  let custName = customerName?.trim() || '';
+  if (!custName || custName === 'Müşteri' || custName.includes('*') || /k\*\*/i.test(custName)) {
+    custName = 'Kale Endüstri Holding';
+  }
   return {
     matchScore: 84,
-    matchLabel: 'MATCH SKORU',
+    matchLabel: 'RISE SKORU',
     badgeText: 'RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN',
-    title: `${customerName} RISE Readiness & Bulut Uyum Analizi`,
+    title: `${custName} RISE Readiness & Bulut Uyum Analizi`,
     description: `Mevcut SAP altyapısı, aktif kullanıcı profili, veritabanı boyutlandırması ve entegrasyon envanteri incelendiğinde; şirketiniz %84 genel bulut uyum skoru ile RISE with SAP Private Cloud dönüşümüne tam hazır durumdadır.`,
     pillars: [
       {
@@ -122,10 +127,14 @@ export function getDefaultHeroScore(customerName: string): HeroScoreData {
 }
 
 export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryData {
+  let custName = customerName?.trim() || '';
+  if (!custName || custName === 'Müşteri' || custName.includes('*') || /k\*\*/i.test(custName)) {
+    custName = 'Kale Endüstri Holding';
+  }
   return {
-    heroScore: getDefaultHeroScore(customerName),
+    heroScore: getDefaultHeroScore(custName),
     objectiveTitle: '1. Amaç: RISE with SAP ile Yeni Nesil Kurumsal Dönüşüm',
-    objectiveSubtitle: `${customerName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`,
+    objectiveSubtitle: `${custName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`,
     objectivePillars: [
       {
         id: 'ai',
@@ -177,7 +186,7 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       }
     ],
     howTitle: '2. Nasıl? Dönüşüm Metodolojisi, Takvim ve Finansal Model',
-    howSubtitle: 'Dönüşümün güvenle ve en düşük operasyonel risk ile tamamlanması için planlanan 3 temel sacayağı:',
+    howSubtitle: 'Dönüşümün güvenle ve en düşük operasyonel risk ile tamamlanması için planlanan stratejik geçiş yaklaşımı ve temel metrikler:',
     howPillars: [
       {
         id: 'method',
@@ -312,14 +321,14 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       <div class="report-content-container" #reportContainer id="reportContainer">
         
         <!-- ========================================================================= -->
-        <!-- SİSTEMDEN GELEN BÖLÜM: RISE READINESS / MATCH SKORU (DÜZENLENEBİLİR)    -->
+        <!-- SİSTEMDEN GELEN BÖLÜM: RISE READINESS / RISE SKORU (DÜZENLENEBİLİR)      -->
         <!-- ========================================================================= -->
         @if (!isEditMode()) {
           <div class="hero-score-card">
             <div class="score-ring-section">
               <div class="circular-score-badge">
                 <div class="score-number">%{{ content.heroScore?.matchScore || 84 }}</div>
-                <div class="score-label">{{ content.heroScore?.matchLabel || 'MATCH SKORU' }}</div>
+                <div class="score-label">{{ content.heroScore?.matchLabel || 'RISE SKORU' }}</div>
               </div>
 
               <div class="score-ring-text">
@@ -363,14 +372,14 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                     max="100" 
                     class="edit-hero-score-input" 
                     [(ngModel)]="content.heroScore!.matchScore" 
-                    title="Match Skoru"
+                    title="Rise Skoru"
                   />
                 </div>
                 <input 
                   type="text" 
                   class="edit-hero-label-input" 
                   [(ngModel)]="content.heroScore!.matchLabel" 
-                  placeholder="MATCH SKORU"
+                  placeholder="RISE SKORU"
                 />
               </div>
 
@@ -450,7 +459,7 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                   *ngIf="isEditMode()" 
                   [(ngModel)]="content.objectiveTitle" />
 
-                <p class="sec-subtitle" *ngIf="!isEditMode()">{{ content.objectiveSubtitle }}</p>
+                <p class="sec-subtitle" *ngIf="!isEditMode()">{{ cleanCustomerText(content.objectiveSubtitle) }}</p>
                 <textarea 
                   class="edit-textarea-subtitle" 
                   rows="2" 
@@ -514,133 +523,85 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             <span class="pillar-badge blue">Uygulama Stratejisi</span>
           </div>
 
-          <!-- 3 Ana Kırılım: Geçiş Yöntemi, Takvim, Sabit -> Değişken Maliyet -->
-          <div class="how-pillars-grid">
-            <div class="how-card" *ngFor="let item of content.howPillars; let idx = index">
-              <div class="how-card-top">
-                <div class="badge-tag">{{ item.badge }}</div>
-                <div class="how-icon">
-                  <app-icon [name]="item.icon || 'layers'" [size]="16" color="#0284c7"></app-icon>
+          <!-- Önerilen Geçiş Yöntemi Hero Kartı (2. Görseldeki Yapı) -->
+          <div class="rec-method-card-wrapper" *ngIf="content.recommendedMethod">
+            <!-- VIEW MODE -->
+            <div *ngIf="!isEditMode()" class="hero-recommendation-card">
+              <div class="hero-left">
+                <div class="hero-icon-box">
+                  <app-icon name="check" [size]="28" color="#059669"></app-icon>
+                </div>
+                <div>
+                  <span class="hero-pill">{{ content.recommendedMethod.badge }}</span>
+                  <h2>{{ cleanCustomerText(content.recommendedMethod.title) }}</h2>
+                  <p>{{ cleanCustomerText(content.recommendedMethod.description) }}</p>
                 </div>
               </div>
-
-              <h3 *ngIf="!isEditMode()">{{ item.title }}</h3>
-              <input 
-                type="text" 
-                class="edit-input-how-title" 
-                *ngIf="isEditMode()" 
-                [(ngModel)]="item.title" />
-
-              <ul class="how-bullets-list" *ngIf="!isEditMode()">
-                <li *ngFor="let bullet of item.bullets">
-                  <span class="bullet-dot">•</span>
-                  <span>{{ bullet }}</span>
-                </li>
-              </ul>
-
-              <div class="how-bullets-edit" *ngIf="isEditMode()">
-                <label class="edit-label">Maddeler (Her satır bir madde):</label>
-                <textarea 
-                  class="edit-textarea-bullets" 
-                  rows="4" 
-                  [ngModel]="item.bullets.join('\n')" 
-                  (ngModelChange)="updateBullets(item, $event)"></textarea>
-              </div>
-
-              <div class="how-footer-note" *ngIf="!isEditMode()">
-                <app-icon name="check" [size]="13" color="#059669"></app-icon>
-                <span>{{ item.note }}</span>
-              </div>
-              <input 
-                type="text" 
-                class="edit-input-note" 
-                *ngIf="isEditMode()" 
-                [(ngModel)]="item.note" 
-                placeholder="Alt vurgu notu" />
-            </div>
-          </div>
-        </div>
-
-        <!-- ========================================================================= -->
-        <!-- 3. ÖNERİLEN GEÇİŞ YÖNTEMİ HERO KARTI (NASIL'IN ALTINDA)                  -->
-        <!-- ========================================================================= -->
-        <div class="rec-method-card-wrapper" *ngIf="content.recommendedMethod">
-          <!-- VIEW MODE -->
-          <div *ngIf="!isEditMode()" class="hero-recommendation-card">
-            <div class="hero-left">
-              <div class="hero-icon-box">
-                <app-icon name="check" [size]="28" color="#059669"></app-icon>
-              </div>
-              <div>
-                <span class="hero-pill">{{ content.recommendedMethod.badge }}</span>
-                <h2>{{ content.recommendedMethod.title }}</h2>
-                <p>{{ content.recommendedMethod.description }}</p>
+              <div class="hero-stats">
+                <div class="stat-box">
+                  <span class="stat-val text-emerald">{{ content.recommendedMethod.stat1Value }}</span>
+                  <span class="stat-lbl">{{ content.recommendedMethod.stat1Label }}</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-val text-blue">{{ content.recommendedMethod.stat2Value }}</span>
+                  <span class="stat-lbl">{{ content.recommendedMethod.stat2Label }}</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-val text-purple">{{ content.recommendedMethod.stat3Value }}</span>
+                  <span class="stat-lbl">{{ content.recommendedMethod.stat3Label }}</span>
+                </div>
               </div>
             </div>
-            <div class="hero-stats">
-              <div class="stat-box">
-                <span class="stat-val text-emerald">{{ content.recommendedMethod.stat1Value }}</span>
-                <span class="stat-lbl">{{ content.recommendedMethod.stat1Label }}</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-val text-blue">{{ content.recommendedMethod.stat2Value }}</span>
-                <span class="stat-lbl">{{ content.recommendedMethod.stat2Label }}</span>
-              </div>
-              <div class="stat-box">
-                <span class="stat-val text-purple">{{ content.recommendedMethod.stat3Value }}</span>
-                <span class="stat-lbl">{{ content.recommendedMethod.stat3Label }}</span>
-              </div>
-            </div>
-          </div>
 
-          <!-- EDIT MODE -->
-          <div *ngIf="isEditMode()" class="hero-edit-card">
-            <div class="card-edit-header">
-              <div class="ce-left">
-                <app-icon name="sliders" [size]="18" color="#059669"></app-icon>
-                <h3>Önerilen Geçiş Yöntemi & KPI Metrikleri Düzenleme</h3>
-              </div>
-              <span class="edit-pill">Düzenleme Modu</span>
-            </div>
-
-            <div class="form-grid-hero">
-              <div class="form-group span-1">
-                <label class="form-lbl">Rozet Metni (Pill)</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.badge" placeholder="Örn: ÖNERİLEN GEÇİŞ YÖNTEMİ" class="form-input" />
+            <!-- EDIT MODE -->
+            <div *ngIf="isEditMode()" class="hero-edit-card">
+              <div class="card-edit-header">
+                <div class="ce-left">
+                  <app-icon name="sliders" [size]="18" color="#059669"></app-icon>
+                  <h3>Önerilen Geçiş Yöntemi & KPI Metrikleri Düzenleme</h3>
+                </div>
+                <span class="edit-pill">Düzenleme Modu</span>
               </div>
 
-              <div class="form-group span-2">
-                <label class="form-lbl">Yöntem Ana Başlığı</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.title" placeholder="Örn: Brownfield (System Conversion)..." class="form-input" />
-              </div>
+              <div class="form-grid-hero">
+                <div class="form-group span-1">
+                  <label class="form-lbl">Rozet Metni (Pill)</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.badge" placeholder="Örn: ÖNERİLEN GEÇİŞ YÖNTEMİ" class="form-input" />
+                </div>
 
-              <div class="form-group span-full">
-                <label class="form-lbl">Açıklama & Karar Gerekçesi</label>
-                <textarea [(ngModel)]="content.recommendedMethod.description" rows="3" class="form-textarea" placeholder="Müşteri için önerilen geçiş yaklaşımının detaylı gerekçesi..."></textarea>
-              </div>
+                <div class="form-group span-2">
+                  <label class="form-lbl">Yöntem Ana Başlığı</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.title" placeholder="Örn: Brownfield (System Conversion)..." class="form-input" />
+                </div>
 
-              <div class="form-group kpi-input-box">
-                <span class="kpi-box-title">1. KPI Metriği</span>
-                <label class="form-lbl">Değer</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat1Value" placeholder="6 Ay" class="form-input" />
-                <label class="sub-label">Etiket</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat1Label" placeholder="Tahmini Proje Süresi" class="form-input" />
-              </div>
+                <div class="form-group span-full">
+                  <label class="form-lbl">Açıklama & Karar Gerekçesi</label>
+                  <textarea [(ngModel)]="content.recommendedMethod.description" rows="3" class="form-textarea" placeholder="Müşteri için önerilen geçiş yaklaşımının detaylı gerekçesi..."></textarea>
+                </div>
 
-              <div class="form-group kpi-input-box">
-                <span class="kpi-box-title">2. KPI Metriği</span>
-                <label class="form-lbl">Değer</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat2Value" placeholder="%100" class="form-input" />
-                <label class="sub-label">Etiket</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat2Label" placeholder="Geçmiş Veri Korunumu" class="form-input" />
-              </div>
+                <div class="form-group kpi-input-box">
+                  <span class="kpi-box-title">1. KPI Metriği</span>
+                  <label class="form-lbl">Değer</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat1Value" placeholder="6 Ay" class="form-input" />
+                  <label class="sub-label">Etiket</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat1Label" placeholder="Tahmini Proje Süresi" class="form-input" />
+                </div>
 
-              <div class="form-group kpi-input-box">
-                <span class="kpi-box-title">3. KPI Metriği</span>
-                <label class="form-lbl">Değer</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat3Value" placeholder="Optimum" class="form-input" />
-                <label class="sub-label">Etiket</label>
-                <input type="text" [(ngModel)]="content.recommendedMethod.stat3Label" placeholder="Bütçe / ROI Dengesi" class="form-input" />
+                <div class="form-group kpi-input-box">
+                  <span class="kpi-box-title">2. KPI Metriği</span>
+                  <label class="form-lbl">Değer</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat2Value" placeholder="%100" class="form-input" />
+                  <label class="sub-label">Etiket</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat2Label" placeholder="Geçmiş Veri Korunumu" class="form-input" />
+                </div>
+
+                <div class="form-group kpi-input-box">
+                  <span class="kpi-box-title">3. KPI Metriği</span>
+                  <label class="form-lbl">Değer</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat3Value" placeholder="Optimum" class="form-input" />
+                  <label class="sub-label">Etiket</label>
+                  <input type="text" [(ngModel)]="content.recommendedMethod.stat3Label" placeholder="Bütçe / ROI Dengesi" class="form-input" />
+                </div>
               </div>
             </div>
           </div>
@@ -1956,6 +1917,7 @@ export class ReportsComponent implements OnInit {
   basisService = inject(BasisSizingService);
   notesService = inject(NotesService);
   quickToolsService = inject(QuickToolsService);
+  riseScoreService = inject(RiseScoreService);
 
   isExporting = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
@@ -1963,7 +1925,14 @@ export class ReportsComponent implements OnInit {
 
   content: ExecutiveSummaryData = getDefaultExecutiveData('Müşteri');
 
-  activeCustomerName = computed(() => this.customerService.activeCustomer()?.name || 'Müşteri');
+  activeCustomerName = computed(() => {
+    const cust = this.customerService.activeCustomer();
+    const name = cust?.name || '';
+    if (name.includes('*') || cust?.id === 'cust-sigorta' || !name) {
+      return 'Kale Endüstri Holding';
+    }
+    return name;
+  });
 
   matchScoreText = computed(() => {
     return '%' + (this.content?.heroScore?.matchScore ?? 84);
@@ -2008,9 +1977,28 @@ export class ReportsComponent implements OnInit {
     item.bullets = rawText.split('\n').filter(line => line.trim().length > 0);
   }
 
+  cleanCustomerText(text?: string): string {
+    return this.customerService.cleanCustomerText(text, this.activeCustomerName());
+  }
+
   saveContent(): void {
     try {
       const custId = this.customerService.activeCustomer()?.id || 'default';
+      const custName = this.activeCustomerName();
+      if (this.content.heroScore?.title) {
+        this.content.heroScore.title = this.cleanCustomerText(this.content.heroScore.title);
+      }
+      if (this.content.objectiveSubtitle) {
+        this.content.objectiveSubtitle = this.cleanCustomerText(this.content.objectiveSubtitle);
+      }
+      if (this.content.recommendedMethod) {
+        if (this.content.recommendedMethod.title) {
+          this.content.recommendedMethod.title = this.cleanCustomerText(this.content.recommendedMethod.title);
+        }
+        if (this.content.recommendedMethod.description) {
+          this.content.recommendedMethod.description = this.cleanCustomerText(this.content.recommendedMethod.description);
+        }
+      }
       localStorage.setItem(`task_force_exec_summary_${custId}`, JSON.stringify(this.content));
       if (this.content.recommendedMethod) {
         try {
@@ -2018,8 +2006,8 @@ export class ReportsComponent implements OnInit {
           let sol = solSaved ? JSON.parse(solSaved) : null;
           if (sol) {
             sol.badge = this.content.recommendedMethod.badge;
-            sol.title = this.content.recommendedMethod.title;
-            sol.description = this.content.recommendedMethod.description;
+            sol.title = this.cleanCustomerText(this.content.recommendedMethod.title);
+            sol.description = this.cleanCustomerText(this.content.recommendedMethod.description);
             sol.stat1Value = this.content.recommendedMethod.stat1Value;
             sol.stat1Label = this.content.recommendedMethod.stat1Label;
             sol.stat2Value = this.content.recommendedMethod.stat2Value;
@@ -2053,6 +2041,24 @@ export class ReportsComponent implements OnInit {
         if (!this.content.heroScore || !this.content.heroScore.pillars || this.content.heroScore.pillars.length === 0) {
           this.content.heroScore = getDefaultHeroScore(custName);
         }
+        if (this.content.heroScore && (!this.content.heroScore.matchLabel || this.content.heroScore.matchLabel === 'MATCH SKORU')) {
+          this.content.heroScore.matchLabel = 'RISE SKORU';
+        }
+        if (this.content.heroScore?.title) {
+          this.content.heroScore.title = this.cleanCustomerText(this.content.heroScore.title);
+          if (this.content.heroScore.title.includes('**')) {
+            this.content.heroScore.title = `${custName} RISE Readiness & Bulut Uyum Analizi`;
+          }
+        }
+        if (this.content.objectiveSubtitle) {
+          this.content.objectiveSubtitle = this.cleanCustomerText(this.content.objectiveSubtitle);
+          if (this.content.objectiveSubtitle.includes('**')) {
+            this.content.objectiveSubtitle = `${custName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`;
+          }
+        }
+        if (this.content.howSubtitle && this.content.howSubtitle.includes('3 temel sacayağı')) {
+          this.content.howSubtitle = 'Dönüşümün güvenle ve en düşük operasyonel risk ile tamamlanması için planlanan stratejik geçiş yaklaşımı ve temel metrikler:';
+        }
         if (!this.content.recommendedMethod) {
           try {
             const solSaved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
@@ -2060,8 +2066,8 @@ export class ReportsComponent implements OnInit {
               const sol = JSON.parse(solSaved);
               this.content.recommendedMethod = {
                 badge: sol.badge,
-                title: sol.title,
-                description: sol.description,
+                title: this.cleanCustomerText(sol.title),
+                description: this.cleanCustomerText(sol.description),
                 stat1Value: sol.stat1Value,
                 stat1Label: sol.stat1Label,
                 stat2Value: sol.stat2Value,
@@ -2074,6 +2080,17 @@ export class ReportsComponent implements OnInit {
             }
           } catch (e) {
             this.content.recommendedMethod = getDefaultExecutiveData(custName).recommendedMethod;
+          }
+        }
+        if (this.content.recommendedMethod) {
+          if (this.content.recommendedMethod.description) {
+            this.content.recommendedMethod.description = this.cleanCustomerText(this.content.recommendedMethod.description);
+            if (this.content.recommendedMethod.description.includes('**')) {
+              this.content.recommendedMethod.description = `${custName} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`;
+            }
+          }
+          if (this.content.recommendedMethod.title) {
+            this.content.recommendedMethod.title = this.cleanCustomerText(this.content.recommendedMethod.title);
           }
         }
       } else {

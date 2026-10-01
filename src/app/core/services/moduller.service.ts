@@ -173,6 +173,126 @@ export function downloadModulesTemplate(): void {
   XLSX.writeFile(wb, 'SAP_Uygulamalari_Sablonu.xlsx');
 }
 
+export const DEFAULT_MODULE_CARDS: ModuleCard[] = [
+  {
+    id: 'def-mm-1',
+    category: 'MM Modülü',
+    title: 'Satıcı & Malzeme Ana Veri Entegrasyonu',
+    severity: 'Kritik',
+    status: 'Geliştirme',
+    bullets: [
+      'ZMM_CREATE_VENDOR programı revize edilmeli, Business Partner (BP) dönüşümü sağlanmalı',
+      'Malzeme ana verilerinde tekilleştirme ve arşivleme uygulanmalı'
+    ],
+    footerNote: 'Öncelikli Eylem (Tahmini Süre: 2 Ay)'
+  },
+  {
+    id: 'def-fi-1',
+    category: 'FI Modülü',
+    title: 'Paralel Para Birimleri & New G/L',
+    severity: 'Yüksek',
+    status: 'Standart',
+    bullets: [
+      'USD ve EUR için paralel para birimi yapılandırması yapılmalı',
+      'Universal Journal (ACDOCA) defter entegrasyonu tamamlanmalı'
+    ],
+    footerNote: 'S/4HANA Hazır'
+  },
+  {
+    id: 'def-co-1',
+    category: 'CO Modülü',
+    title: 'Kâr Merkezi & Masraf Dağıtım Mimarisi',
+    severity: 'Kritik',
+    status: 'Uygun Değil',
+    bullets: [
+      'Kâr merkezi türetim kuralları gözden geçirilmeli',
+      'Yapay kâr merkezleri temizlenmeli ve CO-PA uyarlanmalı'
+    ],
+    footerNote: 'Öncelikli Eylem'
+  },
+  {
+    id: 'def-sd-1',
+    category: 'SD Modülü',
+    title: 'Sipariş & Fiyatlandırma Şemaları',
+    severity: 'Orta',
+    status: 'Fırsat',
+    bullets: [
+      'Vistex / standart fiyatlandırma koşulları S/4HANA ile uyumlu hale getirilmeli',
+      'Gelişmiş kullanılabilirlik kontrolü (aATP) aktive edilmeli'
+    ],
+    footerNote: 'İyileştirme Fırsatı'
+  },
+  {
+    id: 'def-pp-1',
+    category: 'PP Modülü',
+    title: 'Üretim Planlama & MRP Live Entegrasyonu',
+    severity: 'Yüksek',
+    status: 'Geliştirme',
+    bullets: [
+      'Klasik MRP mantığından In-Memory MRP Live mimarisine geçiş planlanmalı',
+      'Kapasite planlama darboğazları giderilmeli'
+    ],
+    footerNote: 'Dönüşüm Avantajı'
+  },
+  {
+    id: 'def-qm-1',
+    category: 'QM Modülü',
+    title: 'Kalite Güvence & Denetim Lotları',
+    severity: 'Orta',
+    status: 'Standart',
+    bullets: [
+      'Giriş kalite kontrol ve numune alma süreçleri standartlaştırılmalı',
+      'Kalite sertifika entegrasyonları dijitalleştirilmeli'
+    ],
+    footerNote: 'Standart Süreç'
+  },
+  {
+    id: 'def-pm-1',
+    category: 'PM Modülü',
+    title: 'Koruyucu Bakım & Varlık Yönetimi',
+    severity: 'Düşük',
+    status: 'Önerilen',
+    bullets: [
+      'Arıza bildirimleri ve kestirimci bakım iş akışları aktive edilmeli'
+    ],
+    footerNote: 'S/4HANA Uyumlu'
+  },
+  {
+    id: 'def-basis-1',
+    category: 'SAP Basis & Mimari',
+    title: 'HANA Bellek & Altyapı Optimizasyonu',
+    severity: 'Kritik',
+    status: 'Uygun Değil',
+    bullets: [
+      'Atıl veri arşivleme (DVM) ile HANA bellek ihtiyacı %40 düşürülmeli',
+      'NetWeaver sürümü S/4HANA Private Cloud Edition seviyesine yükseltilmeli'
+    ],
+    footerNote: 'Kritik Eylem'
+  },
+  {
+    id: 'def-po-1',
+    category: 'Entegrasyon (PO/CPI)',
+    title: 'Legacy Arayüzlerin BTP Suite Taşınması',
+    severity: 'Yüksek',
+    status: 'Geliştirme',
+    bullets: [
+      'SAP PO 7.5 servisleri 2027 EoS öncesi BTP Integration Suite üzerine taşınmalı'
+    ],
+    footerNote: '2027 Öncesi Tamamlanmalı'
+  },
+  {
+    id: 'def-hr-1',
+    category: 'HR / SuccessFactors',
+    title: 'Bordro & Çalışan Self-Servis Portali',
+    severity: 'Orta',
+    status: 'Fırsat',
+    bullets: [
+      'Fiori tabanlı izin ve masraf onay akışları devreye alınmalı'
+    ],
+    footerNote: 'Kullanıcı Deneyimi'
+  }
+];
+
 @Injectable({
   providedIn: 'root'
 })
@@ -204,7 +324,7 @@ export class ModullerService {
 
   private loadForCustomer(custId: string): void {
     if (!custId) {
-      this.cardsList.set([]);
+      this.cardsList.set(DEFAULT_MODULE_CARDS);
       return;
     }
     try {
@@ -217,13 +337,15 @@ export class ModullerService {
       if (saved) {
         const parsed = JSON.parse(saved);
         const normalized = normalizeStoredCards(parsed);
-        this.cardsList.set(normalized);
-        return;
+        if (normalized.length > 0) {
+          this.cardsList.set(normalized);
+          return;
+        }
       }
     } catch (e) {
       console.warn('Failed to load modules from storage', e);
     }
-    this.cardsList.set([]);
+    this.cardsList.set(DEFAULT_MODULE_CARDS);
   }
 
   private saveCurrentCustomerData(): void {

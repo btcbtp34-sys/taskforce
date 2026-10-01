@@ -327,15 +327,15 @@ export class BasisSizingService {
       reportName: getStr('sizing report', '/SDF/HDB_SIZING'),
       version: kvMap.get('version of the report') || 99,
       analysisDate: new Date().toISOString().split('T')[0],
-      sid: getStr('sid', 'TEP'),
-      nwRelease: getStr('nw release', '731 SP 4'),
-      kernelVersion: getStr('kernel version', '722_EX2_REL'),
-      operatingSystem: getStr('operating system', 'Windows Server / Linux'),
-      dbType: getStr('type of analysed database', 'ORACLE'),
-      dbVersion: getStr('database version', '19.20.0.0.0'),
+      sid: getStr('sid', ''),
+      nwRelease: getStr('nw release', ''),
+      kernelVersion: getStr('kernel version', ''),
+      operatingSystem: getStr('operating system', ''),
+      dbType: getStr('type of analysed database', ''),
+      dbVersion: getStr('database version', ''),
       isUnicode: getStr('unicode').toLowerCase().includes('yes'),
-      diskSizeGiB: getNum('data used size on disk', 3265),
-      tablesAnalyzed: getNum('number of tables successfully analysed', 92699),
+      diskSizeGiB: getNum('data used size on disk', 0),
+      tablesAnalyzed: getNum('number of tables successfully analysed', 0),
       tablesWithError: getNum('number of tables with error', 0)
     };
 
