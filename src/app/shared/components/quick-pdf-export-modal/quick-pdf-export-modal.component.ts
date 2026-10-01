@@ -1,11 +1,20 @@
-import { Component, inject, signal, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, ViewChild, ElementRef, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { QuickToolsService } from '../../../core/services/quick-tools.service';
 import { CustomerService } from '../../../core/services/customer.service';
 import { BasisSizingService } from '../../../core/services/basis-sizing.service';
 import { NotesService } from '../../../core/services/notes.service';
+import { ModullerService } from '../../../core/services/moduller.service';
 import { IconComponent } from '../icon/icon.component';
+import { 
+  DEFAULT_CUSTOM_CODE_ITEMS, 
+  CustomCodeItem 
+} from '../../../features/development/development.component';
+import { 
+  getDefaultExecutiveData, 
+  ExecutiveSummaryData 
+} from '../../../features/reports/reports.component';
 import { 
   getDefaultMethodCards, 
   getDefaultRecommendedData, 
@@ -39,9 +48,9 @@ export interface ReportMenuItem {
                 <app-icon name="download" [size]="20" color="#0284c7"></app-icon>
               </div>
               <div>
-                <h3>Rapor İndir (PDF) - Menü Seçimi</h3>
+                <h3>Rapor İndir (PDF) - Kapsamlı Menü & Sayfa Seçimi</h3>
                 <span class="sub-text">
-                  <strong>{{ customerService.activeCustomer().name }}</strong> için PDF'e dahil edilecek menüleri seçiniz.
+                  <strong>{{ customerService.activeCustomer().name }}</strong> için PDF dokümanına dahil edilecek tüm menü ve sayfaları seçiniz.
                 </span>
               </div>
             </div>
@@ -53,8 +62,8 @@ export interface ReportMenuItem {
           <!-- Selection Controls Bar -->
           <div class="controls-bar">
             <div class="status-summary">
-              <span class="badge-count">{{ selectedCount() }} / {{ menuItems.length }} Menü Seçildi</span>
-              <span class="sub-lead">Tüm sistem raporları, mimari çizimler ve geçiş yöntemleri eksiksiz tek bir PDF'te birleştirilir.</span>
+              <span class="badge-count">{{ selectedCount() }} / {{ menuItems.length }} Menü & Sayfa Seçildi</span>
+              <span class="sub-lead">Tüm sayfalar, canlı tablolar, mimari şemalar ve geçiş yöntemleri eksiksiz tek bir PDF'te birleştirilir.</span>
             </div>
 
             <div class="btn-group-quick">
@@ -99,7 +108,7 @@ export interface ReportMenuItem {
             <div class="footer-left">
               <span class="footer-tip">
                 <app-icon name="info" [size]="14" color="#0284c7"></app-icon>
-                Mimari şemalar, geçiş yöntemleri, zaman damgalı notlar ve tablolar yüksek çözünürlüklü A4 formatında derlenir.
+                Her sayfa, yüksek çözünürlüklü A4 formatında vektörel netlikte ve sayfa kırılımları korunarak derlenir.
               </span>
             </div>
 
@@ -109,13 +118,8 @@ export interface ReportMenuItem {
                 class="btn-export" 
                 [disabled]="selectedCount() === 0 || isExporting()" 
                 (click)="generateMultiMenuPdf()">
-                @if (isExporting()) {
-                  <app-icon name="refresh" [size]="16" color="#ffffff"></app-icon>
-                  <span>PDF Hazırlanıyor ({{ exportProgress() }})...</span>
-                } @else {
-                  <app-icon name="download" [size]="16" color="#ffffff"></app-icon>
-                  <span>Seçilen Raporları PDF Olarak İndir ({{ selectedCount() }})</span>
-                }
+                <app-icon name="download" [size]="16" color="#ffffff"></app-icon>
+                <span>Tüm Seçilen Sayfaları PDF İndir ({{ selectedCount() }})</span>
               </button>
             </div>
           </div>
@@ -123,7 +127,20 @@ export interface ReportMenuItem {
       </div>
     }
 
-    <!-- HIDDEN EXPORT TEMPLATE FOR HIGH-RES HTML2CANVAS CONVERSION -->
+    <!-- FULL SCREEN EXPORT PROGRESS OVERLAY (Visible during rendering) -->
+    <div class="pdf-exporting-overlay" *ngIf="isExporting()">
+      <div class="exporting-card">
+        <div class="spinner-pulse"></div>
+        <h3>Kapsamlı PDF Dokümanı Hazırlanıyor</h3>
+        <p class="export-status-text">{{ exportProgress() }}</p>
+        <div class="export-progress-bar">
+          <div class="progress-bar-fill" [style.width]="exportPercent() + '%'"></div>
+        </div>
+        <span class="export-hint">Seçilen tüm menüler, canlı tablolar, grafikler ve mimari çizimler taranıyor. Lütfen bekleyiniz...</span>
+      </div>
+    </div>
+
+    <!-- HIGH-RES TEMPLATE RENDERED IN DOM FOR FLAWLESS HTML2CANVAS CONVERSION -->
     <div class="hidden-pdf-document-wrapper" *ngIf="isExporting()">
       <div class="pdf-export-container" #exportContainer id="multiMenuPdfContainer">
         
@@ -140,11 +157,15 @@ export interface ReportMenuItem {
           </div>
 
           <div class="cover-body">
-            <div class="report-badge">KAPSAMLI DÖNÜŞÜM & ANALİZ RAPORU</div>
+            <div class="report-badge">KAPSAMLI KURUMSAL DÖNÜŞÜM & ANALİZ RAPORU</div>
             <h1 class="cover-title">{{ customerService.activeCustomer().name }}</h1>
-            <h2 class="cover-sub">RISE with SAP S/4HANA Hazırlık, Mimari ve Maliyet Değerlendirmesi</h2>
+            <h2 class="cover-sub">RISE with SAP S/4HANA Hazırlık, Sistem Mimarisi, Geçiş Yöntemleri ve Maliyet Değerlendirmesi</h2>
 
             <div class="cover-meta-grid">
+              <div class="meta-item">
+                <span class="m-lbl">Müşteri / Kurum:</span>
+                <strong class="m-val">{{ customerService.activeCustomer().name }}</strong>
+              </div>
               <div class="meta-item">
                 <span class="m-lbl">Sektör / İş Alanı:</span>
                 <strong class="m-val">{{ customerService.activeCustomer().sector || 'Kurumsal Üretim & Sanayi' }}</strong>
@@ -154,23 +175,28 @@ export interface ReportMenuItem {
                 <strong class="m-val">{{ customerService.activeCustomer().sapUserCount }} Kullanıcı</strong>
               </div>
               <div class="meta-item">
-                <span class="m-lbl">Mevcut Veri Tabanı:</span>
+                <span class="m-lbl">Mevcut Veritabanı:</span>
                 <strong class="m-val">{{ basisService.systemInfo()?.dbType || 'Oracle / MS SQL' }} ({{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB)</strong>
               </div>
               <div class="meta-item">
                 <span class="m-lbl">Dönüşüm Modeli:</span>
                 <strong class="m-val">RISE with SAP Private Cloud Edition (PCE)</strong>
               </div>
+              <div class="meta-item">
+                <span class="m-lbl">Hedef ERP Sürümü:</span>
+                <strong class="m-val">SAP S/4HANA Cloud, Private Edition</strong>
+              </div>
             </div>
 
             <!-- Table of Contents of selected items -->
             <div class="toc-box">
-              <div class="toc-title">RAPOR KAPSAMI VE SEÇİLEN BÖLÜMLER</div>
+              <div class="toc-title">RAPOR KAPSAMI VE SEÇİLEN MENÜ SAYFALARI ({{ selectedCount() }})</div>
               <div class="toc-items">
                 @for (item of selectedItems(); track item.id; let idx = $index) {
                   <div class="toc-line">
                     <span class="toc-num">{{ idx + 1 }}.</span>
-                    <span class="toc-name">{{ item.name }} ({{ item.group }})</span>
+                    <span class="toc-name">{{ item.name }}</span>
+                    <span class="toc-group">[{{ item.group }}]</span>
                     <span class="toc-dots">....................................................................................................</span>
                     <span class="toc-badge">DAHİL</span>
                   </div>
@@ -185,94 +211,215 @@ export interface ReportMenuItem {
         </div>
 
         <!-- ========================================================================= -->
-        <!-- SECTION 1: YÖNETİCİ ÖZETİ                                                  -->
+        <!-- 1. YÖNETİCİ ÖZETİ                                                         -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('reports')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">1. YÖNETİCİ ÖZETİ & DÖNÜŞÜM VİZYONU</div>
-              <div class="sb-meta">RISE with SAP Uyumu & Stratejik Değerlendirme</div>
+              <div class="sb-meta">RISE with SAP Uyumu, 8 Stratejik Amaç ve 4 Dönüşüm Metodolojisi</div>
             </div>
 
             <div class="section-content-box">
-              <div class="exec-summary-banner">
-                <div class="es-badge-circle">%84</div>
-                <div class="es-text">
-                  <h3>RISE with SAP Dönüşüm Hazırlık Skoru</h3>
-                  <p>Mevcut ERP altyapısı ve iş süreçleri incelendiğinde; Clean Core prensiplerine geçiş, bulut ölçeklenebilirliği ve toplam sahip olma maliyetinde öngörülebilir nakit akışı avantajı sağlamaktadır.</p>
+              <!-- Hero Score Card -->
+              <div class="hero-score-card-pdf">
+                <div class="hsc-left">
+                  <div class="circular-score-badge-pdf">
+                    <div class="score-number">%{{ getExecutiveData().heroScore?.matchScore || 84 }}</div>
+                    <div class="score-label">{{ getExecutiveData().heroScore?.matchLabel || 'MATCH SKORU' }}</div>
+                  </div>
+                  <div class="score-text-pdf">
+                    <div class="status-pill-green-pdf">✓ {{ getExecutiveData().heroScore?.badgeText || 'RISE WITH SAP GEÇİŞİNE YÜKSEK DERECEDE UYGUN' }}</div>
+                    <h3>{{ getExecutiveData().heroScore?.title || (customerService.activeCustomer().name + ' RISE Readiness & Bulut Uyum Analizi') }}</h3>
+                    <p>{{ getExecutiveData().heroScore?.description }}</p>
+                  </div>
+                </div>
+
+                <!-- 5 Pillar Status Bars (NO percentages displayed as requested) -->
+                <div class="pillar-grid-pdf">
+                  @for (pillar of getExecutiveData().heroScore?.pillars; track pillar.id) {
+                    <div class="pillar-card-pdf">
+                      <div class="p-head-pdf">
+                        <span class="p-name-pdf">
+                          <app-icon [name]="pillar.icon" [size]="14" [color]="getPillarColor(pillar.colorClass)"></app-icon>
+                          {{ pillar.name }}
+                        </span>
+                      </div>
+                      <div class="progress-bar-pdf">
+                        <div class="progress-fill-pdf" [ngClass]="'bg-' + pillar.colorClass" [style.width.%]="pillar.score"></div>
+                      </div>
+                      <span class="p-desc-pdf">{{ pillar.desc }}</span>
+                    </div>
+                  }
                 </div>
               </div>
 
-              <div class="kpi-mini-grid">
-                <div class="kpi-box">
-                  <span class="k-label">Bulut Mimarisi Uyumu</span>
-                  <strong class="k-val text-blue">%90</strong>
-                  <span class="k-sub">S/4HANA Private Cloud DB</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Lisans Optimizasyonu</span>
-                  <strong class="k-val text-emerald">%85</strong>
-                  <span class="k-sub">FUE ile Atıl Lisans Sıfırlanır</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">Entegrasyon BTP Uyumu</span>
-                  <strong class="k-val text-purple">%82</strong>
-                  <span class="k-sub">PO / AIF Integration Suite Hazır</span>
-                </div>
-                <div class="kpi-box">
-                  <span class="k-label">DVM & Arşivleme</span>
-                  <strong class="k-val text-amber">%78</strong>
-                  <span class="k-sub">HANA Bellek Tasarrufu</span>
-                </div>
+              <!-- 1. Amaç: RISE with SAP ile Kurumsal Dönüşüm (Tüm 8 Sütun) -->
+              <div class="sub-block-title" style="margin-top: 15px;">
+                <app-icon name="sparkles" [size]="15" color="#059669"></app-icon>
+                <span>{{ getExecutiveData().objectiveTitle }}</span>
               </div>
+              <p class="section-p">{{ getExecutiveData().objectiveSubtitle }}</p>
 
-              <!-- Notes summary -->
-              <div class="notes-summary-box" *ngIf="notesService.currentCustomerNotes().length > 0">
-                <h4>Presales ve Satış Değerlendirme Notları (Zaman Damgalı Satır Satır Kayıtlar):</h4>
-                @for (note of notesService.currentCustomerNotes(); track note.id) {
-                  <div class="note-bullet-line">
-                    <span class="n-date">[{{ note.formattedDate }}]</span>
-                    <span class="n-author">{{ note.author }}:</span>
-                    <span class="n-text">{{ note.text }}</span>
+              <div class="purpose-grid-pdf">
+                @for (item of getExecutiveData().objectivePillars; track item.id) {
+                  <div class="purpose-card-pdf">
+                    <div class="pc-icon">
+                      <app-icon [name]="item.icon" [size]="16" color="#0284c7"></app-icon>
+                    </div>
+                    <div class="pc-body">
+                      <h4>{{ item.title }}</h4>
+                      <p>{{ item.desc }}</p>
+                    </div>
                   </div>
                 }
               </div>
+
+              <!-- 2. Nasıl Yapıyoruz? Kanıtlanmış 4 Aşamalı Dönüşüm Metodolojisi -->
+              <div class="sub-block-title" style="margin-top: 20px;">
+                <app-icon name="map" [size]="15" color="#7c3aed"></app-icon>
+                <span>{{ getExecutiveData().howTitle }}</span>
+              </div>
+              <p class="section-p">{{ getExecutiveData().howSubtitle }}</p>
+
+              <div class="how-grid-pdf">
+                @for (item of getExecutiveData().howPillars; track item.id) {
+                  <div class="how-card-pdf">
+                    <div class="hc-head">
+                      <span class="hc-badge">{{ item.badge }}</span>
+                      <h4>{{ item.title }}</h4>
+                    </div>
+                    <ul class="hc-bullets">
+                      @for (b of item.bullets; track b) {
+                        <li><span class="bullet-dot">•</span> {{ b }}</li>
+                      }
+                    </ul>
+                    <div class="hc-foot">{{ item.note }}</div>
+                  </div>
+                }
+              </div>
+
+              <!-- 3. Önerilen Geçiş Yöntemi Hero Kartı -->
+              <div class="hero-recommendation-card-pdf" style="margin-top: 15px;">
+                <div class="hr-left">
+                  <span class="hr-pill">{{ getExecutiveData().recommendedMethod?.badge || getRecommendedData().badge }}</span>
+                  <h2>{{ getExecutiveData().recommendedMethod?.title || getRecommendedData().title }}</h2>
+                  <p>{{ getExecutiveData().recommendedMethod?.description || getRecommendedData().description }}</p>
+                </div>
+                <div class="hr-stats">
+                  <div class="stat-box-pdf">
+                    <span class="sb-val text-emerald">{{ getExecutiveData().recommendedMethod?.stat1Value || getRecommendedData().stat1Value }}</span>
+                    <span class="sb-lbl">{{ getExecutiveData().recommendedMethod?.stat1Label || getRecommendedData().stat1Label }}</span>
+                  </div>
+                  <div class="stat-box-pdf">
+                    <span class="sb-val text-blue">{{ getExecutiveData().recommendedMethod?.stat2Value || getRecommendedData().stat2Value }}</span>
+                    <span class="sb-lbl">{{ getExecutiveData().recommendedMethod?.stat2Label || getRecommendedData().stat2Label }}</span>
+                  </div>
+                  <div class="stat-box-pdf">
+                    <span class="sb-val text-purple">{{ getExecutiveData().recommendedMethod?.stat3Value || getRecommendedData().stat3Value }}</span>
+                    <span class="sb-lbl">{{ getExecutiveData().recommendedMethod?.stat3Label || getRecommendedData().stat3Label }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Presales Değerlendirme Notları -->
+              @if (getExecutiveData().salesNotes) {
+                <div class="sales-notes-box-pdf" style="margin-top: 15px;">
+                  <h4>Presales & Satış Strateji Değerlendirmesi:</h4>
+                  <p>{{ getExecutiveData().salesNotes }}</p>
+                </div>
+              }
             </div>
           </div>
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 2: SAP UYGULAMALARI - BULGULARIMIZ                                -->
+        <!-- 2. SAP UYGULAMALARI - BULGULARIMIZ                                        -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('modules-summary')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">2. SAP UYGULAMALARI - BULGULARIMIZ</div>
-              <div class="sb-meta">Modül Kullanım Analizi ve Süreç İyileştirmeleri</div>
+              <div class="sb-meta">Modül Kullanım Oranları, Önem Derecesi ve Süreç Kazanımları</div>
             </div>
 
             <div class="section-content-box">
               <div class="analysis-card">
-                <h3>Genel Modül Durumu & Bulgular</h3>
+                <h3>Genel Modül Durumu & Tespit Edilen Bulgular</h3>
                 <p>Aktif SAP ERP sistemindeki işlem hacimleri ve kullanıcı rolleri incelendiğinde; Finans (FI/CO), Satış (SD) ve Satınalma/Stok (MM) operasyon omurgasını oluşturmaktadır. Clean Core prensipleri ile iş süreçlerinin standartlaştırılması hedeflenmektedir.</p>
                 <div class="module-stat-row">
                   <div class="m-pill"><strong>FI/CO:</strong> %94 Kullanım Oranı • Standarda Uyumlu</div>
                   <div class="m-pill"><strong>SD:</strong> %88 Kullanım Oranı • Entegrasyon Yoğun</div>
                   <div class="m-pill"><strong>MM/PP:</strong> %82 Kullanım Oranı • MRP Live ile Hızlanacak</div>
+                  <div class="m-pill"><strong>QM/PM:</strong> %74 Kullanım Oranı • Fiori ile Mobil Uyumlu</div>
                 </div>
+              </div>
+
+              <!-- Severity Breakdown -->
+              <div class="kpi-mini-grid" style="margin-top: 15px;">
+                <div class="kpi-box">
+                  <span class="k-label">Toplam İncelenen Kart</span>
+                  <strong class="k-val">{{ modullerService.cards().length }} Adet</strong>
+                  <span class="k-sub">Bulgu & Analiz</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="k-label">Kritik Seviye</span>
+                  <strong class="k-val text-red">{{ getSeverityCount('Kritik') }} Adet</strong>
+                  <span class="k-sub">Öncelikli Eylem</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="k-label">Yüksek Seviye</span>
+                  <strong class="k-val text-amber">{{ getSeverityCount('Yüksek') }} Adet</strong>
+                  <span class="k-sub">İyileştirme Fırsatı</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="k-label">Standart / Önerilen</span>
+                  <strong class="k-val text-emerald">{{ getSeverityCount('Orta') + getSeverityCount('Düşük') }} Adet</strong>
+                  <span class="k-sub">S/4HANA Hazır</span>
+                </div>
+              </div>
+
+              <!-- Module Cards Summary -->
+              <div class="table-wrap" style="margin-top: 15px;">
+                <table class="report-data-table">
+                  <thead>
+                    <tr>
+                      <th>Modül / Kategori</th>
+                      <th>Bulgu Başlığı</th>
+                      <th>Önem Seviyesi</th>
+                      <th>Durum</th>
+                      <th>Temel Bulgular & Notlar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (card of getTopModuleCards(8); track card.id) {
+                      <tr>
+                        <td><strong>{{ card.category }}</strong></td>
+                        <td>{{ card.title }}</td>
+                        <td>
+                          <span class="risk-pill" [ngClass]="card.severity === 'Kritik' ? 'red' : card.severity === 'Yüksek' ? 'amber' : 'blue'">
+                            {{ card.severity }}
+                          </span>
+                        </td>
+                        <td>{{ card.status }}</td>
+                        <td>{{ card.bullets && card.bullets.length > 0 ? card.bullets[0] : (card.footerNote || '—') }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 3: SAP UYGULAMALARI - DETAYLI ANALİZ                               -->
+        <!-- 3. SAP UYGULAMALARI - DETAYLI ANALİZ                                      -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('modules-detail')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">3. SAP UYGULAMALARI - DETAYLI MODÜLER ANALİZ</div>
-              <div class="sb-meta">Süreç Kırılımları ve İyileştirme Fırsatları</div>
+              <div class="sb-title">3. SAP UYGULAMALARI - DETAYLI MODÜLER SÜREÇ ANALİZİ</div>
+              <div class="sb-meta">Süreç Kırılımları, İşlem Hacimleri ve S/4HANA Dönüşüm Çözümleri</div>
             </div>
 
             <div class="section-content-box">
@@ -289,32 +436,53 @@ export interface ReportMenuItem {
                   </thead>
                   <tbody>
                     <tr>
-                      <td><strong>FI - Mali İşler</strong></td>
+                      <td><strong>FI - Mali İşler & Genel Muhasebe</strong></td>
                       <td>120 Kullanıcı</td>
                       <td>45.000 Kayıt</td>
                       <td>Dönem sonu kapanışlarında manuel mutabakat yükü</td>
-                      <td>Universal Journal (ACDOCA) & Otomatik Kapanış</td>
+                      <td>Universal Journal (ACDOCA) & Otomatik Kapanış Cockpit</td>
                     </tr>
                     <tr>
-                      <td><strong>CO - Kontroling</strong></td>
+                      <td><strong>CO - Masraf Yeri & Karlılık (CO-PA)</strong></td>
                       <td>45 Kullanıcı</td>
                       <td>28.000 Kayıt</td>
-                      <td>Maliyet dağıtımı hesaplamalarında gecikmeler</td>
-                      <td>HANA Gerçek Zamanlı Karlılık Analizi (CO-PA)</td>
+                      <td>Maliyet dağıtımı hesaplamalarında gece batch gecikmeleri</td>
+                      <td>HANA Gerçek Zamanlı Karlılık Analizi (Account-based CO-PA)</td>
                     </tr>
                     <tr>
-                      <td><strong>MM - Malzeme Yönetimi</strong></td>
+                      <td><strong>MM - Malzeme Yönetimi & Satınalma</strong></td>
                       <td>160 Kullanıcı</td>
                       <td>85.000 Kayıt</td>
-                      <td>Stok devir hızı ve sipariş onay darboğazı</td>
-                      <td>MRP Live & Otomatik Satınalma Sipariş Yönetimi</td>
+                      <td>Stok devir hızı ve onay darboğazı</td>
+                      <td>MRP Live & Otomatik Satınalma Sipariş Yönetimi (Fiori)</td>
                     </tr>
                     <tr>
-                      <td><strong>SD - Satış Dağıtım</strong></td>
+                      <td><strong>SD - Satış Dağıtım & Sevkiyat</strong></td>
                       <td>190 Kullanıcı</td>
                       <td>110.000 Kayıt</td>
-                      <td>B2B entegrasyonlarında batch gecikmeleri</td>
-                      <td>API Tabanlı Sipariş Karşılama & Gelişmiş ATP</td>
+                      <td>B2B entegrasyonlarında batch bekleme süreleri</td>
+                      <td>API Tabanlı Sipariş Karşılama & Gelişmiş ATP (aATP)</td>
+                    </tr>
+                    <tr>
+                      <td><strong>PP - Üretim Planlama & Kontrol</strong></td>
+                      <td>75 Kullanıcı</td>
+                      <td>35.000 Kayıt</td>
+                      <td>Kapasite planlama ve üretim çizelgeleme zorlukları</td>
+                      <td>PP/DS (Production Planning and Detailed Scheduling)</td>
+                    </tr>
+                    <tr>
+                      <td><strong>QM - Kalite Yönetimi</strong></td>
+                      <td>40 Kullanıcı</td>
+                      <td>18.000 Kayıt</td>
+                      <td>Kağıt tabanlı kalite onayları ve denetim takibi</td>
+                      <td>Mobil Kalite Kontrol Fiori Uygulamaları & Dijital İmzalar</td>
+                    </tr>
+                    <tr>
+                      <td><strong>PM - Bakım Onarım Yönetimi</strong></td>
+                      <td>35 Kullanıcı</td>
+                      <td>12.000 Kayıt</td>
+                      <td>Arıza bildirimlerinde sahadan gecikmeli kayıt girişi</td>
+                      <td>SAP Service and Asset Manager & Kestirimci Bakım</td>
                     </tr>
                   </tbody>
                 </table>
@@ -324,20 +492,20 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 4: GELİŞTİRMELER (CUSTOM CODE)                                    -->
+        <!-- 4. GELİŞTİRMELER (CUSTOM CODE - 10 NESNE TİPİ)                             -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('development')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">4. SAP GELİŞTİRMELERİ & CLEAN CORE UYUMU</div>
-              <div class="sb-meta">Z-Programlar, Custom Tablolar ve Uyarlama Eforları</div>
+              <div class="sb-title">4. SAP GELİŞTİRMELERİ & CLEAN CORE UYUMU (CUSTOM CODE)</div>
+              <div class="sb-meta">10 Nesne Tipi, Z-Programlar, Custom Tablolar ve Uyarlama Eforları</div>
             </div>
 
             <div class="section-content-box">
               <div class="kpi-mini-grid">
                 <div class="kpi-box">
                   <span class="k-label">Toplam Z/Y Nesnesi</span>
-                  <strong class="k-val">1.240</strong>
+                  <strong class="k-val">1.240 Adet</strong>
                   <span class="k-sub">Aktif Custom Kod</span>
                 </div>
                 <div class="kpi-box">
@@ -357,54 +525,32 @@ export interface ReportMenuItem {
                 </div>
               </div>
 
-              <!-- Z-Objects breakdown table -->
+              <!-- 10 Custom Code Objects Table -->
               <div class="table-wrap" style="margin-top: 15px;">
                 <table class="report-data-table">
                   <thead>
                     <tr>
                       <th>Nesne Tipi</th>
+                      <th>Kategori</th>
                       <th>Mevcut Adet</th>
-                      <th>Standarda Dönüşüm</th>
-                      <th>BTP Side-by-Side</th>
-                      <th>Clean Core Stratejisi</th>
+                      <th>Risk Seviyesi</th>
+                      <th>S/4HANA Clean Core Stratejisi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td><strong>Custom Programlar (Z Reports)</strong></td>
-                      <td>480</td>
-                      <td>180 Adet</td>
-                      <td>65 BTP App</td>
-                      <td>Clean Core standardı ile Fiori uygulamalarına dönüştürülecek</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Veritabanı Tabloları (Z Tables)</strong></td>
-                      <td>220</td>
-                      <td>90 Adet</td>
-                      <td>Standart CDS View</td>
-                      <td>S/4HANA genişletme tabloları ile sadeleştirilecek</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Modül Havuzları & Dynpro</strong></td>
-                      <td>140</td>
-                      <td>85 Standart Fiori</td>
-                      <td>25 SAP Build</td>
-                      <td>Dynpro ekranları kaldırılıp Fiori Launchpad'e taşınacak</td>
-                    </tr>
-                    <tr>
-                      <td><strong>User-Exit & CMOD Geliştirmeleri</strong></td>
-                      <td>160</td>
-                      <td>90 BAdI / Clean Core</td>
-                      <td>30 BTP Cloud BAdI</td>
-                      <td>Core değişiklikleri temizlenip Cloud BAdI'ye geçirilecek</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Fonksiyon Modülleri (RFC / BAPI)</strong></td>
-                      <td>240</td>
-                      <td>110 OData API</td>
-                      <td>50 BTP Integration</td>
-                      <td>Standart OData API'leri ile modernize edilecek</td>
-                    </tr>
+                    @for (item of getCustomCodeItems(); track item.id) {
+                      <tr>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td>{{ item.category }}</td>
+                        <td><strong>{{ item.count }} Adet</strong></td>
+                        <td>
+                          <span class="risk-pill" [ngClass]="item.level === 'Yüksek' ? 'red' : item.level === 'Orta' ? 'amber' : 'blue'">
+                            {{ item.level }}
+                          </span>
+                        </td>
+                        <td>{{ item.s4Recommendation }}</td>
+                      </tr>
+                    }
                   </tbody>
                 </table>
               </div>
@@ -413,19 +559,19 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 5: ENTEGRASYON MİMARİSİ (PO / BTP INTEGRATION SUITE)               -->
+        <!-- 5. ENTEGRASYON MİMARİSİ (PO / BTP INTEGRATION SUITE)                       -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('architecture-po')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">5. ENTEGRASYON MİMARİSİ (SAP PO & BTP INTEGRATION SUITE)</div>
-              <div class="sb-meta">Entegrasyon Topolojisi, Canlı Arayüzler ve Bulut Dönüşümü</div>
+              <div class="sb-meta">Entegrasyon Akış Topolojisi, Canlı Arayüzler ve Bulut Dönüşümü</div>
             </div>
 
             <div class="section-content-box">
               <div class="analysis-card">
                 <h3>SAP Process Orchestration (PO) ➔ Integration Suite Geçişi</h3>
-                <p>SAP PO desteğinin sonlanması ile birlikte mevcut canlı entegrasyonlar modernize edilmektedir. Migration Assessment aracı ile arayüzler analiz edilmiş ve SAP Integration Suite (BTP) taşıma haritası oluşturulmuştur.</p>
+                <p>SAP PO desteğinin 2027 sonunda sonlanması ile birlikte mevcut canlı entegrasyonlar modernize edilmektedir. Migration Assessment aracı ile arayüzler analiz edilmiş ve SAP Integration Suite (BTP) taşıma haritası oluşturulmuştur.</p>
                 <div class="module-stat-row">
                   <div class="m-pill"><strong>Canlı Arayüz Sayısı:</strong> 48 Aktif Servis</div>
                   <div class="m-pill"><strong>BTP Uyum Oranı:</strong> %92 Doğrudan Taşınabilir</div>
@@ -437,7 +583,7 @@ export interface ReportMenuItem {
               <div class="arch-schematic-card" style="margin-top: 15px;">
                 <div class="schematic-title">
                   <app-icon name="bolt" [size]="14" color="#0284c7"></app-icon>
-                  <span>SAP PO / BTP Entegrasyon Akış Topolojisi Çizimi</span>
+                  <span>SAP PO / BTP Entegrasyon Akış Topolojisi Şeması</span>
                 </div>
 
                 <div class="integration-topology-flow">
@@ -455,7 +601,7 @@ export interface ReportMenuItem {
                   <div class="flow-arrow-col">
                     <span class="proto-tag">REST / SOAP</span>
                     <span class="arr-icon">➔</span>
-                    <span class="proto-tag">RFC / SFTP / IDoc</span>
+                    <span class="proto-tag">RFC / SFTP</span>
                   </div>
 
                   <!-- Integration Hub Column -->
@@ -542,7 +688,7 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 6: LİSANS VE BULUT (FUE)                                          -->
+        <!-- 6. LİSANS VE BULUT (FUE LİSANS ANALİZİ)                                   -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('analytics')) {
           <div class="pdf-page-section">
@@ -555,7 +701,7 @@ export interface ReportMenuItem {
               <div class="kpi-mini-grid">
                 <div class="kpi-box">
                   <span class="k-label">Mevcut Named User</span>
-                  <strong class="k-val">{{ customerService.activeCustomer().sapUserCount }}</strong>
+                  <strong class="k-val">{{ customerService.activeCustomer().sapUserCount }} Kullanıcı</strong>
                   <span class="k-sub">Professional + Limited</span>
                 </div>
                 <div class="kpi-box">
@@ -565,7 +711,7 @@ export interface ReportMenuItem {
                 </div>
                 <div class="kpi-box">
                   <span class="k-label">Düşük Kullanımlı Kullanıcı</span>
-                  <strong class="k-val text-amber">{{ customerService.activeCustomer().lowUsageUserCount }}</strong>
+                  <strong class="k-val text-amber">{{ customerService.activeCustomer().lowUsageUserCount }} Kullanıcı</strong>
                   <span class="k-sub">Self-Service / Core Adayı</span>
                 </div>
                 <div class="kpi-box">
@@ -574,19 +720,63 @@ export interface ReportMenuItem {
                   <span class="k-sub">Yıllık Lisans Avantajı</span>
                 </div>
               </div>
-              <p class="section-p">FUE (Full User Equivalent) modeli sayesinde; 1 FUE = 1 Advanced User veya 5 Core User veya 30 Self-Service User oranında dinamik dağıtılarak atıl lisans maliyetleri ve aşım cezaları kalıcı olarak engellenir.</p>
+
+              <!-- FUE Conversion Table -->
+              <div class="table-wrap" style="margin-top: 15px;">
+                <table class="report-data-table">
+                  <thead>
+                    <tr>
+                      <th>Kullanıcı Kategorisi</th>
+                      <th>Mevcut Kullanıcı</th>
+                      <th>FUE Dönüşüm Katsayısı</th>
+                      <th>Gereken FUE Karşılığı</th>
+                      <th>Optimizasyon Açıklaması</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Advanced User (Tam Yetkili)</strong></td>
+                      <td>65 Kullanıcı</td>
+                      <td>1 : 1</td>
+                      <td>65.0 FUE</td>
+                      <td>Finans, satınalma ve sistem yöneticileri (Tüm ERP yetkisi)</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Core User (Standart Yetkili)</strong></td>
+                      <td>180 Kullanıcı</td>
+                      <td>5 : 1 (0.2 FUE)</td>
+                      <td>36.0 FUE</td>
+                      <td>Satış temsilcileri, depo ve operasyon ekipleri</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Self-Service User (Kısıtlı Yetkili)</strong></td>
+                      <td>255 Kullanıcı</td>
+                      <td>30 : 1 (0.033 FUE)</td>
+                      <td>8.5 FUE</td>
+                      <td>İzin, talep onayları, masraf girişi ve rapor izleme</td>
+                    </tr>
+                    <tr class="highlight-total-row">
+                      <td><strong>TOPLAM FUE GEREKSİNİMİ</strong></td>
+                      <td><strong>500 Kullanıcı</strong></td>
+                      <td><strong>Dinamik Havuz</strong></td>
+                      <td><strong class="text-blue">109.5 FUE (+%30 Büyüme Tamponu: 142 FUE)</strong></td>
+                      <td><strong>Atıl lisans maliyetleri ve aşım riski kalıcı olarak sıfırlanır</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 7: TEKNİK ALTYAPI - SIZING                                        -->
+        <!-- 7. TEKNİK ALTYAPI - SIZING (MEVCUT / HEDEF SİSTEM)                        -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('source-sizing')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">7. TEKNİK ALTYAPI - MEVCUT / HEDEF SİSTEM BOYUTLANDIRMASI</div>
-              <div class="sb-meta">Donanım, Veritabanı ve HANA Kapasite Planı</div>
+              <div class="sb-meta">Donanım, Veritabanı ve HANA In-Memory Kapasite Planı</div>
             </div>
 
             <div class="section-content-box">
@@ -612,13 +802,23 @@ export interface ReportMenuItem {
                     </tr>
                     <tr>
                       <td><strong>İşlem Gücü (SAPS)</strong></td>
-                      <td>18.000 SAPS (Eski Nesil CPU)</td>
+                      <td>18.000 SAPS (Eski Nesil CPU Donanımı)</td>
                       <td>24.000 SAPS (Modern Hyperscaler Compute)</td>
                     </tr>
                     <tr>
                       <td><strong>Yedeklilik & SLA</strong></td>
                       <td>Lokal Veri Merkezi / Manuel Failover</td>
                       <td>%99.7 - %99.9 Bulut SLA + 7/24 Proaktif SAP Yönetimi</td>
+                    </tr>
+                    <tr>
+                      <td><strong>İşletim Sistemi</strong></td>
+                      <td>Windows Server / Standart Linux</td>
+                      <td>SUSE Linux Enterprise Server for SAP (SLES)</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Yedekleme & DR</strong></td>
+                      <td>Manuel Günlük Tape / Disk Yedekleri</td>
+                      <td>Otomatik Snapshots + Coğrafi Felaket Kurtarma (DR)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -628,13 +828,13 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 8: SİSTEM ORTAMI & MEVCUT AS-IS MİMARİSİ                           -->
+        <!-- 8. SİSTEM ORTAMI & MEVCUT AS-IS MİMARİSİ (2027 EoS)                        -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('architecture-asis')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
               <div class="sb-title">8. SİSTEM ORTAMI & MEVCUT AS-IS MİMARİSİ (2027 EoS)</div>
-              <div class="sb-meta">Mevcut Mimari Şeması, Sürüm Uyumluluğu ve Risk Takvimi</div>
+              <div class="sb-meta">Mevcut Mimari Şeması, Sürüm Uyumluluğu ve Kritik Risk Takvimi</div>
             </div>
 
             <div class="section-content-box">
@@ -685,7 +885,7 @@ export interface ReportMenuItem {
                   <div class="eos-badge">31 ARALIK 2027</div>
                   <div class="eos-body">
                     <strong>Kritik Destek Bitiş (End of Support) Uyarısı:</strong>
-                    <span>SAP ECC 6.0 ana akım desteği 2027 yılı sonunda sona erecektir. Bu tarihten sonra güvenlik yamaları, e-Fatura/e-Defter yasal regülasyon uyarlamaları ve teknik destek ek maliyetlere tabi olacak ve operasyonel risk oluşturacaktır.</span>
+                    <span>SAP ECC 6.0 ana akım desteği 2027 yılı sonunda sona erecektir. Bu tarihten sonra güvenlik yamaları, e-Fatura/e-Defter yasal regülasyon uyarlamaları ve teknik destek ek maliyetlere tabi olacak ve ciddi operasyonel risk oluşturacaktır.</span>
                   </div>
                 </div>
               </div>
@@ -744,7 +944,7 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 9: EN BÜYÜK TABLOLAR (DVM)                                        -->
+        <!-- 9. EN BÜYÜK TABLOLAR (DVM - DATA VOLUME MANAGEMENT)                       -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('largest-tables')) {
           <div class="pdf-page-section">
@@ -756,7 +956,7 @@ export interface ReportMenuItem {
             <div class="section-content-box">
               <div class="kpi-mini-grid">
                 <div class="kpi-box">
-                  <span class="k-label">Toplam Veri Tabanı</span>
+                  <span class="k-label">Toplam Veritabanı</span>
                   <strong class="k-val">{{ basisService.systemInfo()?.diskSizeGiB || 1250 }} GB</strong>
                   <span class="k-sub">Ham Veri Hacmi</span>
                 </div>
@@ -854,48 +1054,25 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 10.1: ÇÖZÜM ÖNERİSİ - ÖNERİLEN YÖNTEM & YOL HARİTASI             -->
+        <!-- 10. ÇÖZÜM ÖNERİSİ: 1. ÖNERİLEN YÖNTEM & YOL HARİTASI                      -->
         <!-- ========================================================================= -->
-        @if (isItemIncluded('solution-proposal')) {
+        @if (isItemIncluded('solution-recommended')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">10.1 ÇÖZÜM ÖNERİSİ: ÖNERİLEN GEÇİŞ YÖNTEMİ & YOL HARİTASI</div>
+              <div class="sb-title">10. ÇÖZÜM ÖNERİSİ: 1. ÖNERİLEN GEÇİŞ YÖNTEMİ & YOL HARİTASI</div>
               <div class="sb-meta">Brownfield (System Conversion) Stratejisi ve 4 Fazlı Canlıya Geçiş Takvimi</div>
             </div>
 
             <div class="section-content-box">
-              <!-- Hero Card for Recommended Method -->
-              <div class="hero-recommendation-card-pdf">
-                <div class="hr-left">
-                  <span class="hr-pill">{{ getRecommendedData().badge }}</span>
-                  <h2>{{ getRecommendedData().title }}</h2>
-                  <p>{{ getRecommendedData().description }}</p>
-                </div>
-                <div class="hr-stats">
-                  <div class="stat-box-pdf">
-                    <span class="sb-val text-emerald">{{ getRecommendedData().stat1Value }}</span>
-                    <span class="sb-lbl">{{ getRecommendedData().stat1Label }}</span>
-                  </div>
-                  <div class="stat-box-pdf">
-                    <span class="sb-val text-blue">{{ getRecommendedData().stat2Value }}</span>
-                    <span class="sb-lbl">{{ getRecommendedData().stat2Label }}</span>
-                  </div>
-                  <div class="stat-box-pdf">
-                    <span class="sb-val text-purple">{{ getRecommendedData().stat3Value }}</span>
-                    <span class="sb-lbl">{{ getRecommendedData().stat3Label }}</span>
-                  </div>
-                </div>
-              </div>
-
               <!-- 4-Phase Transformation Roadmap -->
-              <div class="roadmap-container-pdf" style="margin-top: 20px;">
+              <div class="roadmap-container-pdf">
                 <div class="roadmap-header-pdf">
                   <app-icon name="sparkles" [size]="14" color="#0284c7"></app-icon>
                   <span>{{ getRecommendedData().roadmapTitle }}</span>
                 </div>
 
                 <div class="roadmap-steps-grid">
-                  @for (phase of getRecommendedData().phases; track phase.id; let last = $last) {
+                  @for (phase of getRecommendedData().phases; track phase.id) {
                     <div class="roadmap-step-box" [class.highlight]="phase.isHighlight">
                       <div class="step-top-row">
                         <span class="step-num">{{ phase.stepNumber }}</span>
@@ -913,13 +1090,15 @@ export interface ReportMenuItem {
               </div>
             </div>
           </div>
+        }
 
-          <!-- ======================================================================= -->
-          <!-- SECTION 10.2: ÇÖZÜM ÖNERİSİ - HEDEF MİMARİ (RISE WITH SAP BULUT TOPOLOJİSİ) -->
-          <!-- ======================================================================= -->
+        <!-- ========================================================================= -->
+        <!-- 11. ÇÖZÜM ÖNERİSİ: 2. HEDEF MİMARİ (RISE WITH SAP BULUT TOPOLOJİSİ)       -->
+        <!-- ========================================================================= -->
+        @if (isItemIncluded('solution-architecture')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">10.2 ÇÖZÜM ÖNERİSİ: HEDEF MİMARİ (RISE WITH SAP PCE)</div>
+              <div class="sb-title">11. ÇÖZÜM ÖNERİSİ: 2. HEDEF MİMARİ (RISE WITH SAP PCE)</div>
               <div class="sb-meta">Bulut Hedef Mimari Şeması ve 3. Parti Entegrasyon Haritası</div>
             </div>
 
@@ -1043,13 +1222,15 @@ export interface ReportMenuItem {
               </div>
             </div>
           </div>
+        }
 
-          <!-- ======================================================================= -->
-          <!-- SECTION 10.3: ÇÖZÜM ÖNERİSİ - 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ   -->
-          <!-- ======================================================================= -->
+        <!-- ========================================================================= -->
+        <!-- 12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ             -->
+        <!-- ========================================================================= -->
+        @if (isItemIncluded('solution-methods')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">10.3 ÇÖZÜM ÖNERİSİ: 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ</div>
+              <div class="sb-title">12. ÇÖZÜM ÖNERİSİ: 3. 4 GEÇİŞ YÖNTEMİ & KARŞILAŞTIRMA MATRİSİ</div>
               <div class="sb-meta">Brownfield, Lift & Shift, Selective Data Transition ve Greenfield Analizi</div>
             </div>
 
@@ -1149,12 +1330,12 @@ export interface ReportMenuItem {
         }
 
         <!-- ========================================================================= -->
-        <!-- SECTION 11: TOPLAM SAHİP OLMA MALİYETİ (TCO)                              -->
+        <!-- 13. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI)                                -->
         <!-- ========================================================================= -->
         @if (isItemIncluded('business-case')) {
           <div class="pdf-page-section">
             <div class="section-badge-header">
-              <div class="sb-title">11. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI)</div>
+              <div class="sb-title">13. TOPLAM SAHİP OLMA MALİYETİ (TCO & ROI SİMÜLASYONU)</div>
               <div class="sb-meta">5 Yıllık Karşılaştırmalı Finansal Model ve Yatırım Getirisi</div>
             </div>
 
@@ -1181,7 +1362,76 @@ export interface ReportMenuItem {
                   <span class="k-sub">Öngörülebilir Yıllık Abonelik</span>
                 </div>
               </div>
-              <p class="section-p">Donanım yenileme (CapEx), veri merkezi elektrik/iklimlendirme ve bakım sözleşmelerinin sonlandırılması ile bütçe öngörülebilirliği sağlanmakta, kaynaklar inovasyona yönlendirilebilmektedir.</p>
+
+              <!-- 5-Year Simulation Table -->
+              <div class="table-wrap" style="margin-top: 15px;">
+                <table class="report-data-table">
+                  <thead>
+                    <tr>
+                      <th>Finansal Kalem (EUR)</th>
+                      <th>1. Yıl</th>
+                      <th>2. Yıl</th>
+                      <th>3. Yıl</th>
+                      <th>4. Yıl</th>
+                      <th>5. Yıl</th>
+                      <th>5 Yıllık Toplam</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>AS-IS On-Premise (Bakım + Altyapı + Operasyon)</strong></td>
+                      <td>€216.000</td>
+                      <td>€316.000</td>
+                      <td>€216.000</td>
+                      <td>€216.000</td>
+                      <td>€216.000</td>
+                      <td><strong class="text-amber">€1.180.000</strong></td>
+                    </tr>
+                    <tr>
+                      <td><strong>RISE with SAP (Bulut Abonelik + Dönüşüm)</strong></td>
+                      <td>€700.000</td>
+                      <td>€400.000</td>
+                      <td>€400.000</td>
+                      <td>€400.000</td>
+                      <td>€400.000</td>
+                      <td><strong class="text-blue">€2.300.000</strong></td>
+                    </tr>
+                    <tr class="highlight-total-row">
+                      <td><strong>NET STRATEJİK FAYDA / TCO KAZANIMI</strong></td>
+                      <td colspan="5">Donanım yenileme amortismanı sıfırlanır, operasyonel efor inovasyona kayar</td>
+                      <td><strong class="text-emerald">Öngörülebilir Nakit Akışı</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ========================================================================= -->
+        <!-- 14. NOTLAR                                                                -->
+        <!-- ========================================================================= -->
+        @if (isItemIncluded('notes')) {
+          <div class="pdf-page-section">
+            <div class="section-badge-header">
+              <div class="sb-title">14. NOTLAR (DEĞERLENDİRME KAYITLARI)</div>
+              <div class="sb-meta">Satış, Presales ve Müşteri Özelinde Zaman Damgalı Notlar</div>
+            </div>
+
+            <div class="section-content-box">
+              <div class="notes-summary-box">
+                @if (notesService.currentCustomerNotes().length > 0) {
+                  @for (note of notesService.currentCustomerNotes(); track note.id) {
+                    <div class="note-bullet-line">
+                      <span class="n-date">[{{ note.formattedDate }}]</span>
+                      <span class="n-author">{{ note.author }}:</span>
+                      <span class="n-text">{{ note.text }}</span>
+                    </div>
+                  }
+                } @else {
+                  <p class="text-muted" style="padding: 10px; font-style: italic;">Henüz kaydedilmiş not veya yorum bulunmamaktadır.</p>
+                }
+              </div>
             </div>
           </div>
         }
@@ -1196,7 +1446,7 @@ export interface ReportMenuItem {
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.65);
       backdrop-filter: blur(4px);
       z-index: 1050;
       display: flex;
@@ -1208,11 +1458,11 @@ export interface ReportMenuItem {
 
     .modal-card {
       width: 100%;
-      max-width: 780px;
+      max-width: 840px;
       max-height: 90vh;
       background: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -1305,24 +1555,26 @@ export interface ReportMenuItem {
       .btn-group-quick {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
 
         .btn-quick {
           display: flex;
           align-items: center;
-          gap: 0.35rem;
-          padding: 0.35rem 0.75rem;
-          background: #f1f5f9;
+          gap: 0.3rem;
+          padding: 0.35rem 0.65rem;
+          background: #f8fafc;
           border: 1px solid #cbd5e1;
           border-radius: 6px;
           font-size: 0.76rem;
           font-weight: 600;
-          color: #334155;
+          color: #475569;
           cursor: pointer;
-          transition: background 0.15s;
+          transition: all 0.15s;
 
           &:hover {
-            background: #e2e8f0;
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
           }
         }
       }
@@ -1332,12 +1584,20 @@ export interface ReportMenuItem {
       padding: 1.25rem 1.5rem;
       overflow-y: auto;
       flex: 1;
-      background: #f8fafc;
+      max-height: 480px;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
     }
 
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
       gap: 0.75rem;
     }
 
@@ -1412,19 +1672,19 @@ export interface ReportMenuItem {
 
     .modal-footer {
       padding: 1rem 1.5rem;
+      background: #f8fafc;
       border-top: 1px solid #e2e8f0;
-      background: #ffffff;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 1rem;
       flex-wrap: wrap;
-      gap: 0.75rem;
 
       .footer-left {
         .footer-tip {
           display: flex;
           align-items: center;
-          gap: 0.4rem;
+          gap: 0.35rem;
           font-size: 0.74rem;
           color: #64748b;
         }
@@ -1433,20 +1693,22 @@ export interface ReportMenuItem {
       .footer-actions {
         display: flex;
         align-items: center;
-        gap: 0.65rem;
+        gap: 0.75rem;
 
         .btn-cancel {
-          padding: 0.5rem 1rem;
-          background: #f1f5f9;
+          padding: 0.55rem 1rem;
+          background: #ffffff;
           border: 1px solid #cbd5e1;
           border-radius: 6px;
-          font-size: 0.82rem;
+          font-size: 0.84rem;
           font-weight: 600;
-          color: #334155;
+          color: #475569;
           cursor: pointer;
+          transition: all 0.15s;
 
           &:hover:not(:disabled) {
-            background: #e2e8f0;
+            background: #f1f5f9;
+            color: #0f172a;
           }
         }
 
@@ -1476,18 +1738,91 @@ export interface ReportMenuItem {
       }
     }
 
-    /* HIDDEN HIGH-RES A4 REPORT CONTAINER STYLES */
+    /* FULL SCREEN EXPORT LOADING OVERLAY */
+    .pdf-exporting-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 20000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+
+      .exporting-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 2rem 2.5rem;
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+
+        .spinner-pulse {
+          width: 48px;
+          height: 48px;
+          margin: 0 auto 1.2rem;
+          border: 4px solid #e0f2fe;
+          border-top-color: #0284c7;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        h3 {
+          margin: 0 0 0.5rem;
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .export-status-text {
+          margin: 0 0 1rem;
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: #0284c7;
+        }
+
+        .export-progress-bar {
+          height: 8px;
+          background: #f1f5f9;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 0.85rem;
+
+          .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0284c7, #059669);
+            border-radius: 4px;
+            transition: width 0.2s ease;
+          }
+        }
+
+        .export-hint {
+          font-size: 0.74rem;
+          color: #64748b;
+          line-height: 1.4;
+        }
+      }
+    }
+
+    /* RENDERED IN DOM VIEWPORT FOR FLAWLESS HTML2CANVAS CONVERSION */
     .hidden-pdf-document-wrapper {
-      position: absolute;
-      left: -9999px;
-      top: -9999px;
-      width: 1000px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 860px;
       background: #ffffff;
-      z-index: -10;
+      z-index: 10000;
+      pointer-events: none;
+      box-shadow: 0 0 40px rgba(0,0,0,0.1);
     }
 
     .pdf-export-container {
-      width: 820px;
+      width: 840px;
       background: #ffffff;
       color: #0f172a;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -1533,7 +1868,7 @@ export interface ReportMenuItem {
         }
 
         .cover-body {
-          padding: 40px 0;
+          padding: 35px 0;
 
           .report-badge {
             display: inline-block;
@@ -1544,774 +1879,1206 @@ export interface ReportMenuItem {
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.06em;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
           }
 
           .cover-title {
-            font-size: 34px;
+            margin: 0 0 10px;
+            font-size: 32px;
             font-weight: 900;
             color: #0f172a;
-            margin: 0 0 10px 0;
-            line-height: 1.2;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
           }
 
           .cover-sub {
-            font-size: 16px;
+            margin: 0 0 25px;
+            font-size: 15px;
+            font-weight: 600;
             color: #475569;
-            font-weight: 500;
-            margin: 0 0 30px 0;
             line-height: 1.4;
           }
 
           .cover-meta-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 20px;
+            gap: 10px;
             background: #ffffff;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            margin-bottom: 35px;
+            padding: 16px;
+            margin-bottom: 25px;
 
             .meta-item {
               display: flex;
               flex-direction: column;
-              gap: 4px;
-              .m-lbl { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-              .m-val { font-size: 14px; color: #0f172a; font-weight: 700; }
+              gap: 2px;
+
+              .m-lbl {
+                font-size: 11px;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+              }
+
+              .m-val {
+                font-size: 13px;
+                font-weight: 800;
+                color: #0f172a;
+              }
             }
           }
 
           .toc-box {
             background: #ffffff;
-            border: 1px solid #cbd5e1;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 20px;
+            padding: 16px 20px;
 
             .toc-title {
               font-size: 12px;
               font-weight: 800;
-              color: #334155;
+              color: #0284c7;
               letter-spacing: 0.05em;
-              margin-bottom: 12px;
-              border-bottom: 1px solid #e2e8f0;
-              padding-bottom: 8px;
+              margin-bottom: 10px;
+              padding-bottom: 6px;
+              border-bottom: 1px solid #f1f5f9;
             }
 
             .toc-items {
               display: flex;
               flex-direction: column;
-              gap: 8px;
+              gap: 5px;
 
               .toc-line {
                 display: flex;
                 align-items: center;
-                font-size: 12px;
+                font-size: 11px;
+                color: #334155;
+                overflow: hidden;
+                white-space: nowrap;
 
-                .toc-num { width: 22px; font-weight: 700; color: #0284c7; }
-                .toc-name { font-weight: 600; color: #1e293b; }
-                .toc-dots { flex: 1; color: #cbd5e1; overflow: hidden; white-space: nowrap; margin: 0 8px; }
-                .toc-badge { font-size: 10px; font-weight: 700; color: #059669; }
+                .toc-num {
+                  font-weight: 800;
+                  width: 22px;
+                  color: #0284c7;
+                  flex-shrink: 0;
+                }
+
+                .toc-name {
+                  font-weight: 700;
+                  flex-shrink: 0;
+                }
+
+                .toc-group {
+                  font-size: 10px;
+                  color: #64748b;
+                  margin-left: 6px;
+                  flex-shrink: 0;
+                }
+
+                .toc-dots {
+                  color: #cbd5e1;
+                  padding: 0 6px;
+                  letter-spacing: 2px;
+                  flex: 1;
+                  overflow: hidden;
+                }
+
+                .toc-badge {
+                  font-size: 9px;
+                  font-weight: 800;
+                  color: #059669;
+                  background: #ecfdf5;
+                  border: 1px solid #a7f3d0;
+                  padding: 1px 6px;
+                  border-radius: 4px;
+                  flex-shrink: 0;
+                }
               }
             }
           }
         }
 
         .cover-footer {
-          font-size: 11px;
-          color: #94a3b8;
-          border-top: 1px solid #e2e8f0;
           padding-top: 15px;
+          border-top: 1px solid #cbd5e1;
+          font-size: 10px;
+          color: #94a3b8;
           text-align: center;
         }
       }
 
+      /* GENERAL PDF PAGE SECTION */
       .pdf-page-section {
-        padding: 35px 45px;
+        padding: 35px 40px;
+        box-sizing: border-box;
         page-break-after: always;
-        border-bottom: 1px solid #e2e8f0;
+        min-height: 1080px;
         background: #ffffff;
+        border-bottom: 1px dashed #cbd5e1;
 
         .section-badge-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           padding-bottom: 12px;
-          border-bottom: 2px solid #0f172a;
+          border-bottom: 2px solid #0284c7;
           margin-bottom: 20px;
 
           .sb-title {
-            font-size: 14px;
-            font-weight: 800;
+            font-size: 15px;
+            font-weight: 900;
             color: #0f172a;
-            letter-spacing: 0.04em;
+            letter-spacing: -0.01em;
           }
 
           .sb-meta {
             font-size: 11px;
+            font-weight: 700;
             color: #64748b;
-            font-weight: 600;
           }
         }
 
-        .exec-summary-banner {
+        .section-content-box {
           display: flex;
-          align-items: center;
-          gap: 20px;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          border-radius: 8px;
-          padding: 16px 20px;
-          margin-bottom: 20px;
-
-          .es-badge-circle {
-            width: 60px;
-            height: 60px;
-            background: #166534;
-            color: #ffffff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: 800;
-          }
-
-          .es-text {
-            flex: 1;
-            h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #14532d; }
-            p { margin: 0; font-size: 12px; line-height: 1.5; color: #166534; }
-          }
-        }
-
-        .kpi-mini-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          flex-direction: column;
           gap: 12px;
-          margin-bottom: 15px;
-
-          .kpi-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-
-            .k-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
-            .k-val { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-            .k-sub { font-size: 10px; color: #475569; }
-
-            .text-blue { color: #0284c7; }
-            .text-emerald { color: #059669; }
-            .text-purple { color: #7e22ce; }
-            .text-amber { color: #d97706; }
-          }
-        }
-
-        .notes-summary-box {
-          background: #f8fafc;
-          border: 1px solid #cbd5e1;
-          border-radius: 6px;
-          padding: 14px;
-          margin-top: 15px;
-
-          h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #334155; }
-          .note-bullet-line {
-            font-size: 11px;
-            line-height: 1.45;
-            margin-bottom: 6px;
-            color: #1e293b;
-
-            .n-date { font-weight: 700; color: #0284c7; margin-right: 5px; }
-            .n-author { font-weight: 600; color: #475569; margin-right: 5px; }
-          }
-        }
-
-        .analysis-card {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 16px;
-
-          h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #0f172a; }
-          p { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: #475569; }
-
-          .module-stat-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-
-            .m-pill {
-              background: #ffffff;
-              border: 1px solid #cbd5e1;
-              padding: 5px 10px;
-              border-radius: 6px;
-              font-size: 11px;
-              color: #334155;
-            }
-          }
         }
 
         .section-p {
           font-size: 12px;
-          line-height: 1.5;
           color: #475569;
-          margin-top: 10px;
+          line-height: 1.5;
+          margin: 0;
         }
 
-        .report-data-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
-          margin-top: 10px;
-
-          th {
-            background: #f1f5f9;
-            padding: 8px 10px;
-            text-align: left;
-            font-weight: 700;
-            color: #334155;
-            border-bottom: 2px solid #cbd5e1;
-          }
-
-          td {
-            padding: 7px 10px;
-            border-bottom: 1px solid #e2e8f0;
-            color: #1e293b;
-          }
-        }
-
-        /* ARCHITECTURE SCHEMATICS & DIAGRAMS */
-        .arch-uploaded-container {
-          margin-bottom: 15px;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          padding: 10px;
-          background: #0f172a;
-
-          .auc-header {
-            font-size: 11px;
-            font-weight: 700;
-            color: #94a3b8;
-            margin-bottom: 8px;
-          }
-
-          .pdf-custom-arch-img {
-            width: 100%;
-            max-height: 280px;
-            object-fit: contain;
-            display: block;
-          }
-        }
-
-        .arch-schematic-card {
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          padding: 14px;
-          margin-bottom: 15px;
-
-          .schematic-title {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 12px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #f1f5f9;
-          }
-        }
-
-        /* PO Topology Flow */
-        .integration-topology-flow {
+        .sub-block-title {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-
-          .flow-col {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-
-            .col-head {
-              font-size: 10px;
-              font-weight: 700;
-              color: #64748b;
-              text-transform: uppercase;
-              text-align: center;
-              margin-bottom: 2px;
-            }
-
-            .flow-box {
-              background: #f8fafc;
-              border: 1px solid #e2e8f0;
-              border-radius: 5px;
-              padding: 6px 8px;
-              font-size: 10px;
-              font-weight: 600;
-              color: #1e293b;
-              text-align: center;
-
-              &.core-box {
-                background: #f0fdf4;
-                border-color: #86efac;
-                color: #166534;
-                font-weight: 700;
-              }
-            }
-          }
-
-          .flow-arrow-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-
-            .proto-tag {
-              font-size: 8px;
-              font-weight: 700;
-              color: #0284c7;
-              background: #eff6ff;
-              padding: 1px 4px;
-              border-radius: 3px;
-              white-space: nowrap;
-            }
-
-            .arr-icon {
-              font-size: 14px;
-              color: #94a3b8;
-              font-weight: 800;
-            }
-          }
-
-          .hub-col {
-            flex: 1.4;
-
-            .hub-main-box {
-              background: #eff6ff;
-              border: 2px solid #0284c7;
-              border-radius: 8px;
-              padding: 10px;
-              text-align: center;
-
-              .hub-title { font-size: 11px; font-weight: 800; color: #0369a1; }
-              .hub-sub { font-size: 9px; color: #64748b; margin-top: 2px; }
-              .hub-mig-badge {
-                display: inline-block;
-                background: #0284c7;
-                color: #ffffff;
-                font-size: 9px;
-                font-weight: 700;
-                padding: 2px 6px;
-                border-radius: 4px;
-                margin: 6px 0;
-              }
-              .hub-desc { font-size: 9px; color: #0284c7; line-height: 1.3; }
-            }
-          }
-        }
-
-        /* AS-IS Topology Flow */
-        .asis-topology-flow {
-          display: flex;
-          flex-direction: column;
           gap: 6px;
-
-          .asis-tier-card {
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            border-radius: 6px;
-            padding: 8px 12px;
-
-            &.db-card {
-              background: #f8fafc;
-              border-color: #cbd5e1;
-            }
-
-            .tier-tag { font-size: 9px; font-weight: 700; color: #b45309; text-transform: uppercase; }
-            .tier-title { font-size: 12px; font-weight: 800; color: #0f172a; margin: 2px 0; }
-            .tier-detail { font-size: 10px; color: #475569; }
-          }
-
-          .asis-arrow-down {
-            font-size: 10px;
-            font-weight: 700;
-            color: #d97706;
-            text-align: center;
-          }
+          font-size: 13px;
+          font-weight: 800;
+          color: #0f172a;
         }
+      }
 
-        .eos-callout-banner {
+      /* EXECUTIVE SUMMARY HERO CARD PDF STYLES */
+      .hero-score-card-pdf {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+
+        .hsc-left {
           display: flex;
           align-items: center;
-          gap: 12px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 6px;
-          padding: 10px 14px;
-          margin-top: 10px;
+          gap: 18px;
 
-          .eos-badge {
-            background: #dc2626;
+          .circular-score-badge-pdf {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff;
-            font-size: 10px;
-            font-weight: 800;
-            padding: 4px 8px;
-            border-radius: 4px;
-            white-space: nowrap;
-          }
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
 
-          .eos-body {
-            font-size: 10.5px;
-            color: #991b1b;
-            line-height: 1.4;
-            strong { display: block; font-weight: 700; margin-bottom: 2px; }
-          }
-        }
+            .score-number {
+              font-size: 24px;
+              font-weight: 900;
+              line-height: 1;
+            }
 
-        /* TO-BE Target Architecture Diagram */
-        .tobe-architecture-diagram {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-
-          .tobe-tier-row {
-            border-radius: 6px;
-            padding: 8px 12px;
-            border: 1px solid #e2e8f0;
-
-            .tier-label {
-              font-size: 9px;
+            .score-label {
+              font-size: 8px;
               font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: 0.04em;
-              margin-bottom: 6px;
-            }
-
-            &.tier-presentation {
-              background: #f8fafc;
-              .tier-label { color: #0284c7; }
-            }
-
-            &.tier-core {
-              background: #f0fdf4;
-              border-color: #86efac;
-              .tier-label { color: #15803d; }
-
-              .core-highlight-box {
-                .ch-title { font-size: 13px; font-weight: 800; color: #14532d; }
-                .ch-specs { font-size: 10px; color: #166534; margin-top: 3px; }
-              }
-            }
-
-            &.tier-btp {
-              background: #faf5ff;
-              border-color: #e9d5ff;
-              .tier-label { color: #7e22ce; }
-            }
-
-            &.tier-infra {
-              background: #f1f5f9;
-              .tier-label { color: #334155; }
-            }
-
-            .tier-content-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 6px;
-
-              .tobe-node-pill {
-                background: #ffffff;
-                border: 1px solid #cbd5e1;
-                border-radius: 4px;
-                padding: 4px 6px;
-                font-size: 9.5px;
-                color: #1e293b;
-              }
-            }
-
-            .infra-flex-row {
-              display: flex;
-              gap: 8px;
-
-              .infra-badge {
-                flex: 1;
-                background: #ffffff;
-                border: 1px solid #cbd5e1;
-                border-radius: 4px;
-                padding: 5px;
-                text-align: center;
-                font-size: 9.5px;
-                font-weight: 600;
-                color: #334155;
-
-                &.green {
-                  border-color: #86efac;
-                  background: #f0fdf4;
-                  color: #166534;
-                  font-weight: 700;
-                }
-              }
-            }
-          }
-
-          .tobe-flow-divider {
-            font-size: 9px;
-            font-weight: 700;
-            color: #059669;
-            text-align: center;
-          }
-        }
-
-        /* Recommended Hero Card PDF */
-        .hero-recommendation-card-pdf {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          border-radius: 8px;
-          padding: 16px;
-
-          .hr-left {
-            flex: 1;
-            .hr-pill {
-              font-size: 9px;
-              font-weight: 800;
-              color: #059669;
               letter-spacing: 0.05em;
-              text-transform: uppercase;
+              margin-top: 3px;
             }
-            h2 {
-              margin: 4px 0 6px;
-              font-size: 16px;
+          }
+
+          .score-text-pdf {
+            flex: 1;
+
+            .status-pill-green-pdf {
+              display: inline-block;
+              padding: 2px 8px;
+              background: #ecfdf5;
+              border: 1px solid #a7f3d0;
+              color: #059669;
+              font-size: 9px;
               font-weight: 800;
-              color: #14532d;
+              border-radius: 20px;
+              margin-bottom: 5px;
             }
+
+            h3 {
+              margin: 0 0 4px;
+              font-size: 14px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+
             p {
               margin: 0;
               font-size: 11px;
-              line-height: 1.45;
-              color: #166534;
-            }
-          }
-
-          .hr-stats {
-            display: flex;
-            gap: 10px;
-
-            .stat-box-pdf {
-              background: #ffffff;
-              border: 1px solid #e2e8f0;
-              border-radius: 6px;
-              padding: 8px 12px;
-              text-align: center;
-              min-width: 80px;
-
-              .sb-val { font-size: 15px; font-weight: 800; display: block; margin-bottom: 2px; }
-              .sb-lbl { font-size: 9px; color: #64748b; font-weight: 600; }
-              .text-emerald { color: #059669; }
-              .text-blue { color: #0284c7; }
-              .text-purple { color: #7e22ce; }
+              color: #475569;
+              line-height: 1.4;
             }
           }
         }
 
-        /* Roadmap Grid PDF */
-        .roadmap-container-pdf {
+        .pillar-grid-pdf {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 10px;
+          background: #f8fafc;
+          padding: 12px 14px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+
+          .pillar-card-pdf {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .p-head-pdf {
+              font-size: 10px;
+              font-weight: 700;
+              color: #1e293b;
+
+              .p-name-pdf {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            }
+
+            .progress-bar-pdf {
+              height: 6px;
+              background: #e2e8f0;
+              border-radius: 3px;
+              overflow: hidden;
+
+              .progress-fill-pdf {
+                height: 100%;
+                border-radius: 3px;
+                &.bg-blue { background: #0284c7; }
+                &.bg-emerald { background: #059669; }
+                &.bg-purple { background: #7c3aed; }
+                &.bg-amber { background: #d97706; }
+              }
+            }
+
+            .p-desc-pdf {
+              font-size: 8.5px;
+              color: #64748b;
+              line-height: 1.25;
+            }
+          }
+        }
+      }
+
+      /* 8 PURPOSE CARDS GRID */
+      .purpose-grid-pdf {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+
+        .purpose-card-pdf {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px 12px;
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+
+          .pc-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+
+          .pc-body {
+            flex: 1;
+
+            h4 {
+              margin: 0 0 2px;
+              font-size: 11px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+
+            p {
+              margin: 0;
+              font-size: 9.5px;
+              color: #64748b;
+              line-height: 1.35;
+            }
+          }
+        }
+      }
+
+      /* 4 METHODOLOGY CARDS GRID */
+      .how-grid-pdf {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+
+        .how-card-pdf {
           background: #ffffff;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
-          padding: 14px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
 
-          .roadmap-header-pdf {
+          .hc-head {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+
+            .hc-badge {
+              padding: 2px 6px;
+              background: #f0f9ff;
+              border: 1px solid #bae6fd;
+              color: #0284c7;
+              font-size: 9px;
+              font-weight: 800;
+              border-radius: 4px;
+            }
+
+            h4 {
+              margin: 0;
+              font-size: 11.5px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+          }
+
+          .hc-bullets {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+
+            li {
+              font-size: 9.5px;
+              color: #475569;
+              line-height: 1.35;
+
+              .bullet-dot {
+                color: #0284c7;
+                font-weight: 900;
+              }
+            }
+          }
+
+          .hc-foot {
+            font-size: 9px;
+            font-weight: 700;
+            color: #059669;
+            background: #f0fdf4;
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+          }
+        }
+      }
+
+      .sales-notes-box-pdf {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 14px;
+
+        h4 {
+          margin: 0 0 4px;
+          font-size: 11px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        p {
+          margin: 0;
+          font-size: 10px;
+          color: #334155;
+          line-height: 1.45;
+          font-style: italic;
+        }
+      }
+
+      /* KPI MINI GRID */
+      .kpi-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+
+        .kpi-box {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 10px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .k-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #64748b;
+          }
+
+          .k-val {
+            font-size: 16px;
+            font-weight: 900;
+            color: #0f172a;
+          }
+
+          .k-sub {
+            font-size: 8.5px;
+            color: #64748b;
+          }
+        }
+      }
+
+      /* ANALYSIS CARDS */
+      .analysis-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+
+        h3 {
+          margin: 0 0 4px;
+          font-size: 13px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        p {
+          margin: 0 0 10px;
+          font-size: 11px;
+          color: #475569;
+          line-height: 1.4;
+        }
+
+        .module-stat-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+
+          .m-pill {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10px;
+            color: #334155;
+          }
+        }
+      }
+
+      /* REPORT DATA TABLES */
+      .table-wrap {
+        width: 100%;
+        overflow: hidden;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+      }
+
+      .report-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10.5px;
+
+        thead {
+          background: #f1f5f9;
+
+          th {
+            padding: 7px 10px;
+            text-align: left;
+            font-weight: 800;
+            color: #334155;
+            border-bottom: 1px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+
+            &.th-rec {
+              background: #ecfdf5;
+              color: #047857;
+              border-bottom-color: #a7f3d0;
+            }
+          }
+        }
+
+        tbody {
+          tr {
+            border-bottom: 1px solid #f1f5f9;
+
+            &:nth-child(even) {
+              background: #fafafa;
+            }
+
+            &.highlight-total-row {
+              background: #f0fdf4;
+              font-weight: 800;
+            }
+
+            td {
+              padding: 6px 10px;
+              color: #334155;
+              border-right: 1px solid #f1f5f9;
+              vertical-align: middle;
+
+              &.td-rec {
+                background: #f0fdf4;
+                color: #047857;
+                font-weight: 700;
+              }
+            }
+          }
+        }
+      }
+
+      /* SCHEMATICS & DIAGRAMS */
+      .arch-schematic-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 14px 18px;
+
+        .schematic-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #0f172a;
+          margin-bottom: 12px;
+        }
+      }
+
+      /* PO INTEGRATION TOPOLOGY */
+      .integration-topology-flow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+
+        .flow-col {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          flex: 1;
+
+          .col-head {
+            font-size: 10px;
+            font-weight: 800;
+            color: #475569;
+            text-align: center;
+            margin-bottom: 2px;
+          }
+
+          .flow-box {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 9.5px;
+            color: #334155;
+            text-align: center;
+            font-weight: 600;
+
+            &.core-box {
+              background: #f0f9ff;
+              border-color: #0284c7;
+              color: #0284c7;
+              font-weight: 800;
+            }
+          }
+        }
+
+        .flow-arrow-col {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+
+          .proto-tag {
+            font-size: 7.5px;
+            font-weight: 800;
+            color: #0284c7;
+            background: #e0f2fe;
+            padding: 1px 4px;
+            border-radius: 3px;
+          }
+
+          .arr-icon {
+            font-size: 14px;
+            color: #0284c7;
+            font-weight: 900;
+          }
+        }
+
+        .hub-col {
+          flex: 1.3;
+
+          .hub-main-box {
+            background: #eff6ff;
+            border: 2px solid #3b82f6;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+
+            .hub-title {
+              font-size: 11px;
+              font-weight: 900;
+              color: #1d4ed8;
+            }
+
+            .hub-sub {
+              font-size: 8.5px;
+              color: #475569;
+            }
+
+            .hub-mig-badge {
+              font-size: 9px;
+              font-weight: 800;
+              color: #059669;
+              background: #ecfdf5;
+              padding: 2px 6px;
+              border-radius: 4px;
+              margin: 4px auto;
+              display: inline-block;
+            }
+
+            .hub-desc {
+              font-size: 8px;
+              color: #64748b;
+            }
+          }
+        }
+      }
+
+      /* AS-IS TOPOLOGY */
+      .asis-topology-flow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        background: #fffbeb;
+        border: 1px solid #fef3c7;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+
+        .asis-tier-card {
+          width: 85%;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          padding: 8px 12px;
+          text-align: center;
+
+          &.db-card {
+            border-color: #f59e0b;
+          }
+
+          .tier-tag {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+          }
+
+          .tier-title {
             font-size: 12px;
             font-weight: 800;
             color: #0f172a;
-            margin-bottom: 12px;
           }
 
-          .roadmap-steps-grid {
+          .tier-detail {
+            font-size: 9.5px;
+            color: #475569;
+          }
+        }
+
+        .asis-arrow-down {
+          font-size: 9px;
+          font-weight: 700;
+          color: #d97706;
+        }
+      }
+
+      .eos-callout-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        padding: 8px 12px;
+
+        .eos-badge {
+          background: #dc2626;
+          color: #ffffff;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .eos-body {
+          font-size: 10px;
+          color: #991b1b;
+          line-height: 1.35;
+        }
+      }
+
+      /* TO-BE 4-TIER ARCHITECTURE DIAGRAM */
+      .tobe-architecture-diagram {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .tobe-tier-row {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 8px 12px;
+
+          .tier-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #475569;
+            margin-bottom: 6px;
+          }
+
+          .tier-content-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            gap: 6px;
 
-            .roadmap-step-box {
-              background: #f8fafc;
-              border: 1px solid #e2e8f0;
-              border-radius: 6px;
-              padding: 10px;
+            .tobe-node-pill {
+              background: #ffffff;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              padding: 4px 6px;
+              font-size: 9px;
+              color: #334155;
+              text-align: center;
+            }
+          }
 
-              &.highlight {
-                background: #f0fdf4;
-                border-color: #86efac;
+          &.tier-core {
+            background: #f0fdf4;
+            border-color: #86efac;
+
+            .core-highlight-box {
+              background: #ffffff;
+              border: 1px solid #4ade80;
+              border-radius: 4px;
+              padding: 6px 10px;
+              text-align: center;
+
+              .ch-title {
+                font-size: 12px;
+                font-weight: 900;
+                color: #15803d;
               }
 
-              .step-top-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 4px;
-
-                .step-num { font-size: 14px; font-weight: 900; color: #94a3b8; }
-                .step-badge {
-                  font-size: 8px;
-                  font-weight: 700;
-                  color: #0284c7;
-                  background: #eff6ff;
-                  padding: 1px 4px;
-                  border-radius: 3px;
-
-                  &.green { background: #dcfce7; color: #059669; }
-                }
+              .ch-specs {
+                font-size: 9px;
+                color: #475569;
               }
+            }
+          }
 
-              h4 {
-                font-size: 11px;
-                font-weight: 800;
-                color: #0f172a;
-                margin: 0 0 6px 0;
-              }
+          .infra-flex-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
 
-              ul {
-                margin: 0;
-                padding-left: 14px;
-                li {
-                  font-size: 9.5px;
-                  color: #475569;
-                  line-height: 1.35;
-                  margin-bottom: 3px;
-                }
+            .infra-badge {
+              background: #ffffff;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              padding: 4px 8px;
+              font-size: 9px;
+              font-weight: 700;
+              color: #334155;
+
+              &.green {
+                background: #ecfdf5;
+                border-color: #a7f3d0;
+                color: #047857;
               }
             }
           }
         }
 
-        /* Method Cards Grid PDF */
-        .methods-cards-grid-pdf {
+        .tobe-flow-divider {
+          text-align: center;
+          font-size: 8.5px;
+          font-weight: 700;
+          color: #059669;
+        }
+      }
+
+      /* 4 METHOD CARDS GRID */
+      .methods-cards-grid-pdf {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+
+        .method-card-pdf {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+
+          &.recommended {
+            border: 2px solid #059669;
+            background: #f0fdf4;
+          }
+
+          .mc-head {
+            .mc-top {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 4px;
+
+              .mc-badge {
+                font-size: 8.5px;
+                font-weight: 800;
+                padding: 2px 6px;
+                border-radius: 4px;
+
+                &.recommended { background: #059669; color: #ffffff; }
+                &.lift-shift { background: #0284c7; color: #ffffff; }
+                &.partial { background: #d97706; color: #ffffff; }
+                &.not-suitable { background: #dc2626; color: #ffffff; }
+              }
+
+              .mc-duration {
+                font-size: 9.5px;
+                font-weight: 700;
+                color: #475569;
+              }
+            }
+
+            h3 {
+              margin: 0 0 2px;
+              font-size: 12.5px;
+              font-weight: 900;
+              color: #0f172a;
+            }
+
+            .mc-sub {
+              margin: 0;
+              font-size: 9.5px;
+              color: #64748b;
+            }
+          }
+
+          .mc-bullets {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 4px 0;
+
+            .mc-bullet-item {
+              display: flex;
+              gap: 4px;
+              font-size: 9px;
+              line-height: 1.35;
+
+              .bullet-dot {
+                font-weight: 900;
+                &.green { color: #059669; }
+                &.blue { color: #0284c7; }
+                &.amber { color: #d97706; }
+                &.red { color: #dc2626; }
+              }
+
+              .bullet-text {
+                color: #334155;
+              }
+            }
+          }
+
+          .mc-foot {
+            font-size: 9px;
+            font-weight: 700;
+            color: #059669;
+            background: #ffffff;
+            border: 1px solid #bbf7d0;
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-top: auto;
+          }
+        }
+      }
+
+      /* ROADMAP */
+      .hero-recommendation-card-pdf {
+        background: #ffffff;
+        border: 2px solid #059669;
+        border-radius: 8px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+
+        .hr-left {
+          flex: 1;
+
+          .hr-pill {
+            display: inline-block;
+            background: #059669;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+          }
+
+          h2 {
+            margin: 0 0 4px;
+            font-size: 15px;
+            font-weight: 900;
+            color: #0f172a;
+          }
+
+          p {
+            margin: 0;
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.4;
+          }
+        }
+
+        .hr-stats {
+          display: flex;
+          gap: 8px;
+
+          .stat-box-pdf {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 10px;
+            text-align: center;
+            min-width: 65px;
+
+            .sb-val {
+              display: block;
+              font-size: 13px;
+              font-weight: 900;
+            }
+
+            .sb-lbl {
+              font-size: 8px;
+              color: #64748b;
+            }
+          }
+        }
+      }
+
+      .roadmap-container-pdf {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 12px 14px;
+
+        .roadmap-header-pdf {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #0f172a;
+          margin-bottom: 10px;
+        }
+
+        .roadmap-steps-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 8px;
 
-          .method-card-pdf {
+          .roadmap-step-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            border-radius: 6px;
+            padding: 8px;
 
-            &.recommended { border-top: 3px solid #059669; }
-            &.lift-shift { border-top: 3px solid #0284c7; }
-            &.partial { border-top: 3px solid #d97706; }
-            &.not-suitable { border-top: 3px solid #dc2626; }
-
-            .mc-head {
-              .mc-top {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 4px;
-
-                .mc-badge {
-                  font-size: 8px;
-                  font-weight: 800;
-                  padding: 1px 4px;
-                  border-radius: 3px;
-
-                  &.recommended { background: #dcfce7; color: #15803d; }
-                  &.lift-shift { background: #e0f2fe; color: #0369a1; }
-                  &.partial { background: #fef3c7; color: #b45309; }
-                  &.not-suitable { background: #fee2e2; color: #b91c1c; }
-                }
-
-                .mc-duration { font-size: 9px; font-weight: 700; color: #64748b; }
-              }
-
-              h3 { font-size: 11px; font-weight: 800; color: #0f172a; margin: 2px 0; }
-              .mc-sub { font-size: 8.5px; color: #64748b; margin: 0 0 6px; }
+            &.highlight {
+              border-color: #059669;
+              background: #f0fdf4;
             }
 
-            .mc-bullets {
+            .step-top-row {
               display: flex;
-              flex-direction: column;
-              gap: 4px;
-              margin: 6px 0;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 4px;
 
-              .mc-bullet-item {
+              .step-num {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: #0284c7;
+                color: #ffffff;
+                font-size: 9px;
+                font-weight: 800;
                 display: flex;
-                align-items: flex-start;
-                gap: 4px;
+                align-items: center;
+                justify-content: center;
+              }
 
-                .bullet-dot {
-                  width: 5px;
-                  height: 5px;
-                  border-radius: 50%;
-                  margin-top: 4px;
-                  flex-shrink: 0;
+              .step-badge {
+                font-size: 8px;
+                font-weight: 800;
+                padding: 1px 4px;
+                border-radius: 3px;
+                background: #f1f5f9;
+                color: #475569;
 
-                  &.green { background: #059669; }
-                  &.blue { background: #0284c7; }
-                  &.amber { background: #d97706; }
-                  &.red { background: #dc2626; }
-                }
-
-                .bullet-text {
-                  font-size: 9px;
-                  line-height: 1.3;
-                  color: #334155;
-                  strong { font-weight: 700; color: #0f172a; margin-right: 2px; }
-                }
+                &.green { background: #059669; color: #ffffff; }
               }
             }
 
-            .mc-foot {
+            h4 {
+              margin: 0 0 4px;
+              font-size: 10.5px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+
+            ul {
+              margin: 0;
+              padding-left: 12px;
               font-size: 8.5px;
-              font-weight: 600;
-              color: #64748b;
-              border-top: 1px solid #f1f5f9;
-              padding-top: 5px;
-              margin-top: auto;
+              color: #475569;
+              line-height: 1.35;
             }
           }
-        }
-
-        /* Matrix Table PDF */
-        .matrix-table {
-          th.th-rec {
-            background: #dcfce7;
-            color: #15803d;
-            border-bottom-color: #86efac;
-          }
-          td.td-rec {
-            background: #f0fdf4;
-            color: #14532d;
-            font-weight: 600;
-          }
-        }
-
-        .risk-pill {
-          display: inline-block;
-          font-size: 9px;
-          font-weight: 700;
-          padding: 1px 6px;
-          border-radius: 4px;
-
-          &.red { background: #fee2e2; color: #dc2626; }
-          &.amber { background: #fef3c7; color: #b45309; }
-          &.blue { background: #e0f2fe; color: #0284c7; }
-          &.green { background: #dcfce7; color: #15803d; }
         }
       }
+
+      /* NOTES SUMMARY */
+      .notes-summary-box {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .note-bullet-line {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 8px 12px;
+          display: flex;
+          gap: 6px;
+          align-items: flex-start;
+          font-size: 10.5px;
+
+          .n-date {
+            font-weight: 700;
+            color: #0284c7;
+            white-space: nowrap;
+          }
+
+          .n-author {
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+          }
+
+          .n-text {
+            color: #334155;
+            line-height: 1.4;
+          }
+        }
+      }
+
+      /* COMMON HELPER PILLS */
+      .risk-pill {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 800;
+
+        &.red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        &.amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        &.blue { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+        &.green { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+      }
+
+      .text-red { color: #dc2626; }
+      .text-amber { color: #d97706; }
+      .text-blue { color: #0284c7; }
+      .text-emerald { color: #059669; }
+      .text-purple { color: #7c3aed; }
+
+      .arch-uploaded-container {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px;
+        background: #f8fafc;
+        margin-bottom: 12px;
+
+        .auc-header {
+          font-size: 11px;
+          font-weight: 800;
+          color: #0f172a;
+          margin-bottom: 6px;
+        }
+
+        .pdf-custom-arch-img {
+          width: 100%;
+          max-height: 280px;
+          object-fit: contain;
+          border-radius: 4px;
+          background: #ffffff;
+        }
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     @keyframes fadeIn {
@@ -2330,26 +3097,29 @@ export class QuickPdfExportModalComponent {
   customerService = inject(CustomerService);
   basisService = inject(BasisSizingService);
   notesService = inject(NotesService);
+  modullerService = inject(ModullerService);
 
   @ViewChild('exportContainer') exportContainer?: ElementRef<HTMLElement>;
 
   isExporting = signal<boolean>(false);
   exportProgress = signal<string>('0%');
+  exportPercent = signal<number>(0);
 
   currentDateStr = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
 
+  // 14 DISTINCT MENUS AND SUB-MENUS MATCHING THE SIDEBAR 1-TO-1
   menuItems: ReportMenuItem[] = [
     {
       id: 'reports',
-      name: 'Yönetici Özeti',
+      name: '1. Yönetici Özeti',
       group: 'ÖZET',
-      desc: 'RISE Match Skoru, Bulut Uyumu, Stratejik Hedefler ve Zaman Damgalı Notlar',
+      desc: 'RISE Match Skoru, Bulut Uyumu, 1. Amaç (8 Sütun), 2. Nasıl Yapıyoruz (4 Aşama) ve Notlar',
       icon: 'file-text',
       selected: true
     },
     {
       id: 'modules-summary',
-      name: 'Bulgularımız',
+      name: '2. Bulgularımız (Modüller)',
       group: 'SAP UYGULAMALARI',
       desc: 'Modül kullanım oranları, tespit edilen darboğazlar ve süreç kazanımları',
       icon: 'sliders',
@@ -2357,74 +3127,98 @@ export class QuickPdfExportModalComponent {
     },
     {
       id: 'modules-detail',
-      name: 'Detaylı Analiz',
+      name: '3. Detaylı Analiz (Süreçler)',
       group: 'SAP UYGULAMALARI',
-      desc: 'FI, CO, SD, MM, PP vb. derinlemesine süreç analizi',
+      desc: 'FI, CO, SD, MM, PP vb. derinlemesine modüler süreç analiz tablosu',
       icon: 'layers',
       selected: true
     },
     {
       id: 'development',
-      name: 'Geliştirmeler (Custom Code)',
+      name: '4. Geliştirmeler (Custom Code)',
       group: 'SAP UYGULAMALARI',
-      desc: 'Z-Kod envanteri, atıl kodlar ve Clean Core uyarlama hedefleri',
+      desc: '10 Nesne tipi (User-Exit, RFC, Z-Tablo vb.), adetler, riskler ve Clean Core hedefleri',
       icon: 'cpu',
       selected: true
     },
     {
       id: 'architecture-po',
-      name: 'Entegrasyon Haritası',
+      name: '5. Entegrasyon Haritası (PO/BTP)',
       group: 'SAP UYGULAMALARI',
-      desc: 'PO/AIF servisleri, SAP Integration Suite (BTP) geçiş değerlendirmesi ve topoloji çizimi',
+      desc: 'SAP PO ➔ BTP Integration Suite akış topolojisi şeması ve canlı servisler tablosu',
       icon: 'bolt',
       selected: true
     },
     {
       id: 'analytics',
-      name: 'FUE Lisans Analizi',
+      name: '6. FUE Lisans Analizi',
       group: 'LİSANS & BULUT',
-      desc: 'Mevcut lisanslar, FUE dönüşümü ve atıl lisans tasarrufu',
+      desc: 'Named User vs FUE lisans dönüşümü, katsayılar ve atıl lisans tasarrufu',
       icon: 'bolt',
       selected: true
     },
     {
       id: 'source-sizing',
-      name: 'Mevcut / Hedef Sistem',
+      name: '7. Mevcut / Hedef Sistem (Sizing)',
       group: 'TEKNİK ALTYAPI',
-      desc: 'CPU, RAM, Disk boyutlandırması ve S/4HANA Private Cloud mimarisi',
+      desc: 'Donanım, CPU/RAM/Disk, SAP HANA bellek boyutlandırması ve S/4HANA Private Cloud mimarisi',
       icon: 'database',
       selected: true
     },
     {
       id: 'architecture-asis',
-      name: 'Sistem Ortamı & Destek Bitişi',
+      name: '8. Sistem Ortamı & Destek Bitişi',
       group: 'TEKNİK ALTYAPI',
-      desc: 'Sistem mimarisi akış çizimi, SAP/OS/DB sürümleri ve 2027 EoS risk takvimi',
+      desc: 'Mevcut AS-IS 3 katmanlı mimari şeması, sunucu envanteri ve 2027 EoS risk takvimi',
       icon: 'shield',
       selected: true
     },
     {
       id: 'largest-tables',
-      name: 'En Büyük Tablolar (DVM)',
+      name: '9. En Büyük Tablolar (DVM)',
       group: 'TEKNİK ALTYAPI',
-      desc: 'Data Volume Management analizi, arşivleme ve HANA bellek tasarrufu',
+      desc: 'Data Volume Management analizi, en büyük tablolar, arşivleme ve HANA bellek tasarrufu',
       icon: 'layers',
       selected: true
     },
     {
-      id: 'solution-proposal',
-      name: 'Çözüm Önerisi & Yol Haritası',
+      id: 'solution-recommended',
+      name: '10. Önerilen Yöntem (Brownfield)',
       group: 'ÇÖZÜM ÖNERİSİ',
-      desc: 'Brownfield geçiş yöntemi, 4 fazlı yol haritası, hedef mimari çizimi ve 4 yöntemin karşılaştırma matrisi',
+      desc: 'Brownfield sistem dönüşüm stratejisi, 4 fazlı canlıya geçiş takvimi ve teslimatlar',
       icon: 'map',
       selected: true
     },
     {
+      id: 'solution-architecture',
+      name: '11. Hedef Mimari (RISE PCE)',
+      group: 'ÇÖZÜM ÖNERİSİ',
+      desc: 'RISE with SAP PCE 4 katmanlı bulut mimarisi şeması ve 3. parti entegrasyon haritası',
+      icon: 'sparkles',
+      selected: true
+    },
+    {
+      id: 'solution-methods',
+      name: '12. 4 Geçiş Yöntemi & Karşılaştırma',
+      group: 'ÇÖZÜM ÖNERİSİ',
+      desc: 'Brownfield, Lift & Shift, Selective Data, Greenfield kartları ve Karşılaştırma Matrisi',
+      icon: 'sliders',
+      selected: true
+    },
+    {
       id: 'business-case',
-      name: 'Toplam Sahip Olma Maliyeti (TCO)',
+      name: '13. Toplam Sahip Olma Maliyeti (TCO)',
       group: 'FİNANSAL ANALİZ',
-      desc: '5 yıllık TCO karşılaştırması, OpEx dönüşümü ve ROI analizi',
+      desc: '5 yıllık finansal simülasyon, On-Premise vs RISE karşılaştırması ve ROI analizi',
       icon: 'dollar',
+      selected: true
+    },
+    {
+      id: 'notes',
+      name: '14. Notlar',
+      group: 'DEĞERLENDİRME',
+      desc: 'Satış, Presales ve müşteri için kaydedilmiş tüm zaman damgalı notlar',
+      icon: 'file-text',
       selected: true
     }
   ];
@@ -2449,12 +3243,43 @@ export class QuickPdfExportModalComponent {
     this.menuItems.forEach(m => m.selected = false);
   }
 
-  onSelectionChange(): void {
-    // triggered by checkbox
-  }
+  onSelectionChange(): void {}
 
   close(): void {
     this.quickToolsService.closePdfExport();
+  }
+
+  getPillarColor(colorClass: string): string {
+    switch (colorClass) {
+      case 'blue': return '#0284c7';
+      case 'emerald': return '#059669';
+      case 'purple': return '#7c3aed';
+      case 'amber': return '#d97706';
+      default: return '#0284c7';
+    }
+  }
+
+  getExecutiveData(): ExecutiveSummaryData {
+    const custId = this.customerService.activeCustomer()?.id || 'default';
+    const custName = this.customerService.activeCustomer()?.name || '';
+    try {
+      const raw = localStorage.getItem(`task_force_exec_summary_${custId}`);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return getDefaultExecutiveData(custName);
+  }
+
+  getSeverityCount(severity: string): number {
+    return this.modullerService.cards().filter(c => c.severity === severity).length;
+  }
+
+  getTopModuleCards(limit: number) {
+    const cards = this.modullerService.cards();
+    return cards.slice(0, limit);
+  }
+
+  getCustomCodeItems(): CustomCodeItem[] {
+    return DEFAULT_CUSTOM_CODE_ITEMS;
   }
 
   getAsisImage(): string | null {
@@ -2490,21 +3315,24 @@ export class QuickPdfExportModalComponent {
     if (this.selectedCount() === 0 || this.isExporting()) return;
 
     this.isExporting.set(true);
-    this.exportProgress.set('Başlatılıyor...');
+    this.exportProgress.set('Sayfalar hazırlanıyor...');
+    this.exportPercent.set(5);
 
     try {
-      // Allow Angular change detection to render the hidden container
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Allow Angular change detection to render the container into DOM
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       const container = this.exportContainer?.nativeElement || document.getElementById('multiMenuPdfContainer');
       if (!container) {
         throw new Error('PDF container not found');
       }
 
-      this.exportProgress.set('Sayfalar taranıyor...');
-
-      // Find all sections or pages
+      // Query all page elements: cover + sections
       const sections = container.querySelectorAll('.pdf-page, .pdf-page-section');
+      if (sections.length === 0) {
+        throw new Error('No printable sections found');
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = 210;
       const pageHeight = 297;
@@ -2514,7 +3342,11 @@ export class QuickPdfExportModalComponent {
       for (let i = 0; i < sections.length; i++) {
         const sec = sections[i] as HTMLElement;
         const progressPercent = Math.round(((i + 1) / sections.length) * 100);
-        this.exportProgress.set(`Sayfa ${i + 1} / ${sections.length} (${progressPercent}%)`);
+        this.exportPercent.set(progressPercent);
+        this.exportProgress.set(`Sayfa ${i + 1} / ${sections.length} (${progressPercent}%) taranıyor...`);
+
+        // Small yield to let UI and styles paint
+        await new Promise(resolve => setTimeout(resolve, 80));
 
         const canvas = await html2canvas(sec, {
           scale: 2,
@@ -2532,11 +3364,11 @@ export class QuickPdfExportModalComponent {
           isFirstPage = false;
         }
 
-        // Fit image nicely into A4 page
+        // Add to PDF page
         if (imgHeight <= pageHeight) {
           pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight, undefined, 'FAST');
         } else {
-          // If a section is taller than single A4 page, slice it
+          // If section content exceeds single A4 page height, slice into multiple pages
           let heightLeft = imgHeight;
           let position = 0;
           pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight, undefined, 'FAST');
@@ -2551,17 +3383,19 @@ export class QuickPdfExportModalComponent {
         }
       }
 
-      const custName = this.customerService.activeCustomer().name.replace(/\s+/g, '_');
+      this.exportProgress.set('PDF dosyası kaydediliyor...');
+      const custName = (this.customerService.activeCustomer()?.name || 'Musteri').replace(/\s+/g, '_');
       pdf.save(`${custName}_SAP_Kapsamli_Donusum_Raporu.pdf`);
 
+      // Wait a moment then close
+      await new Promise(resolve => setTimeout(resolve, 500));
       this.close();
     } catch (err) {
       console.error('Multi-menu PDF generation failed:', err);
-      alert('PDF oluşturulurken bir hata oluştu. Tarayıcı yazdırma ekranına yönlendiriliyorsunuz.');
-      window.print();
+      alert('PDF oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.');
     } finally {
       this.isExporting.set(false);
-      this.exportProgress.set('0%');
+      this.exportPercent.set(0);
     }
   }
 }

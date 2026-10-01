@@ -25,7 +25,7 @@ import { IconComponent } from '../icon/icon.component';
                   <span class="customer-tag">{{ customerService.activeCustomer().name }}</span>
                   <span class="type-tag">Zaman Damgalı Not</span>
                 </div>
-                <h3>Yeni Not / Stratejik Yorum Ekle</h3>
+                <h3>Yeni Not Ekle</h3>
               </div>
             </div>
             <button class="btn-close" (click)="close()" title="Kapat">

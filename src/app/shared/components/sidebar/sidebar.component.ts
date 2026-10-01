@@ -245,10 +245,10 @@ import { NotesService } from '../../../core/services/notes.service';
           <span class="nav-badge highlight-purple" *ngIf="!collapsed">AI</span>
         </a>
 
-        <!-- Yorum ve Notlar -->
-        <a routerLink="/notes" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Notlar & Yorumlar' : ''">
+        <!-- Notlar -->
+        <a routerLink="/notes" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Notlar' : ''">
           <div class="nav-icon"><app-icon name="file-text" [size]="17" color="#0284c7"></app-icon></div>
-          <span class="nav-label" *ngIf="!collapsed">Notlar & Yorumlar</span>
+          <span class="nav-label" *ngIf="!collapsed">Notlar</span>
           <span class="nav-badge highlight-blue" *ngIf="!collapsed">{{ notesService.currentCustomerNotesCount() }} Not</span>
         </a>
 

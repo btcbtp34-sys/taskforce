@@ -44,6 +44,18 @@ export interface HowPillar {
   note: string;
 }
 
+export interface RecommendedMethodHeroData {
+  badge: string;
+  title: string;
+  description: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+}
+
 export interface ExecutiveSummaryData {
   heroScore?: HeroScoreData;
   objectiveTitle: string;
@@ -52,6 +64,7 @@ export interface ExecutiveSummaryData {
   howTitle: string;
   howSubtitle: string;
   howPillars: HowPillar[];
+  recommendedMethod?: RecommendedMethodHeroData;
   salesNotes: string;
   preparedBy: string;
 }
@@ -206,6 +219,17 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
         note: 'Toplam Sahip Olma Maliyetinde %20-30 oranında nakit akışı ve öngörülebilirlik avantajı'
       }
     ],
+    recommendedMethod: {
+      badge: 'ÖNERİLEN GEÇİŞ YÖNTEMİ',
+      title: 'Brownfield (System Conversion) + DVM / Arşivleme',
+      description: `${customerName} için geçmiş işlem verisi ve mevzuat denetim sürekliliği zorunlu olduğu için saf Greenfield elenmiştir. MM/FI çekirdeğinin doğrudan taşındığı, yüksek boyutlu atıl verilerin go-live öncesi arşivlendiği ve CO/BP temizliğinin yapıldığı Brownfield yaklaşımı en düşük maliyet ve en yüksek başarı oranını sunmaktadır.`,
+      stat1Value: '6 Ay',
+      stat1Label: 'Tahmini Proje Süresi',
+      stat2Value: '%100',
+      stat2Label: 'Geçmiş Veri Korunumu',
+      stat3Value: 'Optimum',
+      stat3Label: 'Bütçe / ROI Dengesi'
+    },
     salesNotes: 'Müşterimizin büyüme vizyonuna tam uyumlu, veri kaybı riski taşımayan ve operasyonel sürekliliği güvenceye alan özel RISE with SAP teklif paketimiz hazırlanmıştır.',
     preparedBy: 'SAP Satış & Satış Öncesi (Presales) Çözüm Mimarlığı Ekibi'
   };
@@ -533,6 +557,91 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                 *ngIf="isEditMode()" 
                 [(ngModel)]="item.note" 
                 placeholder="Alt vurgu notu" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 3. ÖNERİLEN GEÇİŞ YÖNTEMİ HERO KARTI (NASIL'IN ALTINDA)                  -->
+        <!-- ========================================================================= -->
+        <div class="rec-method-card-wrapper" *ngIf="content.recommendedMethod">
+          <!-- VIEW MODE -->
+          <div *ngIf="!isEditMode()" class="hero-recommendation-card">
+            <div class="hero-left">
+              <div class="hero-icon-box">
+                <app-icon name="check" [size]="28" color="#059669"></app-icon>
+              </div>
+              <div>
+                <span class="hero-pill">{{ content.recommendedMethod.badge }}</span>
+                <h2>{{ content.recommendedMethod.title }}</h2>
+                <p>{{ content.recommendedMethod.description }}</p>
+              </div>
+            </div>
+            <div class="hero-stats">
+              <div class="stat-box">
+                <span class="stat-val text-emerald">{{ content.recommendedMethod.stat1Value }}</span>
+                <span class="stat-lbl">{{ content.recommendedMethod.stat1Label }}</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-val text-blue">{{ content.recommendedMethod.stat2Value }}</span>
+                <span class="stat-lbl">{{ content.recommendedMethod.stat2Label }}</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-val text-purple">{{ content.recommendedMethod.stat3Value }}</span>
+                <span class="stat-lbl">{{ content.recommendedMethod.stat3Label }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- EDIT MODE -->
+          <div *ngIf="isEditMode()" class="hero-edit-card">
+            <div class="card-edit-header">
+              <div class="ce-left">
+                <app-icon name="sliders" [size]="18" color="#059669"></app-icon>
+                <h3>Önerilen Geçiş Yöntemi & KPI Metrikleri Düzenleme</h3>
+              </div>
+              <span class="edit-pill">Düzenleme Modu</span>
+            </div>
+
+            <div class="form-grid-hero">
+              <div class="form-group span-1">
+                <label class="form-lbl">Rozet Metni (Pill)</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.badge" placeholder="Örn: ÖNERİLEN GEÇİŞ YÖNTEMİ" class="form-input" />
+              </div>
+
+              <div class="form-group span-2">
+                <label class="form-lbl">Yöntem Ana Başlığı</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.title" placeholder="Örn: Brownfield (System Conversion)..." class="form-input" />
+              </div>
+
+              <div class="form-group span-full">
+                <label class="form-lbl">Açıklama & Karar Gerekçesi</label>
+                <textarea [(ngModel)]="content.recommendedMethod.description" rows="3" class="form-textarea" placeholder="Müşteri için önerilen geçiş yaklaşımının detaylı gerekçesi..."></textarea>
+              </div>
+
+              <div class="form-group kpi-input-box">
+                <span class="kpi-box-title">1. KPI Metriği</span>
+                <label class="form-lbl">Değer</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat1Value" placeholder="6 Ay" class="form-input" />
+                <label class="sub-label">Etiket</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat1Label" placeholder="Tahmini Proje Süresi" class="form-input" />
+              </div>
+
+              <div class="form-group kpi-input-box">
+                <span class="kpi-box-title">2. KPI Metriği</span>
+                <label class="form-lbl">Değer</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat2Value" placeholder="%100" class="form-input" />
+                <label class="sub-label">Etiket</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat2Label" placeholder="Geçmiş Veri Korunumu" class="form-input" />
+              </div>
+
+              <div class="form-group kpi-input-box">
+                <span class="kpi-box-title">3. KPI Metriği</span>
+                <label class="form-lbl">Değer</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat3Value" placeholder="Optimum" class="form-input" />
+                <label class="sub-label">Etiket</label>
+                <input type="text" [(ngModel)]="content.recommendedMethod.stat3Label" placeholder="Bütçe / ROI Dengesi" class="form-input" />
+              </div>
             </div>
           </div>
         </div>
@@ -1644,6 +1753,193 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
     .bg-purple { background: #7e22ce; }
     .bg-amber { background: #f59e0b; }
 
+    /* RECOMMENDED METHOD HERO CARD (UNDER NASIL YAPİYORUZ) */
+    .rec-method-card-wrapper {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .hero-recommendation-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+      border: 1px solid #bbf7d0;
+      border-radius: 14px;
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.06);
+
+      .hero-left {
+        display: flex;
+        gap: 1.25rem;
+        align-items: flex-start;
+        max-width: 65%;
+
+        .hero-icon-box {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: #dcfce7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .hero-pill {
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          color: #059669;
+          text-transform: uppercase;
+        }
+
+        h2 {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0.2rem 0 0.4rem 0;
+        }
+
+        p {
+          font-size: 0.82rem;
+          color: #475569;
+          line-height: 1.5;
+          margin: 0;
+        }
+      }
+
+      .hero-stats {
+        display: flex;
+        gap: 1.25rem;
+
+        .stat-box {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          padding: 0.85rem 1.15rem;
+          border-radius: 10px;
+          text-align: center;
+          min-width: 105px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+
+          .stat-val { font-size: 1.35rem; font-weight: 800; display: block; }
+          .stat-lbl { font-size: 0.68rem; color: #64748b; font-weight: 600; }
+          .text-emerald { color: #059669; }
+          .text-blue { color: #0284c7; }
+          .text-purple { color: #7c3aed; }
+        }
+      }
+    }
+
+    .hero-edit-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+
+      .card-edit-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid #f1f5f9;
+
+        .ce-left {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+
+          h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+          }
+        }
+
+        .edit-pill {
+          background: #f0fdf4;
+          color: #166534;
+          border: 1px solid #bbf7d0;
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 0.2rem 0.6rem;
+          border-radius: 6px;
+        }
+      }
+    }
+
+    .form-grid-hero {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+
+      .span-1 { grid-column: span 1; }
+      .span-2 { grid-column: span 2; }
+      .span-full { grid-column: 1 / -1; }
+
+      .kpi-input-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+
+        .kpi-box-title {
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: #0284c7;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 0.2rem;
+        }
+
+        .sub-label {
+          font-size: 0.68rem;
+          color: #64748b;
+          font-weight: 600;
+          margin-top: 0.2rem;
+        }
+      }
+
+      .form-lbl {
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #334155;
+      }
+
+      .form-input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.82rem;
+        color: #0f172a;
+        background: #ffffff;
+        &:focus { outline: none; border-color: #0284c7; }
+      }
+
+      .form-textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.82rem;
+        color: #0f172a;
+        background: #ffffff;
+        resize: vertical;
+        line-height: 1.5;
+        &:focus { outline: none; border-color: #0284c7; }
+      }
+    }
+
     /* HIGH RESOLUTION PRINT STYLES */
     @media print {
       body { background: #ffffff !important; }
@@ -1651,7 +1947,7 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       .executive-report-page { padding: 0 !important; background: #ffffff !important; max-width: 100% !important; }
       .hero-score-card { break-inside: avoid; background: #ffffff !important; border: 2px solid #0284c7 !important; }
       .section-card { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
-      .purpose-card, .how-card { break-inside: avoid; }
+      .purpose-card, .how-card, .hero-recommendation-card { break-inside: avoid; }
     }
   `]
 })
@@ -1716,6 +2012,24 @@ export class ReportsComponent implements OnInit {
     try {
       const custId = this.customerService.activeCustomer()?.id || 'default';
       localStorage.setItem(`task_force_exec_summary_${custId}`, JSON.stringify(this.content));
+      if (this.content.recommendedMethod) {
+        try {
+          const solSaved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
+          let sol = solSaved ? JSON.parse(solSaved) : null;
+          if (sol) {
+            sol.badge = this.content.recommendedMethod.badge;
+            sol.title = this.content.recommendedMethod.title;
+            sol.description = this.content.recommendedMethod.description;
+            sol.stat1Value = this.content.recommendedMethod.stat1Value;
+            sol.stat1Label = this.content.recommendedMethod.stat1Label;
+            sol.stat2Value = this.content.recommendedMethod.stat2Value;
+            sol.stat2Label = this.content.recommendedMethod.stat2Label;
+            sol.stat3Value = this.content.recommendedMethod.stat3Value;
+            sol.stat3Label = this.content.recommendedMethod.stat3Label;
+            localStorage.setItem(`taskforce_recommended_method_${custId}`, JSON.stringify(sol));
+          }
+        } catch (e) {}
+      }
       this.isSaved.set(true);
       setTimeout(() => this.isSaved.set(false), 2500);
     } catch (e) {
@@ -1739,6 +2053,29 @@ export class ReportsComponent implements OnInit {
         if (!this.content.heroScore || !this.content.heroScore.pillars || this.content.heroScore.pillars.length === 0) {
           this.content.heroScore = getDefaultHeroScore(custName);
         }
+        if (!this.content.recommendedMethod) {
+          try {
+            const solSaved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
+            if (solSaved) {
+              const sol = JSON.parse(solSaved);
+              this.content.recommendedMethod = {
+                badge: sol.badge,
+                title: sol.title,
+                description: sol.description,
+                stat1Value: sol.stat1Value,
+                stat1Label: sol.stat1Label,
+                stat2Value: sol.stat2Value,
+                stat2Label: sol.stat2Label,
+                stat3Value: sol.stat3Value,
+                stat3Label: sol.stat3Label
+              };
+            } else {
+              this.content.recommendedMethod = getDefaultExecutiveData(custName).recommendedMethod;
+            }
+          } catch (e) {
+            this.content.recommendedMethod = getDefaultExecutiveData(custName).recommendedMethod;
+          }
+        }
       } else {
         this.content = getDefaultExecutiveData(custName);
       }
@@ -1747,50 +2084,7 @@ export class ReportsComponent implements OnInit {
     }
   }
 
-  async exportToPDF(): Promise<void> {
-    if (this.isExporting()) return;
-    this.isExporting.set(true);
-
-    try {
-      const element = this.reportContainer?.nativeElement || document.getElementById('reportContainer');
-      if (!element) {
-        window.print();
-        this.isExporting.set(false);
-        return;
-      }
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
-      }
-
-      const custName = this.activeCustomerName().replace(/\s+/g, '_');
-      pdf.save(`${custName}_Yonetici_Ozeti_Raporu.pdf`);
-    } catch (error) {
-      console.error('PDF export failed, fallback to print:', error);
-      window.print();
-    } finally {
-      this.isExporting.set(false);
-    }
+  exportToPDF(): void {
+    this.quickToolsService.openPdfExport();
   }
 }

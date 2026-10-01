@@ -547,7 +547,7 @@ export interface ThirdPartySystem {
           <div class="toolbar-actions">
             <button *ngIf="!isEditingRecommended()" type="button" class="btn-rec btn-rec-edit" (click)="startEditRecommended()">
               <app-icon name="edit" [size]="14" color="#0284c7"></app-icon>
-              <span>Metodoloji & Yol Haritasını Düzenle</span>
+              <span>Yol Haritasını Düzenle</span>
             </button>
 
             <button *ngIf="!isEditingRecommended() && isCustomized()" type="button" class="btn-rec btn-rec-reset" (click)="resetRecommendedToDefault()" title="Varsayılan metinlere dön">
@@ -564,86 +564,6 @@ export interface ThirdPartySystem {
               <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
               <span>Değişiklikleri Kaydet</span>
             </button>
-          </div>
-        </div>
-
-        <!-- VIEW MODE: Hero Recommendation Card -->
-        <div *ngIf="!isEditingRecommended()" class="hero-recommendation-card">
-          <div class="hero-left">
-            <div class="hero-icon-box">
-              <app-icon name="check" [size]="28" color="#059669"></app-icon>
-            </div>
-            <div>
-              <span class="hero-pill">{{ recommendedData().badge }}</span>
-              <h2>{{ recommendedData().title }}</h2>
-              <p>{{ recommendedData().description }}</p>
-            </div>
-          </div>
-          <div class="hero-stats">
-            <div class="stat-box">
-              <span class="stat-val text-emerald">{{ recommendedData().stat1Value }}</span>
-              <span class="stat-lbl">{{ recommendedData().stat1Label }}</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-val text-blue">{{ recommendedData().stat2Value }}</span>
-              <span class="stat-lbl">{{ recommendedData().stat2Label }}</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-val text-purple">{{ recommendedData().stat3Value }}</span>
-              <span class="stat-lbl">{{ recommendedData().stat3Label }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- EDIT MODE: Hero Edit Form Card -->
-        <div *ngIf="isEditingRecommended()" class="hero-edit-card">
-          <div class="card-edit-header">
-            <div class="ce-left">
-              <app-icon name="edit" [size]="18" color="#0284c7"></app-icon>
-              <h3>Önerilen Yöntem & KPI Metrikleri Düzenleme</h3>
-            </div>
-            <span class="edit-pill">Düzenleme Modu</span>
-          </div>
-
-          <div class="form-grid-hero">
-            <div class="form-group span-2">
-              <label>Rozet Metni (Pill)</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.badge" placeholder="Örn: ÖNERİLEN GEÇİŞ YÖNTEMİ" class="form-input" />
-            </div>
-
-            <div class="form-group span-2">
-              <label>Yöntem Ana Başlığı</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.title" placeholder="Örn: Brownfield (System Conversion)..." class="form-input" />
-            </div>
-
-            <div class="form-group span-full">
-              <label>Açıklama & Karar Gerekçesi</label>
-              <textarea [(ngModel)]="editRecommendedModel.description" rows="3" class="form-textarea" placeholder="Müşteri için önerilen geçiş yaklaşımının detaylı gerekçesi..."></textarea>
-            </div>
-
-            <div class="form-group kpi-input-box">
-              <span class="kpi-box-title">1. KPI Metriği</span>
-              <label>Değer (Süre)</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat1Value" placeholder="6 Ay" class="form-input" />
-              <label class="sub-label">Açıklama Etiketi</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat1Label" placeholder="Tahmini Proje Süresi" class="form-input" />
-            </div>
-
-            <div class="form-group kpi-input-box">
-              <span class="kpi-box-title">2. KPI Metriği</span>
-              <label>Değer (Veri)</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat2Value" placeholder="%100" class="form-input" />
-              <label class="sub-label">Açıklama Etiketi</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat2Label" placeholder="Geçmiş Veri Korunumu" class="form-input" />
-            </div>
-
-            <div class="form-group kpi-input-box">
-              <span class="kpi-box-title">3. KPI Metriği</span>
-              <label>Değer (Bütçe)</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat3Value" placeholder="Optimum" class="form-input" />
-              <label class="sub-label">Açıklama Etiketi</label>
-              <input type="text" [(ngModel)]="editRecommendedModel.stat3Label" placeholder="Bütçe / ROI Dengesi" class="form-input" />
-            </div>
           </div>
         </div>
 

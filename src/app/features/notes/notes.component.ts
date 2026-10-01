@@ -1,7 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import { NotesService, CustomerNote } from '../../core/services/notes.service';
 import { CustomerService } from '../../core/services/customer.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -9,78 +8,16 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 @Component({
   selector: 'app-notes',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
     <div class="notes-page-container">
-      <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-left">
-          <div class="badge-row">
-            <span class="customer-badge">{{ customerService.activeCustomer().name }}</span>
-            <span class="section-tag">Hızlı Araçlar</span>
-            <span class="type-tag">Zaman Damgalı Not Yöneticisi</span>
-          </div>
-          <h1 class="page-title">Notlar & Stratejik Yorumlar</h1>
-          <p class="page-subtitle">
-            Müşteri analiz, satış ve presales süreçlerine dair satır satır tarih ve saat damgalı yorum ve not takibi
-          </p>
-        </div>
-
-        <div class="header-actions">
-          <button type="button" class="btn btn-primary btn-add-note" (click)="openAddModal()">
-            <app-icon name="plus" [size]="16" color="#ffffff"></app-icon>
-            <span>+ Yeni Not / Yorum Ekle</span>
-          </button>
-
-          <a routerLink="/reports" class="btn btn-secondary">
-            <app-icon name="file-text" [size]="16" color="#059669"></app-icon>
-            <span>Yönetici Özetine Git</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- KPI Summary Row -->
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-title">Toplam Kayıtlı Not</span>
-            <div class="icon-circle bg-blue">
-              <app-icon name="file-text" [size]="18" color="#0284c7"></app-icon>
-            </div>
-          </div>
-          <div class="kpi-val text-blue">{{ notesService.currentCustomerNotesCount() }}</div>
-          <div class="kpi-sub">{{ customerService.activeCustomer().name }} Müşterisi</div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-title">Son Not Zamanı</span>
-            <div class="icon-circle bg-emerald">
-              <app-icon name="check" [size]="18" color="#059669"></app-icon>
-            </div>
-          </div>
-          <div class="kpi-val text-emerald">{{ latestNoteDate() }}</div>
-          <div class="kpi-sub">En son eklenen güncel kayıt</div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-title">Entegrasyon Durumu</span>
-            <div class="icon-circle bg-purple">
-              <app-icon name="sparkles" [size]="18" color="#7e22ce"></app-icon>
-            </div>
-          </div>
-          <div class="kpi-val text-purple">Senkron</div>
-          <div class="kpi-sub">Yönetici Özeti ve PDF Çıktısıyla Tam Uyumlu</div>
-        </div>
-      </div>
-
       <!-- Main Layout: Full-Width Stream of Notes -->
       <div class="stream-card">
         <div class="stream-header-bar">
           <div class="sh-left">
             <div class="title-with-badge">
-              <h3>Kayıtlı Yorum ve Not Akışı</h3>
+              <span class="customer-pill">{{ customerService.activeCustomer().name }}</span>
+              <h3>Kayıtlı Notlar</h3>
               <span class="notes-badge">{{ filteredNotes().length }} Not</span>
             </div>
             <span class="sh-sub">Her not kronolojik olarak tarih ve saat damgasıyla listelenir.</span>
@@ -101,7 +38,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <!-- Quick Add Button -->
             <button type="button" class="btn-quick-add" (click)="openAddModal()">
               <app-icon name="plus" [size]="14" color="#ffffff"></app-icon>
-              <span>Yeni Not Ekle</span>
+              <span>+ Yeni Not Ekle</span>
             </button>
           </div>
         </div>
@@ -115,7 +52,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             <p>Bu müşteri için sağ üstteki buton veya aşağıdaki buton üzerinden zaman damgalı ilk notunuzu ekleyebilirsiniz.</p>
             <button type="button" class="btn btn-primary btn-empty-add" (click)="openAddModal()">
               <app-icon name="plus" [size]="16" color="#ffffff"></app-icon>
-              <span>+ Yeni Not / Yorum Ekle</span>
+              <span>+ Yeni Not Ekle</span>
             </button>
           </div>
         } @else {
@@ -273,73 +210,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       gap: 1.5rem;
     }
 
-    /* HEADER */
-    .page-header {
-      background: #ffffff;
-      padding: 1.35rem 1.65rem;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-
-      .badge-row {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.35rem;
-
-        .customer-badge {
-          padding: 0.2rem 0.6rem;
-          background: #e0f2fe;
-          color: #0284c7;
-          border-radius: 6px;
-          font-size: 0.76rem;
-          font-weight: 700;
-        }
-
-        .section-tag {
-          padding: 0.2rem 0.55rem;
-          background: #f1f5f9;
-          color: #475569;
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 600;
-        }
-
-        .type-tag {
-          padding: 0.2rem 0.55rem;
-          background: #ecfdf5;
-          color: #059669;
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 600;
-        }
-      }
-
-      .page-title {
-        margin: 0 0 0.25rem;
-        font-size: 1.45rem;
-        font-weight: 800;
-        color: #0f172a;
-      }
-
-      .page-subtitle {
-        margin: 0;
-        font-size: 0.84rem;
-        color: #64748b;
-      }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-    }
-
     /* GLOBAL BUTTON STYLES */
     .btn {
       display: inline-flex;
@@ -381,66 +251,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       }
     }
 
-    /* KPI GRID */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1rem;
-
-      .kpi-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 1.1rem 1.35rem;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-
-        .kpi-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 0.4rem;
-
-          .kpi-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-          }
-
-          .icon-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            &.bg-blue { background: #e0f2fe; }
-            &.bg-emerald { background: #ecfdf5; }
-            &.bg-purple { background: #f3e8ff; }
-          }
-        }
-
-        .kpi-val {
-          font-size: 1.65rem;
-          font-weight: 800;
-          color: #0f172a;
-          line-height: 1.2;
-          margin-bottom: 0.2rem;
-
-          &.text-blue { color: #0284c7; }
-          &.text-emerald { color: #059669; }
-          &.text-purple { color: #7e22ce; }
-        }
-
-        .kpi-sub {
-          font-size: 0.74rem;
-          color: #64748b;
-        }
-      }
-    }
-
     /* STREAM CARD (FULL WIDTH) */
     .stream-card {
       background: #ffffff;
@@ -468,6 +278,15 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             align-items: center;
             gap: 0.6rem;
             margin-bottom: 0.2rem;
+
+            .customer-pill {
+              padding: 0.15rem 0.55rem;
+              background: #e0f2fe;
+              color: #0284c7;
+              border-radius: 6px;
+              font-size: 0.72rem;
+              font-weight: 700;
+            }
 
             h3 {
               margin: 0;
@@ -521,13 +340,13 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            padding: 0.4rem 0.85rem;
+            padding: 0.45rem 0.95rem;
             background: #0284c7;
             color: #ffffff;
             border: none;
             border-radius: 6px;
-            font-size: 0.78rem;
-            font-weight: 600;
+            font-size: 0.8rem;
+            font-weight: 700;
             cursor: pointer;
             transition: background 0.15s;
 
@@ -544,7 +363,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      max-height: calc(100vh - 290px);
+      max-height: calc(100vh - 165px);
       overflow-y: auto;
       padding-right: 8px;
 
