@@ -238,12 +238,13 @@ import { NotesService } from '../../../core/services/notes.service';
           <span class="nav-badge highlight" *ngIf="!collapsed">+ Excel</span>
         </a>
 
-        <!-- Prompt ile Mimari Çizici -->
+        <!-- Prompt ile Mimari Çizici (Şimdilik yorum satırında)
         <a routerLink="/architecture-generator" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Prompt ile Mimari Çizici' : ''">
           <div class="nav-icon"><app-icon name="sparkles" [size]="17" color="#7c3aed"></app-icon></div>
           <span class="nav-label" *ngIf="!collapsed">Prompt ile Mimari Çizici</span>
           <span class="nav-badge highlight-purple" *ngIf="!collapsed">AI</span>
         </a>
+        -->
 
         <!-- Rise Skor Hesaplama -->
         <a routerLink="/rise-score" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Rise Skor Hesaplama' : ''">

@@ -207,12 +207,19 @@ export interface ArchitectureEdge {
       </div>
 
       <!-- Main Map Grid -->
-      <div class="map-grid" *ngIf="architectureMode() !== 'po' || importService.hasUploadedPoData()">
+      <div class="map-grid" [class.sidebar-collapsed]="isSidebarCollapsed()" *ngIf="architectureMode() !== 'po' || importService.hasUploadedPoData()">
+
         <!-- Sidebar Controls & Configurator -->
-        <div class="card-box config-panel">
+        <div class="card-box config-panel" [class.collapsed]="isSidebarCollapsed()">
           <div class="card-header">
-            <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</h3>
-            <span class="sub-text">{{ architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Servis') : (totalServerCount() + ' Sunucu / Instance') }}</span>
+            <div class="header-left-wrap">
+              <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</h3>
+              <span class="sub-text">{{ architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Servis') : (totalServerCount() + ' Sunucu / Instance') }}</span>
+            </div>
+            <button class="btn-collapse-sidebar" (click)="closeSidebar()" title="Menüyü Sola Kapat">
+              <app-icon name="chevron-left" [size]="13"></app-icon>
+              <span>Kapat</span>
+            </button>
           </div>
 
           <!-- Sidebar Tabs: Sunucular vs Bağlantı Kabloları -->
@@ -331,18 +338,101 @@ export interface ArchitectureEdge {
         </div>
 
         <!-- FULL HEIGHT Interactive Visual Diagram Canvas Container -->
-        <div class="card-box canvas-container">
-          <div class="canvas-header">
+        <div class="card-box canvas-container" [class.is-fullscreen]="isFullscreen()">
+          <!-- Normal Canvas Header (when NOT in fullscreen) -->
+          <div class="canvas-header" *ngIf="!isFullscreen()">
             <div class="active-customer-tag">
               <app-icon name="customers" [size]="15" color="#0284c7"></app-icon>
               <span>{{ customerService.activeCustomer().name }} — {{ architectureMode() === 'asis' ? 'Mevcut AS-IS Mimari Akış Şeması' : (architectureMode() === 'po' ? ('Excel PO Canlı Entegrasyon Haritası (' + poIntegrationInterfaces().length + ' Servis)') : 'RISE with SAP Hedef Mimari') }}</span>
             </div>
 
-            <div class="map-legend">
-              <span class="legend-dot core">ERP Core</span>
-              <span class="legend-dot btp">PO / BTP Entegrasyon</span>
-              <span class="legend-dot instance">Red Badge: Instance</span>
-              <span class="legend-dot eos">Destek Sonu (EoS)</span>
+            <div class="canvas-header-right">
+              <div class="map-legend">
+                <span class="legend-dot core">ERP Core</span>
+                <span class="legend-dot btp">PO / BTP Entegrasyon</span>
+                <span class="legend-dot instance">Red Badge: Instance</span>
+                <span class="legend-dot eos">Destek Sonu (EoS)</span>
+              </div>
+              <button class="btn-canvas-fullscreen" (click)="toggleFullscreen()" title="Çizim Ekranını Tam Ekran Yap">
+                <app-icon name="maximize" [size]="13" color="#0284c7"></app-icon>
+                <span>Tam Ekran</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- DEDICATED FULLSCREEN TOP CONTROL BAR (When isFullscreen() is true) -->
+          <div class="fullscreen-top-bar" *ngIf="isFullscreen()">
+            <div class="fs-bar-left">
+              <!-- Sidebar drawer toggle in fullscreen -->
+              <button 
+                class="btn btn-fs-sidebar" 
+                [class.active]="!isSidebarCollapsed()" 
+                (click)="toggleSidebar()" 
+                title="Sistem Bileşenleri Menüsünü Aç / Kapat">
+                <app-icon name="layers" [size]="15"></app-icon>
+                <span>Sistem Bileşenleri ({{ nodes().length }})</span>
+                <span class="fs-arrow">{{ isSidebarCollapsed() ? '▶' : '◀' }}</span>
+              </button>
+
+              <!-- Mode Switcher Tabs right in Fullscreen: AS-IS vs RISE ("görseldeki 2 alandaki çizimler aynı şekilde tam ekran") -->
+              <div class="fs-mode-toggle-group" *ngIf="architectureMode() !== 'po'">
+                <button 
+                  class="fs-mode-btn" 
+                  [class.active-asis]="architectureMode() === 'asis'" 
+                  (click)="setArchitectureMode('asis')">
+                  <app-icon name="alert" [size]="14" [color]="architectureMode() === 'asis' ? '#ffffff' : '#d97706'"></app-icon>
+                  <span>Mevcut Durum (AS-IS)</span>
+                </button>
+                <button 
+                  class="fs-mode-btn" 
+                  [class.active-rise]="architectureMode() === 'rise'" 
+                  (click)="setArchitectureMode('rise')">
+                  <app-icon name="sparkles" [size]="14" [color]="architectureMode() === 'rise' ? '#ffffff' : '#059669'"></app-icon>
+                  <span>RISE with SAP Hedef Mimari</span>
+                </button>
+              </div>
+
+              <div class="fs-customer-pill">
+                <app-icon name="customers" [size]="14" color="#0284c7"></app-icon>
+                <span>{{ customerService.activeCustomer().name }}</span>
+              </div>
+            </div>
+
+            <div class="fs-bar-actions">
+              <button class="btn btn-studio-add btn-sm" (click)="openCreateNodeModal()" title="Yeni Sunucu / Bileşen Ekle">
+                <app-icon name="plus" [size]="13" color="#ffffff"></app-icon>
+                <span>+ Bileşen Ekle</span>
+              </button>
+
+              <button 
+                class="btn btn-sm" 
+                [ngClass]="isConnectingMode() ? 'btn-studio-connect-active' : 'btn-secondary'" 
+                (click)="toggleConnectingMode()" 
+                title="İki sunucu arasında bağlantı oku çek">
+                <app-icon name="link" [size]="13" [color]="isConnectingMode() ? '#ffffff' : '#0284c7'"></app-icon>
+                <span>{{ isConnectingMode() ? (connectSourceNode() ? '2. Hedefe Tıkla' : '1. Kaynağa Tıkla') : 'Bağlantı Kur' }}</span>
+              </button>
+
+              <button class="btn btn-studio-save btn-sm" (click)="saveCustomLayout()" title="Mimari çizimi kaydet">
+                <app-icon name="check" [size]="13" color="#ffffff"></app-icon>
+                <span>Kaydet</span>
+              </button>
+
+              <button class="btn btn-secondary btn-sm" (click)="fitToContent()" title="Ekrana Sığdır">
+                <app-icon name="maximize" [size]="13"></app-icon>
+                <span>Sığdır</span>
+              </button>
+
+              <button class="btn btn-secondary btn-sm" (click)="exportDiagram()" title="PNG İndir" *ngIf="nodes().length > 0">
+                <app-icon name="download" [size]="13"></app-icon>
+                <span>PNG</span>
+              </button>
+
+              <!-- Prominent Close Fullscreen Button -->
+              <button class="btn btn-close-fullscreen" (click)="exitFullscreen()" title="Tam Ekrandan Çık (ESC)">
+                <app-icon name="minimize" [size]="14" color="#ffffff"></app-icon>
+                <span>✕ Tam Ekranı Kapat (ESC)</span>
+              </button>
             </div>
           </div>
 
@@ -355,6 +445,19 @@ export interface ArchitectureEdge {
             [style.background-size]="(24 * zoom()) + 'px ' + (24 * zoom()) + 'px'"
             (mousedown)="onCanvasMouseDown($event)"
             (wheel)="onCanvasWheel($event)">
+
+            <!-- Floating Sidebar Opener Tab (Docked on left edge of the canvas) -->
+            <button 
+              *ngIf="isSidebarCollapsed() && !isFullscreen()" 
+              class="sidebar-floating-open-btn" 
+              (click)="openSidebar()" 
+              (mousedown)="$event.stopPropagation()"
+              title="Sistem Bileşenleri Menüsünü Aç">
+              <app-icon name="layers" [size]="16" color="#0284c7"></app-icon>
+              <span class="sf-title">{{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</span>
+              <span class="sf-badge">{{ architectureMode() === 'po' ? poIntegrationInterfaces().length : nodes().length }}</span>
+              <app-icon name="chevron-right" [size]="13" color="#0284c7"></app-icon>
+            </button>
 
             <!-- Floating Connecting Mode Banner (Fixed in Viewport) -->
             <div class="canvas-floating-banner connecting-banner" *ngIf="isConnectingMode()" (mousedown)="$event.stopPropagation()">
@@ -813,9 +916,139 @@ export interface ArchitectureEdge {
                 <app-icon name="refresh" [size]="13"></app-icon>
                 <span>Sıfırla</span>
               </button>
+              <div class="zoom-divider"></div>
+              <button class="zoom-btn action-btn fullscreen-zoom-btn" (click)="toggleFullscreen()" [title]="isFullscreen() ? 'Tam Ekrandan Çık (ESC)' : 'Tam Ekran Modu'">
+                <app-icon [name]="isFullscreen() ? 'minimize' : 'maximize'" [size]="13"></app-icon>
+                <span>{{ isFullscreen() ? 'Küçült' : 'Tam Ekran' }}</span>
+              </button>
             </div>
           </div>
         </div> <!-- Close .visual-canvas -->
+
+        <!-- Floating Sidebar Drawer in Fullscreen Mode -->
+        <div class="fullscreen-sidebar-drawer" *ngIf="isFullscreen() && !isSidebarCollapsed()">
+          <div class="card-box config-panel in-fs-drawer">
+            <div class="card-header">
+              <div class="header-left-wrap">
+                <h3><app-icon name="layers" [size]="16"></app-icon> {{ architectureMode() === 'po' ? 'Entegrasyon Düğümleri' : 'Sistem Bileşenleri' }}</h3>
+                <span class="sub-text">{{ architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Servis') : (totalServerCount() + ' Sunucu / Instance') }}</span>
+              </div>
+              <button class="btn-collapse-sidebar" (click)="closeSidebar()" title="Menüyü Kapat">
+                <app-icon name="chevron-left" [size]="13"></app-icon>
+                <span>Kapat</span>
+              </button>
+            </div>
+
+            <!-- Sidebar Tabs: Sunucular vs Bağlantı Kabloları -->
+            <div class="sidebar-tab-pills">
+              <button class="s-tab-pill" [class.active]="activeSidebarTab() === 'nodes'" (click)="activeSidebarTab.set('nodes')">
+                <app-icon name="layers" [size]="13"></app-icon>
+                <span>Sunucular ({{ nodes().length }})</span>
+              </button>
+              <button class="s-tab-pill" [class.active]="activeSidebarTab() === 'edges'" (click)="activeSidebarTab.set('edges')">
+                <app-icon name="link" [size]="13"></app-icon>
+                <span>Kablolar ({{ currentEdges().length }})</span>
+              </button>
+            </div>
+
+            <!-- Tab 1: System Nodes List -->
+            <div class="node-config-list" *ngIf="activeSidebarTab() === 'nodes'">
+              @if (nodes().length === 0) {
+                <div class="empty-edges-msg">
+                  <p>Henüz eklenmiş bir bileşen bulunmuyor.</p>
+                  <button class="btn btn-sm btn-studio-add" (click)="openCreateNodeModal()">
+                    <app-icon name="plus" [size]="13" color="#ffffff"></app-icon>
+                    <span>+ Bileşen Ekle</span>
+                  </button>
+                </div>
+              } @else {
+                @for (node of nodes(); track node.id) {
+                  <div 
+                    class="node-item" 
+                    [class.selected]="selectedNode()?.id === node.id"
+                    [class.eos-item]="node.isEosRisk"
+                    (click)="selectNode(node)">
+                    
+                    <div class="node-header-row">
+                      <strong class="node-name">{{ node.name }}</strong>
+                      <span class="instance-pill-badge" *ngIf="architectureMode() !== 'po'" title="Sunucu / Instance Adedi">{{ node.instanceCount || 1 }}x</span>
+                      <span class="eos-badge" *ngIf="node.isEosRisk">{{ getEosBadgeText(node.eosDate) }}</span>
+                    </div>
+
+                    <div class="node-footer-row">
+                      <span class="meta">{{ node.dbInfo || node.category }} • {{ node.userCount }} Kullanıcı</span>
+                      <button class="btn-detail-sm" (click)="$event.stopPropagation(); openDetailModal(node)">Detay ➔</button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Tab 2: Active Connection Cables List -->
+            <div class="edges-config-list" *ngIf="activeSidebarTab() === 'edges'">
+              @if (currentEdges().length === 0) {
+                <div class="empty-edges-msg">
+                  <p>Henüz çekilmiş bir bağlantı kablosu bulunmuyor.</p>
+                  <button class="btn btn-sm btn-studio-connect" (click)="toggleConnectingMode()">
+                    <app-icon name="link" [size]="13"></app-icon>
+                    <span>Bağlantı Kur</span>
+                  </button>
+                </div>
+              } @else {
+                @for (edge of currentEdges(); track edge.id) {
+                  <div class="edge-list-card">
+                    <div class="edge-info-top">
+                      <span class="edge-route">{{ getNodeName(edge.fromId) }} ➔ {{ getNodeName(edge.toId) }}</span>
+                      <button class="btn-delete-edge" (click)="deleteEdge(edge, $event)" title="Bu kabloyu sil">
+                        <app-icon name="trash" [size]="12" color="#dc2626"></app-icon>
+                        <span>Sil</span>
+                      </button>
+                    </div>
+                    <div class="edge-meta-row">
+                      <span class="edge-label-tag">{{ edge.label || 'Akış Oku' }}</span>
+                      <span class="edge-risk-tag" *ngIf="edge.isEosRisk">⚠️ Riskli</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Quick ROI & Transformation Summary Box -->
+            <div class="roi-summary-box">
+              <h4><app-icon name="chart" [size]="15" color="#0284c7"></app-icon> {{ architectureMode() === 'po' ? 'PO Entegrasyon Metrikleri' : (architectureMode() === 'rise' ? 'RISE Bulut Kıyaslama Raporu' : 'Altyapı Özeti') }}</h4>
+              <div class="summary-stat">
+                <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Entegrasyon' : 'Sunucu Altyapı Adedi' }}</span>
+                <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
+                  {{ architectureMode() === 'asis' ? (nodes().length > 0 ? (totalServerCount() + ' Sunucu / Instance') : '0 Sunucu (Çizim Bekleniyor)') : (architectureMode() === 'po' ? (poIntegrationInterfaces().length + ' Canlı Arayüz') : (nodes().length > 0 ? (totalServerCount() + ' Bulut Bileşeni') : '0 Servis (Çizim Bekleniyor)')) }}
+                </strong>
+              </div>
+              <div class="summary-stat">
+                <span class="s-label">{{ architectureMode() === 'po' ? 'Verici (Outbound)' : 'Entegrasyon Mimarisi' }}</span>
+                <strong class="s-val green">
+                  {{ architectureMode() === 'po' ? (outboundCount() + ' Servis (Outbound)') : (architectureMode() === 'rise' ? 'SAP BTP Integration Suite' : 'PO 7.5 On-Premise') }}
+                </strong>
+              </div>
+              <div class="summary-stat">
+                <span class="s-label">{{ architectureMode() === 'po' ? 'Alıcı (Inbound)' : 'Hedef Lisans Paketi' }}</span>
+                <strong class="s-val" [class.text-blue]="architectureMode() === 'po'" [class.green]="architectureMode() !== 'po'">
+                  {{ architectureMode() === 'po' ? (inboundCount() + ' Servis (Inbound)') : '70 FUE (Optimize Bulut)' }}
+                </strong>
+              </div>
+              <div class="summary-stat">
+                <span class="s-label">{{ architectureMode() === 'po' ? 'Senkron / Anlık' : 'Tahmini Yıllık Tasarruf' }}</span>
+                <strong class="s-val green">
+                  {{ architectureMode() === 'po' ? (syncCount() + ' Canlı Servis') : (basisService.hasUploadedData() ? 'Excel Verisi Mevcut' : 'Veri Bekleniyor') }}
+                </strong>
+              </div>
+              <div class="summary-stat">
+                <span class="s-label">{{ architectureMode() === 'po' ? 'Toplam Sunucu Adedi' : 'Destek Sonu (EoS) Riski' }}</span>
+                <strong class="s-val" [class.red]="architectureMode() === 'asis'" [class.green]="architectureMode() === 'rise' || architectureMode() === 'po'">
+                  {{ architectureMode() === 'po' ? ((importService.poSummary()?.totalServers || nodes().length) + ' Sunucu / Instance') : (architectureMode() === 'asis' ? (nodes().some(hasEosRisk) ? (countEosNodes() + ' Kritik EoS Riski') : '0 EoS Riski') : '0 Risk (%100 SAP Bulut)') }}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
 
           <!-- Selected Node Details Drawer Bar -->
           <div class="node-detail-bar" *ngIf="selectedNode() as sn">
@@ -1449,11 +1682,138 @@ export interface ArchitectureEdge {
       }
     }
 
+    .btn-toggle-sidebar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      font-weight: 600;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+      }
+
+      &.active-open {
+        background: #f0f9ff;
+        border-color: #7dd3fc;
+        color: #0284c7;
+        font-weight: 700;
+      }
+    }
+
+    .btn-studio-fullscreen {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-weight: 700;
+      border: none;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+        transform: translateY(-1px);
+      }
+    }
+
     .map-grid {
-      display: grid;
-      grid-template-columns: 340px 1fr;
+      display: flex;
       gap: 1.25rem;
       flex: 1;
+      position: relative;
+      align-items: stretch;
+      transition: gap 0.28s ease;
+
+      &.sidebar-collapsed {
+        gap: 0;
+      }
+    }
+
+    .sidebar-floating-open-btn {
+      position: absolute;
+      left: 0;
+      top: 1.25rem;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 0.9rem;
+      background: #ffffff;
+      border: 1px solid #bae6fd;
+      border-left: 4px solid #0284c7;
+      border-radius: 0 10px 10px 0;
+      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.16);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0369a1;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        background: #f0f9ff;
+        padding-left: 1.15rem;
+        box-shadow: 0 6px 20px rgba(2, 132, 199, 0.25);
+        transform: translateX(2px);
+      }
+
+      .sf-badge {
+        background: #e0f2fe;
+        color: #0284c7;
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 0.1rem 0.45rem;
+        border-radius: 9999px;
+      }
+    }
+
+    .config-panel {
+      width: 340px;
+      min-width: 340px;
+      max-width: 340px;
+      box-sizing: border-box;
+      transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+
+      &.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        margin-left: -20px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        border: none !important;
+        visibility: hidden !important;
+      }
+    }
+
+    .btn-collapse-sidebar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.55rem;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #dc2626;
+      }
     }
 
     .card-box {
@@ -1469,8 +1829,14 @@ export interface ArchitectureEdge {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 0.5rem;
         h3 { margin: 0; font-size: 0.9rem; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 0.35rem; }
         .sub-text { font-size: 0.7rem; color: #6b7280; }
+        .header-left-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+        }
       }
     }
 
@@ -1734,6 +2100,38 @@ export interface ArchitectureEdge {
       display: flex;
       flex-direction: column;
       flex: 1;
+      min-width: 0;
+      transition: all 0.28s ease;
+
+      &.is-fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        max-height: 100vh !important;
+        z-index: 999999 !important;
+        background: #f8fafc !important;
+        border-radius: 0 !important;
+        border: none !important;
+        padding: 0.65rem 1rem 0.75rem 1rem !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
+
+        .visual-canvas {
+          flex: 1 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+      }
 
       .canvas-header {
         display: flex;
@@ -1749,6 +2147,33 @@ export interface ArchitectureEdge {
           font-weight: 700;
           font-size: 0.82rem;
           color: #0284c7;
+        }
+
+        .canvas-header-right {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .btn-canvas-fullscreen {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.75rem;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #0284c7;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: #0284c7;
+            color: #ffffff;
+            app-icon { color: #ffffff !important; }
+          }
         }
 
         .map-legend {
@@ -1777,6 +2202,156 @@ export interface ArchitectureEdge {
           }
         }
       }
+    }
+
+    .fullscreen-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.4rem 0.5rem 0.65rem 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 0.5rem;
+      flex-shrink: 0;
+
+      .fs-bar-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .btn-fs-sidebar {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.75rem;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: #f1f5f9;
+          color: #0284c7;
+        }
+
+        &.active {
+          background: #f0f9ff;
+          border-color: #7dd3fc;
+          color: #0284c7;
+        }
+
+        .fs-arrow {
+          font-size: 0.7rem;
+        }
+      }
+
+      .fs-mode-toggle-group {
+        display: flex;
+        background: #e2e8f0;
+        padding: 3px;
+        border-radius: 8px;
+        gap: 3px;
+
+        .fs-mode-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+          border: none;
+          background: transparent;
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &.active-asis {
+            background: #d97706;
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(217, 119, 6, 0.3);
+          }
+
+          &.active-rise {
+            background: #059669;
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(5, 150, 105, 0.3);
+          }
+        }
+      }
+
+      .fs-customer-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.65rem;
+        background: #f1f5f9;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #0284c7;
+      }
+
+      .fs-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn-close-fullscreen {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.95rem;
+        background: #dc2626;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: #b91c1c;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(220, 38, 38, 0.45);
+        }
+      }
+    }
+
+    .fullscreen-sidebar-drawer {
+      position: absolute;
+      left: 1.25rem;
+      top: 4.8rem;
+      bottom: 1.25rem;
+      width: 340px;
+      z-index: 1000;
+      display: flex;
+      pointer-events: none;
+
+      .config-panel.in-fs-drawer {
+        pointer-events: auto;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        overflow-y: auto;
+        animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
     }
 
     .visual-canvas {
@@ -4195,6 +4770,49 @@ export class ArchitectureMapComponent {
   zoom = signal<number>(1.0);
   isPanning = signal<boolean>(false);
   isRiseSizingPanelCollapsed = signal<boolean>(false);
+
+  // Collapsible Left Sidebar ("Sistem Bileşenleri" / "Entegrasyon Düğümleri")
+  // Default is closed as requested by the user: "default kapalı gelsin. ben istediğidme açayım."
+  isSidebarCollapsed = signal<boolean>(true);
+
+  // Fullscreen Drawing Canvas Mode
+  isFullscreen = signal<boolean>(false);
+
+  toggleSidebar(): void {
+    this.isSidebarCollapsed.set(!this.isSidebarCollapsed());
+  }
+
+  openSidebar(): void {
+    this.isSidebarCollapsed.set(false);
+  }
+
+  closeSidebar(): void {
+    this.isSidebarCollapsed.set(true);
+  }
+
+  toggleFullscreen(): void {
+    const next = !this.isFullscreen();
+    this.isFullscreen.set(next);
+    setTimeout(() => {
+      this.fitToContent();
+    }, 150);
+  }
+
+  exitFullscreen(): void {
+    if (this.isFullscreen()) {
+      this.isFullscreen.set(false);
+      setTimeout(() => {
+        this.fitToContent();
+      }, 150);
+    }
+  }
+
+  @HostListener('window:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isFullscreen()) {
+      this.exitFullscreen();
+    }
+  }
   private panStartX = 0;
   private panStartY = 0;
   private dragNodeOffsetX = 0;
@@ -4776,6 +5394,7 @@ export class ArchitectureMapComponent {
         mode
       };
       localStorage.setItem(key, JSON.stringify(data));
+      this.captureAndSaveScreenshot(true);
     } catch (e) {
       console.error('autoSave error', e);
     }
@@ -4996,11 +5615,15 @@ export class ArchitectureMapComponent {
 
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
+    const wasDragging = !!this.draggingNodeId;
     if (this.draggingNodeId) {
       this.draggingNodeId = null;
     }
     if (this.isPanning()) {
       this.isPanning.set(false);
+    }
+    if (wasDragging) {
+      this.autoSave();
     }
   }
 
@@ -5030,7 +5653,10 @@ export class ArchitectureMapComponent {
         ignoreElements: (element) => {
           return element.classList?.contains('canvas-floating-banner') ||
                  element.classList?.contains('canvas-floating-toast') ||
-                 element.classList?.contains('canvas-controls');
+                 element.classList?.contains('canvas-controls') ||
+                 element.classList?.contains('sidebar-floating-open-btn') ||
+                 element.classList?.contains('canvas-nav-controls') ||
+                 element.classList?.contains('node-quick-actions');
         }
       });
 

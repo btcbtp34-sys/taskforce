@@ -24,6 +24,7 @@ import {
 } from '../../../features/solution-proposal/solution-proposal.component';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { BTC_LOGO_BASE64 } from './btc-logo-base64';
 
 const DEFAULT_ASIS_ITEMS: { id: string; name: string; values: number[] }[] = [
   { id: 'a1', name: 'Existing Maintenance', values: [80000, 80000, 80000, 80000, 80000] },
@@ -1718,6 +1719,7 @@ export interface ReportMenuItem {
           padding-bottom: 10px;
           border-bottom: 2px solid #0284c7;
           margin-bottom: 16px;
+          padding-right: 110px;
 
           .sb-title {
             font-size: 15px;
@@ -3796,6 +3798,18 @@ export class QuickPdfExportModalComponent {
 
         // Her bölüm tam 1 A4 sayfasına (210 x 297 mm) oturur — kesilme veya satır bölünmesi kesinlikle olmaz
         pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+
+        // BTC Logo - Tüm PDF sayfalarının en üst sağ tarafına ekle
+        if (BTC_LOGO_BASE64) {
+          const logoW = 25;
+          const logoH = 10.15; // 1252:508 oranına tam uygun
+          const logoX = pageWidth - logoW - 9;
+          const logoY = 4.5;
+          // Temiz beyaz arka plan ile metin/çizgilerin arkada kalmasını sağla
+          pdf.setFillColor(255, 255, 255);
+          pdf.roundedRect(logoX - 1.5, logoY - 1, logoW + 3, logoH + 2, 1, 1, 'F');
+          pdf.addImage(BTC_LOGO_BASE64, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+        }
       }
 
       this.exportProgress.set('PDF indiriliyor...');
