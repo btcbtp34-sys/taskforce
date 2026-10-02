@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -13,9 +13,13 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
   templateUrl: './rise-score.component.html',
   styleUrl: './rise-score.component.scss'
 })
-export class RiseScoreComponent {
+export class RiseScoreComponent implements OnInit {
   riseService = inject(RiseScoreService);
   customerService = inject(CustomerService);
+
+  ngOnInit(): void {
+    this.riseService.refreshCriteria();
+  }
 
   // Accordion state for option point editing per criterion (collapsed by default)
   expandedEditors = signal<Record<string, boolean>>({});
@@ -59,6 +63,18 @@ export class RiseScoreComponent {
     if (!newLabel) return;
     c.selectedOptionLabel = newLabel;
     this.riseService.selectDropdownOption(c.id, newLabel);
+
+    if (c.id === 'gecis_yontemi') {
+      const danismanlik = this.criteria.find(item => item.id === 'danismanlik_ihtiyaci');
+      if (danismanlik) {
+        const match = danismanlik.options.find(
+          (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === newLabel.toLowerCase().replace(/\s+/g, '')
+        );
+        if (match) {
+          danismanlik.selectedOptionLabel = match.label;
+        }
+      }
+    }
   }
 
   onRadioChange(c: RiseCriterion, val: boolean): void {
@@ -77,7 +93,7 @@ export class RiseScoreComponent {
   }
 
   trackByCriterion(index: number, c: RiseCriterion): string {
-    return c.id;
+    return `${c.id}_${c.selectedOptionLabel}_${c.options?.length || 0}_${c.type}`;
   }
 
   trackByOption(index: number, opt: RiseCriterionOption): string {

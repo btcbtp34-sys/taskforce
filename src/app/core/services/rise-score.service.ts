@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
 import { CustomerService } from './customer.service';
 
 export interface RiseCriterionOption {
@@ -22,7 +22,7 @@ export interface RiseCriterion {
 export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   {
     id: 'gecis_yontemi',
-    title: 'Geçiş yöntemi',
+    title: 'Rise Geçiş Yöntemi',
     type: 'dropdown',
     category: 'Geçiş Stratejisi',
     selectedOptionLabel: 'Brownfield',
@@ -39,7 +39,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'fue_sayisi',
-    title: 'FUE Sayısı',
+    title: 'Lisans FUE Sayısı',
     type: 'dropdown',
     category: 'Kullanıcı & Lisans',
     selectedOptionLabel: '136-499',
@@ -96,7 +96,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'veritabani_boyutlandirmasi',
-    title: 'Veritabanı Boyutlandırması',
+    title: 'Veritabanı Kapasitesi',
     type: 'dropdown',
     category: 'Altyapı & Veritabanı',
     selectedOptionLabel: 'M',
@@ -113,7 +113,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'yeni_uygulamalar',
-    title: 'Yeni Uygulamalar',
+    title: 'Yeni SAP Uygulamalar & Teknolojileri',
     type: 'radio',
     category: 'İnovasyon & Genişleme',
     selectedOptionLabel: '',
@@ -125,7 +125,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'erp_urunu',
-    title: 'ERP Ürünü',
+    title: 'SAP ERP Ürünü',
     type: 'dropdown',
     category: 'Mevcut Sistem',
     selectedOptionLabel: 'ECC ERP',
@@ -140,7 +140,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'ana_veri_karmasikligi',
-    title: 'Ana Veri Karmaşıklığı',
+    title: 'Ana Veri Çeşitliliği ve Hacmi',
     type: 'radio',
     category: 'Veri Kalitesi',
     selectedOptionLabel: '',
@@ -152,7 +152,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'ozel_gelistirme',
-    title: 'Özel Geliştirme',
+    title: 'Müşteriye Özgü / Özel Geliştirmeler',
     type: 'dropdown',
     category: 'Custom Code (Z/Y)',
     selectedOptionLabel: 'High',
@@ -167,7 +167,7 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
   },
   {
     id: 'bakim_sonu_riski',
-    title: 'Bakım Sonu Riski',
+    title: 'Bakım ve Güncelleme Destekleri',
     type: 'dropdown',
     category: 'Destek & Risk',
     selectedOptionLabel: 'High',
@@ -185,14 +185,46 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
     title: 'Danışmanlık İhtiyacı',
     type: 'dropdown',
     category: 'Danışmanlık & Hizmet',
-    selectedOptionLabel: 'Greenfield',
+    selectedOptionLabel: 'Brownfield',
     radioValue: false,
     radioPoints: 0,
     highlighted: true,
     description: 'Dönüşüm projesindeki harici danışmanlık, süreç tasarımı ve proje yönetim ihtiyacı.',
     options: [
-      { label: 'Greenfield', points: 12 },
-      { label: 'Brownfield/Lift & Shift/Selective Data', points: 10 }
+      { label: 'Brownfield', points: 9 },
+      { label: 'Greenfield', points: 3 },
+      { label: 'Lift & Shift', points: 12 },
+      { label: 'Selective Data', points: 8 }
+    ]
+  },
+  {
+    id: 'rise_sektor_destegi',
+    title: 'Rise Sektör Desteği',
+    type: 'radio',
+    category: 'Sektör & Çözüm',
+    selectedOptionLabel: 'Var',
+    radioValue: true,
+    radioPoints: 3,
+    highlighted: false,
+    description: '',
+    options: [
+      { label: 'Var', points: 3 },
+      { label: 'Yok', points: 1 }
+    ]
+  },
+  {
+    id: 'entegrasyon_yogunlugu_3rd',
+    title: '3RD Entegrasyon Yoğunluğu',
+    type: 'radio',
+    category: 'Entegrasyon & Mimari',
+    selectedOptionLabel: 'Az',
+    radioValue: true,
+    radioPoints: 3,
+    highlighted: false,
+    description: '',
+    options: [
+      { label: 'Az', points: 3 },
+      { label: 'Çok', points: 1 }
     ]
   }
 ];
@@ -208,14 +240,69 @@ export class RiseScoreService {
   constructor() {
     // When active customer changes, load customer-specific saved state or default
     effect(() => {
-      const custId = this.customerService.activeCustomerId();
+      const id = this.customerService.activeCustomerId();
+      untracked(() => {
+        this.loadForCustomer(id);
+        this.forceUpdateDanismanlikOptions();
+      });
+    });
+  }
+
+  // Force re-sync criteria from definition
+  refreshCriteria(): void {
+    const custId = this.customerService.activeCustomerId();
+    untracked(() => {
       this.loadForCustomer(custId);
-    }, { allowSignalWrites: true });
+      this.forceUpdateDanismanlikOptions();
+    });
+  }
+
+  forceUpdateDanismanlikOptions(): void {
+    untracked(() => {
+      const defDanismanlik = DEFAULT_RISE_CRITERIA.find(d => d.id === 'danismanlik_ihtiyaci')!;
+      const currentList = this.criteria();
+      const gecisItem = currentList.find(c => c.id === 'gecis_yontemi');
+      const selectedGecis = gecisItem?.selectedOptionLabel || 'Brownfield';
+
+      const matchingOption = defDanismanlik.options.find(
+        (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === selectedGecis.toLowerCase().replace(/\s+/g, '')
+      );
+      const targetLabel = matchingOption?.label || defDanismanlik.options[0].label;
+
+      const danismanlikCurrent = currentList.find(c => c.id === 'danismanlik_ihtiyaci');
+      if (
+        danismanlikCurrent &&
+        danismanlikCurrent.selectedOptionLabel === targetLabel &&
+        danismanlikCurrent.options?.length === defDanismanlik.options.length
+      ) {
+        return;
+      }
+
+      this.criteria.update(list => {
+        return list.map(item => {
+          if (item.id === 'danismanlik_ihtiyaci') {
+            return {
+              ...item,
+              title: defDanismanlik.title,
+              type: 'dropdown',
+              category: defDanismanlik.category,
+              options: JSON.parse(JSON.stringify(defDanismanlik.options)),
+              selectedOptionLabel: targetLabel
+            };
+          }
+          return item;
+        });
+      });
+    });
   }
 
   // Calculate current score for a criterion
   getCriterionScore(c: RiseCriterion): number {
     if (c.type === 'radio') {
+      if (c.options && c.options.length > 0) {
+        const match = c.options.find(opt => opt.label === c.selectedOptionLabel);
+        return match ? (Number(match.points) || 0) : 0;
+      }
       return c.radioValue ? (Number(c.radioPoints) || 0) : 0;
     } else {
       const match = c.options.find(opt => opt.label === c.selectedOptionLabel);
@@ -232,6 +319,9 @@ export class RiseScoreService {
   readonly maxPossibleScore = computed(() => {
     return this.criteria().reduce((sum, c) => {
       if (c.type === 'radio') {
+        if (c.options && c.options.length > 0) {
+          return sum + c.options.reduce((m, o) => Math.max(m, Number(o.points) || 0), 0);
+        }
         return sum + Math.max(Number(c.radioPoints) || 0, 0);
       } else {
         const maxOpt = c.options.reduce((m, o) => Math.max(m, Number(o.points) || 0), 0);
@@ -244,6 +334,10 @@ export class RiseScoreService {
   readonly minPossibleScore = computed(() => {
     return this.criteria().reduce((sum, c) => {
       if (c.type === 'radio') {
+        if (c.options && c.options.length > 0) {
+          const minOpt = c.options.reduce((m, o) => Math.min(m, Number(o.points) || 0), Infinity);
+          return sum + (minOpt === Infinity ? 0 : minOpt);
+        }
         return sum + 0;
       } else {
         const minOpt = c.options.reduce((m, o) => Math.min(m, Number(o.points) || 0), Infinity);
@@ -298,9 +392,21 @@ export class RiseScoreService {
   // Select dropdown option
   selectDropdownOption(criterionId: string, optionLabel: string): void {
     this.criteria.update(list => {
+      let syncDanismanlikLabel: string | null = null;
+      if (criterionId === 'gecis_yontemi') {
+        syncDanismanlikLabel = optionLabel;
+      }
       return list.map(item => {
         if (item.id === criterionId) {
           return { ...item, selectedOptionLabel: optionLabel };
+        }
+        if (syncDanismanlikLabel && item.id === 'danismanlik_ihtiyaci') {
+          const match = item.options.find(
+            (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === syncDanismanlikLabel!.toLowerCase().replace(/\s+/g, '')
+          );
+          if (match) {
+            return { ...item, selectedOptionLabel: match.label };
+          }
         }
         return item;
       });
@@ -375,8 +481,12 @@ export class RiseScoreService {
   // Quick Preset: High Score
   applyHighScorePreset(): void {
     this.criteria.update(list => {
-      return list.map(c => {
+      const updated = list.map(c => {
         if (c.type === 'radio') {
+          if (c.options && c.options.length > 0) {
+            const best = [...c.options].sort((a, b) => b.points - a.points)[0];
+            return { ...c, selectedOptionLabel: best?.label || c.selectedOptionLabel };
+          }
           return { ...c, radioValue: true };
         } else {
           // pick highest point option
@@ -384,6 +494,18 @@ export class RiseScoreService {
           return { ...c, selectedOptionLabel: best?.label || c.selectedOptionLabel };
         }
       });
+      // Synchronize danismanlik_ihtiyaci with gecis_yontemi
+      const gecis = updated.find(it => it.id === 'gecis_yontemi');
+      const danismanlik = updated.find(it => it.id === 'danismanlik_ihtiyaci');
+      if (gecis && danismanlik) {
+        const match = danismanlik.options.find(
+          (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === gecis.selectedOptionLabel.toLowerCase().replace(/\s+/g, '')
+        );
+        if (match) {
+          danismanlik.selectedOptionLabel = match.label;
+        }
+      }
+      return updated;
     });
     this.saveForCustomer();
   }
@@ -391,8 +513,12 @@ export class RiseScoreService {
   // Quick Preset: Low Score
   applyLowScorePreset(): void {
     this.criteria.update(list => {
-      return list.map(c => {
+      const updated = list.map(c => {
         if (c.type === 'radio') {
+          if (c.options && c.options.length > 0) {
+            const lowest = [...c.options].sort((a, b) => a.points - b.points)[0];
+            return { ...c, selectedOptionLabel: lowest?.label || c.selectedOptionLabel };
+          }
           return { ...c, radioValue: false };
         } else {
           // pick lowest point option
@@ -400,6 +526,18 @@ export class RiseScoreService {
           return { ...c, selectedOptionLabel: lowest?.label || c.selectedOptionLabel };
         }
       });
+      // Synchronize danismanlik_ihtiyaci with gecis_yontemi
+      const gecis = updated.find(it => it.id === 'gecis_yontemi');
+      const danismanlik = updated.find(it => it.id === 'danismanlik_ihtiyaci');
+      if (gecis && danismanlik) {
+        const match = danismanlik.options.find(
+          (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === gecis.selectedOptionLabel.toLowerCase().replace(/\s+/g, '')
+        );
+        if (match) {
+          danismanlik.selectedOptionLabel = match.label;
+        }
+      }
+      return updated;
     });
     this.saveForCustomer();
   }
@@ -487,7 +625,50 @@ export class RiseScoreService {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.criteria.set(parsed);
+          const defaultMap = new Map(DEFAULT_RISE_CRITERIA.map(d => [d.id, d]));
+          const updated = parsed.map((item: RiseCriterion) => {
+            const def = defaultMap.get(item.id);
+            if (def) {
+              // Ensure options match the canonical system options for this criterion
+              const optionsMatch = Array.isArray(item.options) &&
+                item.options.length === def.options.length &&
+                item.options.every((opt: RiseCriterionOption, idx: number) => opt.label === def.options[idx]?.label);
+
+              const resolvedOptions = optionsMatch ? item.options : JSON.parse(JSON.stringify(def.options));
+              const isValidSelection = resolvedOptions.some((o: RiseCriterionOption) => o.label === item.selectedOptionLabel);
+              const resolvedSelected = isValidSelection ? item.selectedOptionLabel : def.selectedOptionLabel;
+
+              return { 
+                ...item, 
+                title: def.title, 
+                type: def.type,
+                category: def.category,
+                options: resolvedOptions,
+                selectedOptionLabel: resolvedSelected
+              };
+            }
+            return item;
+          });
+          const existingIds = new Set(updated.map((item: RiseCriterion) => item.id));
+          const missing = DEFAULT_RISE_CRITERIA.filter(d => !existingIds.has(d.id));
+          const finalCriteria = missing.length > 0
+            ? [...updated, ...JSON.parse(JSON.stringify(missing))]
+            : updated;
+
+          // Always ensure danismanlik_ihtiyaci is synced with gecis_yontemi on load
+          const gecisItem = finalCriteria.find((it: RiseCriterion) => it.id === 'gecis_yontemi');
+          const danismanlikItem = finalCriteria.find((it: RiseCriterion) => it.id === 'danismanlik_ihtiyaci');
+          if (gecisItem && danismanlikItem) {
+            const match = danismanlikItem.options.find(
+              (opt: RiseCriterionOption) => opt.label.toLowerCase().replace(/\s+/g, '') === gecisItem.selectedOptionLabel.toLowerCase().replace(/\s+/g, '')
+            );
+            if (match) {
+              danismanlikItem.selectedOptionLabel = match.label;
+            }
+          }
+
+          this.criteria.set(finalCriteria);
+          this.saveForCustomer();
           return;
         }
       }

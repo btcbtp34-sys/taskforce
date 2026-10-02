@@ -102,7 +102,6 @@
             <span class="category-pill">{{ c.category }}</span>
           </div>
           <h3 class="criterion-name">{{ c.title }}</h3>
-          <p class="criterion-desc" *ngIf="c.description">{{ c.description }}</p>
         </div>
 
         <!-- 3. Control & Accordion Point Editor Column -->
@@ -166,35 +165,56 @@
           <!-- RADIO BUTTON TYPE -->
           <div *ngIf="c.type === 'radio'" class="radio-control-block">
             <div class="radio-buttons-row">
-              <!-- Radio: Evet / Var -->
-              <label 
-                class="radio-btn-card" 
-                [class.checked]="c.radioValue === true"
-                (click)="onRadioChange(c, true)"
-              >
-                <input 
-                  type="radio" 
-                  [name]="'list_radio_' + c.id" 
-                  [checked]="c.radioValue === true" 
-                  (change)="onRadioChange(c, true)"
-                />
-                <span class="r-text">Evet / Var</span>
-              </label>
+              <!-- When criterion has options (e.g. Var/Yok or Az/Çok) -->
+              <ng-container *ngIf="c.options && c.options.length > 0; else defaultRadio">
+                <label 
+                  *ngFor="let opt of c.options; trackBy: trackByOption"
+                  class="radio-btn-card" 
+                  [class.checked]="c.selectedOptionLabel === opt.label"
+                  (click)="onDropdownSelect(c, opt.label)"
+                >
+                  <input 
+                    type="radio" 
+                    [name]="'list_radio_' + c.id" 
+                    [checked]="c.selectedOptionLabel === opt.label" 
+                    (change)="onDropdownSelect(c, opt.label)"
+                  />
+                  <span class="r-text">{{ opt.label }}</span>
+                </label>
+              </ng-container>
 
-              <!-- Radio: Hayır / Yok -->
-              <label 
-                class="radio-btn-card" 
-                [class.checked]="c.radioValue === false"
-                (click)="onRadioChange(c, false)"
-              >
-                <input 
-                  type="radio" 
-                  [name]="'list_radio_' + c.id" 
-                  [checked]="c.radioValue === false" 
-                  (change)="onRadioChange(c, false)"
-                />
-                <span class="r-text">Hayır / Yok</span>
-              </label>
+              <!-- Standard Boolean Radio (Evet / Var vs Hayır / Yok) -->
+              <ng-template #defaultRadio>
+                <!-- Radio: Evet / Var -->
+                <label 
+                  class="radio-btn-card" 
+                  [class.checked]="c.radioValue === true"
+                  (click)="onRadioChange(c, true)"
+                >
+                  <input 
+                    type="radio" 
+                    [name]="'list_radio_' + c.id" 
+                    [checked]="c.radioValue === true" 
+                    (change)="onRadioChange(c, true)"
+                  />
+                  <span class="r-text">Evet / Var</span>
+                </label>
+
+                <!-- Radio: Hayır / Yok -->
+                <label 
+                  class="radio-btn-card" 
+                  [class.checked]="c.radioValue === false"
+                  (click)="onRadioChange(c, false)"
+                >
+                  <input 
+                    type="radio" 
+                    [name]="'list_radio_' + c.id" 
+                    [checked]="c.radioValue === false" 
+                    (change)="onRadioChange(c, false)"
+                  />
+                  <span class="r-text">Hayır / Yok</span>
+                </label>
+              </ng-template>
             </div>
 
             <!-- Accordion Button to Edit Radio Points -->
@@ -206,24 +226,49 @@
                 [class.btn-accordion-active]="isEditorOpen(c.id)"
               >
                 <app-icon name="sliders" [size]="12"></app-icon>
-                <span>Puanı Değiştir</span>
+                <span>{{ (c.options && c.options.length > 0) ? 'Puanları Değiştir' : 'Puanı Değiştir' }}</span>
                 <span class="acc-chevron" [class.rotate]="isEditorOpen(c.id)">▼</span>
               </button>
 
               <!-- Collapsible Accordion Drawer -->
               <div class="accordion-drawer" *ngIf="isEditorOpen(c.id)">
-                <div class="radio-editable-box">
-                  <span class="box-lbl">Kriter Puan Katsayısı:</span>
-                  <div class="input-pts-wrap">
-                    <input 
-                      type="number" 
-                      class="radio-pt-input" 
-                      [value]="c.radioPoints" 
-                      (change)="onRadioPointChange(c, $event)"
-                    />
-                    <span class="pts-text">Puan</span>
+                <!-- Option chips point editor for option-based radios -->
+                <div class="chips-list" *ngIf="c.options && c.options.length > 0; else singleRadioPts">
+                  <div 
+                    *ngFor="let opt of c.options; trackBy: trackByOption" 
+                    class="point-chip"
+                    [class.chip-active]="opt.label === c.selectedOptionLabel"
+                    (click)="onDropdownSelect(c, opt.label)"
+                    title="Tıklayarak seçin veya kutudan puanı güncelleyin"
+                  >
+                    <span class="chip-name">{{ opt.label }}:</span>
+                    <div class="chip-input-wrap" (click)="$event.stopPropagation()">
+                      <input 
+                        type="number" 
+                        class="chip-input" 
+                        [value]="opt.points" 
+                        (change)="onOptionPointChange(c, opt, $event)"
+                      />
+                      <span class="chip-unit">p</span>
+                    </div>
                   </div>
                 </div>
+
+                <!-- Single point editor for boolean radios -->
+                <ng-template #singleRadioPts>
+                  <div class="radio-editable-box">
+                    <span class="box-lbl">Kriter Puan Katsayısı:</span>
+                    <div class="input-pts-wrap">
+                      <input 
+                        type="number" 
+                        class="radio-pt-input" 
+                        [value]="c.radioPoints" 
+                        (change)="onRadioPointChange(c, $event)"
+                      />
+                      <span class="pts-text">Puan</span>
+                    </div>
+                  </div>
+                </ng-template>
               </div>
             </div>
           </div>

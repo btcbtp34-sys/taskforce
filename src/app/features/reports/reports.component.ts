@@ -326,9 +326,37 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
         @if (!isEditMode()) {
           <div class="hero-score-card">
             <div class="score-ring-section">
-              <div class="circular-score-badge">
-                <div class="score-number">%{{ content.heroScore?.matchScore || 84 }}</div>
-                <div class="score-label">{{ content.heroScore?.matchLabel || 'RISE SKORU' }}</div>
+              <div 
+                class="circular-score-badge-wrap"
+                [class.tooltip-active]="isRiseTooltipOpen()"
+                (mouseenter)="isRiseTooltipOpen.set(true)"
+                (mouseleave)="isRiseTooltipOpen.set(false)">
+                <a routerLink="/rise-score" class="circular-score-badge" title="Rise Skor Hesaplamayı İncele">
+                  <div class="score-number">%{{ content.heroScore?.matchScore || 84 }}</div>
+                  <div class="score-label">{{ content.heroScore?.matchLabel || 'RISE SKORU' }}</div>
+                  <div 
+                    class="badge-hint-icon" 
+                    (click)="$event.preventDefault(); $event.stopPropagation(); isRiseTooltipOpen.set(!isRiseTooltipOpen())" 
+                    title="Kriter başlıklarını aç / kapat">
+                    <app-icon name="info" [size]="10" color="#059669"></app-icon>
+                  </div>
+                </a>
+
+                <!-- Hover & Click Tooltip: Sadece Kriterler -->
+                <div 
+                  class="rise-score-tooltip no-print" 
+                  role="tooltip"
+                  (mouseenter)="isRiseTooltipOpen.set(true)"
+                  (mouseleave)="isRiseTooltipOpen.set(false)">
+                  <div class="tooltip-list">
+                    @for (item of riseScoreService.criteria(); track item.id; let idx = $index) {
+                      <div class="tooltip-item">
+                        <span class="ti-num">{{ idx + 1 }}.</span>
+                        <span class="ti-title">{{ item.title }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
               </div>
 
               <div class="score-ring-text">
@@ -812,6 +840,22 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
         gap: 2rem;
         flex-wrap: wrap;
 
+        .circular-score-badge-wrap {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+
+          &:hover .rise-score-tooltip,
+          &:focus-within .rise-score-tooltip,
+          &.tooltip-active .rise-score-tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+          }
+        }
+
         .circular-score-badge {
           width: 110px;
           height: 110px;
@@ -824,6 +868,30 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          text-decoration: none;
+          position: relative;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+          &:hover {
+            transform: scale(1.04);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.32);
+          }
+
+          .badge-hint-icon {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          }
 
           .score-number {
             font-size: 1.75rem;
@@ -838,6 +906,89 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             letter-spacing: 0.05em;
             color: #64748b;
             margin-top: 0.25rem;
+          }
+        }
+
+        .rise-score-tooltip {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          transform: translateY(6px);
+          z-index: 1050;
+          width: max-content;
+          min-width: 580px;
+          max-width: min(640px, calc(100vw - 30px));
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          box-shadow: 0 20px 40px -6px rgba(15, 23, 42, 0.22), 0 8px 16px -2px rgba(0, 0, 0, 0.08);
+          visibility: hidden;
+          opacity: 0;
+          transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+          pointer-events: none;
+          text-align: left;
+          box-sizing: border-box;
+
+          &::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            right: 0;
+            height: 12px;
+          }
+
+          &::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 45px;
+            width: 12px;
+            height: 12px;
+            background: #ffffff;
+            border-left: 1px solid #cbd5e1;
+            border-top: 1px solid #cbd5e1;
+            transform: rotate(45deg);
+          }
+
+          .tooltip-list {
+            padding: 0.75rem 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(7, auto);
+            column-gap: 1.5rem;
+            row-gap: 0.25rem;
+            box-sizing: border-box;
+
+            .tooltip-item {
+              display: flex;
+              align-items: center;
+              gap: 0.45rem;
+              padding: 0.35rem 0.5rem;
+              border-radius: 6px;
+              font-size: 0.76rem;
+              transition: background 0.12s ease;
+
+              &:hover {
+                background: #f1f5f9;
+              }
+
+              .ti-num {
+                color: #0284c7;
+                font-weight: 700;
+                font-size: 0.72rem;
+                min-width: 18px;
+              }
+
+              .ti-title {
+                color: #1e293b;
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            }
           }
         }
 
@@ -1922,6 +2073,7 @@ export class ReportsComponent implements OnInit {
   isExporting = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
   isSaved = signal<boolean>(false);
+  isRiseTooltipOpen = signal<boolean>(false);
 
   content: ExecutiveSummaryData = getDefaultExecutiveData('Müşteri');
 
