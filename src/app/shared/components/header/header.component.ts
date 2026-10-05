@@ -41,6 +41,7 @@ import { IconComponent } from '../icon/icon.component';
                 (click)="onSelectCustomer(c.id)">
                 <div class="cd-main">
                   <strong class="cd-name">{{ c.name }}</strong>
+                  <span class="cd-sector" *ngIf="c.sector">{{ c.sector }}</span>
                 </div>
                 <span class="cd-badge" *ngIf="hasDataForCustomer(c.id)">Excel Yüklü</span>
               </div>
@@ -289,6 +290,8 @@ import { IconComponent } from '../icon/icon.component';
               color: #15803d;
               padding: 0.15rem 0.45rem;
               border-radius: 4px;
+              white-space: nowrap;
+              flex-shrink: 0;
             }
           }
         }
@@ -724,11 +727,7 @@ export class HeaderComponent {
   }
 
   hasDataForCustomer(id: string): boolean {
-    try {
-      return !!(localStorage.getItem('taskforce_sizing_pkg_' + id) || localStorage.getItem('taskforce_po_pkg_' + id));
-    } catch (e) {
-      return false;
-    }
+    return this.customerService.hasDataForCustomer(id);
   }
 
   @HostListener('document:click')
@@ -779,6 +778,10 @@ export class HeaderComponent {
           try { localStorage.removeItem(k); } catch (e) {}
         }
       }
+
+      try {
+        localStorage.setItem('taskforce_cleared_' + activeId, 'true');
+      } catch (e) {}
 
       window.alert(`${custName} için tüm veriler sıfırlandı.`);
       window.location.reload();
@@ -1002,6 +1005,10 @@ export class HeaderComponent {
           if (parsed.customerProfile) {
             this.customerService.mergeCustomerData(activeId, parsed.customerProfile);
           }
+
+          try {
+            localStorage.removeItem('taskforce_cleared_' + activeId);
+          } catch (e) {}
 
           alert(`"${activeCustomer.name}" müşterisine ait yedek başarıyla yüklendi! Sayfa yeni verilerle yenileniyor.`);
           window.location.reload();

@@ -355,6 +355,9 @@ export class ModullerService {
     try {
       const custId = this.customerService.activeCustomerId();
       if (custId) {
+        if (this.cardsList().length > 0) {
+          localStorage.removeItem('taskforce_cleared_' + custId);
+        }
         localStorage.setItem(STORAGE_PREFIX + custId, JSON.stringify(this.cardsList()));
       }
     } catch (e) {

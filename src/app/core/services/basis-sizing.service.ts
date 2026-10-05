@@ -97,6 +97,7 @@ export class BasisSizingService {
   private saveToStorage(pkg: BasisSizingPackage): void {
     try {
       const activeId = this.customerService.activeCustomerId();
+      localStorage.removeItem('taskforce_cleared_' + activeId);
       const key = `taskforce_sizing_pkg_${activeId}`;
       localStorage.setItem(key, JSON.stringify(pkg));
     } catch (e) {

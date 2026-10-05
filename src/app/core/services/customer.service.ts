@@ -178,9 +178,13 @@ export class CustomerService {
   }
 
   updateCustomerDataFromBasis(basisUserCount: number, fueValue: number, products: any[]): void {
+    const activeId = this.activeCustomerIdSignal();
+    try {
+      localStorage.removeItem('taskforce_cleared_' + activeId);
+    } catch (e) {}
     this.customersSignal.update(list => {
       const updated = list.map(c => {
-        if (c.id === this.activeCustomerIdSignal()) {
+        if (c.id === activeId) {
           return {
             ...c,
             sapUserCount: basisUserCount,
@@ -196,6 +200,48 @@ export class CustomerService {
       this.saveCustomers(updated);
       return updated;
     });
+  }
+
+  hasDataForCustomer(id: string): boolean {
+    try {
+      // 1. Explicitly cleared by user
+      if (localStorage.getItem('taskforce_cleared_' + id) === 'true') {
+        return false;
+      }
+
+      // 2. Basis Sizing Excel or PO Integration Excel package exists
+      if (localStorage.getItem('taskforce_sizing_pkg_' + id) || localStorage.getItem('taskforce_po_pkg_' + id)) {
+        return true;
+      }
+
+      // 3. Module Cards uploaded from Excel exist
+      const modStr = localStorage.getItem('taskforce_modules_cards_' + id);
+      if (modStr) {
+        try {
+          const arr = JSON.parse(modStr);
+          if (Array.isArray(arr) && arr.length > 0) {
+            return true;
+          }
+        } catch (e) {}
+      }
+
+      // 4. Check active customer record in state
+      const cust = this.customersSignal().find(c => c.id === id);
+      if (cust) {
+        if (cust.sapUserCount > 0 && cust.lastAnalysisDate && cust.lastAnalysisDate !== 'Veri Yüklenmesi Bekleniyor') {
+          return true;
+        }
+      }
+
+      // 5. Default initial customers with preloaded Excel analysis
+      if (['cust-sigorta', 'cust-1', 'cust-3', 'cust-test'].includes(id)) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   updateCustomerStatus(id: string, status: Customer['taskForceStatus'], progress: number): void {
@@ -233,32 +279,26 @@ export class CustomerService {
   }
 
   resetCustomerData(id: string): void {
-    const mock = MOCK_CUSTOMERS.find(m => m.id === id);
+    try {
+      localStorage.setItem('taskforce_cleared_' + id, 'true');
+    } catch (e) {}
     this.customersSignal.update(list => {
       const updated = list.map(c => {
         if (c.id === id) {
-          if (mock) {
-            return {
-              ...mock,
-              name: (mock.id === 'cust-sigorta') ? 'Kale Endüstri Holding' : mock.name,
-              code: (mock.id === 'cust-sigorta') ? 'KEH' : mock.code
-            };
-          } else {
-            return {
-              ...c,
-              sapUserCount: 0,
-              activeUserCount: 0,
-              lowUsageUserCount: 0,
-              totalLicenseCost: 0,
-              estimatedOpportunityValue: 0,
-              activeOpportunityCount: 0,
-              taskForceStatus: 'Data Collection' as const,
-              progressPercentage: 10,
-              sapProducts: [],
-              coreProblems: [],
-              lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
-            };
-          }
+          return {
+            ...c,
+            sapUserCount: 0,
+            activeUserCount: 0,
+            lowUsageUserCount: 0,
+            totalLicenseCost: 0,
+            estimatedOpportunityValue: 0,
+            activeOpportunityCount: 0,
+            taskForceStatus: 'Data Collection' as const,
+            progressPercentage: 10,
+            sapProducts: [],
+            coreProblems: [],
+            lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
+          };
         }
         return c;
       });

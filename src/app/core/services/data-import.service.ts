@@ -97,6 +97,7 @@ export class DataImportService {
   saveForCustomer(): void {
     try {
       const activeId = this.customerService.activeCustomerId();
+      localStorage.removeItem(`taskforce_cleared_${activeId}`);
       const key = `taskforce_po_pkg_${activeId}`;
       const data = {
         poInterfaces: this.poInterfaces(),

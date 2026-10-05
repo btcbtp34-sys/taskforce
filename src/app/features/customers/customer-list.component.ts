@@ -69,7 +69,10 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
                       <app-icon name="database" [size]="16" color="#0284c7"></app-icon>
                     </div>
                     <div class="name-info">
-                      <strong class="cust-name">{{ cust.name }}</strong>
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <strong class="cust-name">{{ cust.name }}</strong>
+                        <span class="excel-badge-pill" *ngIf="customerService.hasDataForCustomer(cust.id)">Excel Yüklü</span>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -314,6 +317,16 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         flex-direction: column;
         .cust-name { font-size: 0.85rem; color: #111827; }
         .cust-code { font-size: 0.7rem; color: #6b7280; }
+        .excel-badge-pill {
+          font-size: 0.62rem;
+          font-weight: 700;
+          background: #dcfce7;
+          color: #15803d;
+          padding: 0.1rem 0.4rem;
+          border-radius: 4px;
+          border: 1px solid #bbf7d0;
+          white-space: nowrap;
+        }
       }
     }
 

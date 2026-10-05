@@ -108,7 +108,8 @@ import { Customer } from '../../core/models/customer.model';
                       <strong class="opt-name">{{ cust.name }}</strong>
                       <span class="opt-sector" *ngIf="cust.sector">{{ cust.sector }}</span>
                     </div>
-                    <span class="opt-badge">{{ cust.code }}</span>
+                    <span class="opt-badge excel-badge" *ngIf="customerService.hasDataForCustomer(cust.id)">Excel Yüklü</span>
+                    <span class="opt-badge" *ngIf="!customerService.hasDataForCustomer(cust.id)">{{ cust.code }}</span>
                   </div>
                 } @empty {
                   <div class="no-results">
@@ -366,6 +367,15 @@ import { Customer } from '../../core/models/customer.model';
         padding: 0.1rem 0.35rem;
         border-radius: 4px;
         border: 1px solid #bae6fd;
+        white-space: nowrap;
+        flex-shrink: 0;
+
+        &.excel-badge {
+          background: #dcfce7;
+          color: #15803d;
+          border-color: #bbf7d0;
+          font-weight: 700;
+        }
       }
 
       &:hover {
