@@ -556,7 +556,7 @@ export class RiseScoreService {
       const score = this.matchScoreForExec();
       const activeCust = this.customerService.activeCustomer();
       let custName = activeCust?.name || 'Müşteri';
-      if (custName.includes('*') || activeCust?.id === 'cust-sigorta') {
+      if (activeCust?.id === 'cust-sigorta' || /k\*\*/i.test(custName)) {
         custName = 'Kale Endüstri Holding';
       }
       if (raw) {

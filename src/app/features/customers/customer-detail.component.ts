@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { KpiCardComponent } from '../../shared/components/kpi-card/kpi-card.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
@@ -357,8 +357,18 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
     }
   `]
 })
-export class CustomerDetailComponent {
+export class CustomerDetailComponent implements OnInit {
   customerService = inject(CustomerService);
+  route = inject(ActivatedRoute);
 
   readonly activeCustomer = this.customerService.activeCustomer;
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.customerService.selectCustomer(id);
+      }
+    });
+  }
 }

@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild, computed, OnInit, HostListener } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, computed, OnInit, HostListener, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -72,7 +72,9 @@ export interface ExecutiveSummaryData {
 
 export function getDefaultHeroScore(customerName: string): HeroScoreData {
   let custName = customerName?.trim() || '';
-  if (!custName || custName === 'Müşteri' || custName.includes('*') || /k\*\*/i.test(custName)) {
+  if (!custName || custName === 'Müşteri') {
+    custName = 'Müşteri';
+  } else if (/k\*\*/i.test(custName)) {
     custName = 'Kale Endüstri Holding';
   }
   return {
@@ -128,7 +130,9 @@ export function getDefaultHeroScore(customerName: string): HeroScoreData {
 
 export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryData {
   let custName = customerName?.trim() || '';
-  if (!custName || custName === 'Müşteri' || custName.includes('*') || /k\*\*/i.test(custName)) {
+  if (!custName || custName === 'Müşteri') {
+    custName = 'Müşteri';
+  } else if (/k\*\*/i.test(custName)) {
     custName = 'Kale Endüstri Holding';
   }
   return {
@@ -2059,10 +2063,10 @@ export class ReportsComponent implements OnInit {
   activeCustomerName = computed(() => {
     const cust = this.customerService.activeCustomer();
     const name = cust?.name || '';
-    if (name.includes('*') || cust?.id === 'cust-sigorta' || !name) {
+    if (cust?.id === 'cust-sigorta' || /k\*\*/i.test(name)) {
       return 'Kale Endüstri Holding';
     }
-    return name;
+    return name || 'Müşteri';
   });
 
   matchScoreText = computed(() => {
@@ -2073,6 +2077,15 @@ export class ReportsComponent implements OnInit {
   inlineNoteAuthor = 'Satış & Presales Ekibi';
 
   @ViewChild('reportContainer') reportContainer!: ElementRef<HTMLDivElement>;
+
+  constructor() {
+    effect(() => {
+      const activeId = this.customerService.activeCustomerId();
+      if (activeId) {
+        this.loadSavedContent();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadSavedContent();

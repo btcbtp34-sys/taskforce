@@ -1,6 +1,6 @@
 import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { CustomerService } from '../../../core/services/customer.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { BasisSizingService } from '../../../core/services/basis-sizing.service';
@@ -698,6 +698,7 @@ export class HeaderComponent {
   basisService = inject(BasisSizingService);
   importService = inject(DataImportService);
   modullerService = inject(ModullerService);
+  router = inject(Router);
   showNotifications = false;
   showCustomerDropdown = false;
   showBackupMenu = false;
@@ -717,6 +718,9 @@ export class HeaderComponent {
   onSelectCustomer(id: string): void {
     this.customerService.selectCustomer(id);
     this.showCustomerDropdown = false;
+    if (this.router.url.startsWith('/customers/')) {
+      this.router.navigate(['/customers', id]);
+    }
   }
 
   hasDataForCustomer(id: string): boolean {
@@ -736,20 +740,48 @@ export class HeaderComponent {
 
   resetCurrentCustomerData(): void {
     const custName = this.customerService.activeCustomer().name;
-    const confirmed = window.confirm(`${custName} için yüklenen tüm Excel ve modül verilerini temizlemek istediğinize emin misiniz?`);
-    if (confirmed) {
+    const activeId = this.customerService.activeCustomerId();
+    const confirmed = window.confirm(`${custName} için yüklenen tüm Excel, modül ve analiz verilerini tamamen temizlemek istediğinize emin misiniz?`);
+    if (confirmed && activeId) {
       this.basisService.clearUploadedData();
       this.importService.clearUploadedPoData();
-      this.modullerService.clearCustomerModules();
-      const activeId = this.customerService.activeCustomerId();
-      if (activeId) {
-        localStorage.removeItem(`taskforce_tco_years_${activeId}`);
-        localStorage.removeItem(`taskforce_tco_asis_${activeId}`);
-        localStorage.removeItem(`taskforce_tco_rise_${activeId}`);
-        localStorage.removeItem(`taskforce_recommended_method_${activeId}`);
-        localStorage.removeItem(`taskforce_custom_code_${activeId}`);
-        localStorage.removeItem(`taskforce_methods_cards_${activeId}`);
+      this.modullerService.clearCustomerModules(activeId);
+      this.customerService.resetCustomerData(activeId);
+
+      const specificKeys = [
+        `taskforce_sizing_pkg_${activeId}`,
+        `taskforce_po_pkg_${activeId}`,
+        `taskforce_modules_cards_${activeId}`,
+        `taskforce_modules_${activeId}`,
+        `taskforce_tco_years_${activeId}`,
+        `taskforce_tco_asis_${activeId}`,
+        `taskforce_tco_rise_${activeId}`,
+        `taskforce_recommended_method_${activeId}`,
+        `taskforce_custom_code_${activeId}`,
+        `taskforce_methods_cards_${activeId}`,
+        `task_force_exec_summary_${activeId}`,
+        `taskforce_custom_arch_${activeId}_asis`,
+        `taskforce_custom_arch_${activeId}_po`,
+        `taskforce_custom_arch_${activeId}_rise`,
+        `taskforce_target_arch_asis_img_${activeId}`,
+        `taskforce_target_arch_tobe_img_${activeId}`,
+        `taskforce_arch_ss_asis_${activeId}`,
+        `taskforce_arch_ss_rise_${activeId}`,
+        `taskforce_arch_ss_po_${activeId}`
+      ];
+      specificKeys.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.endsWith(`_${activeId}`) || k.includes(`_${activeId}_`))) {
+          try { localStorage.removeItem(k); } catch (e) {}
+        }
       }
+
+      window.alert(`${custName} için tüm veriler sıfırlandı.`);
+      window.location.reload();
     }
   }
 
@@ -772,14 +804,15 @@ export class HeaderComponent {
       // 1. Bu müşteriye ait tüm localStorage anahtarlarını topla
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith('taskforce_')) continue;
+        if (!key || (!key.startsWith('taskforce_') && !key.startsWith('task_force_'))) continue;
 
         const isCustomerKey = key.endsWith(`_${activeId}`) ||
                               key.includes(`_${activeId}_`) ||
                               key === `taskforce_modules_${activeId}` ||
                               key === `taskforce_modules_cards_${activeId}` ||
                               key === `taskforce_sizing_pkg_${activeId}` ||
-                              key === `taskforce_po_pkg_${activeId}`;
+                              key === `taskforce_po_pkg_${activeId}` ||
+                              key === `task_force_exec_summary_${activeId}`;
 
         if (isCustomerKey) {
           const val = localStorage.getItem(key);
@@ -848,7 +881,7 @@ export class HeaderComponent {
       let count = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith('taskforce_')) {
+        if (key && (key.startsWith('taskforce_') || key.startsWith('task_force_'))) {
           const val = localStorage.getItem(key);
           if (val !== null) {
             backupData[key] = val;
@@ -957,6 +990,8 @@ export class HeaderComponent {
                 targetKey = `taskforce_custom_code_${activeId}`;
               } else if (key.startsWith('taskforce_methods_cards_')) {
                 targetKey = `taskforce_methods_cards_${activeId}`;
+              } else if (key.startsWith('task_force_exec_summary_')) {
+                targetKey = `task_force_exec_summary_${activeId}`;
               }
             }
 
@@ -973,7 +1008,7 @@ export class HeaderComponent {
         } else {
           // Sistem geneli tam yedek (tüm müşteriler)
           const keys = Object.keys(storageObj);
-          const validKeys = keys.filter(k => k.startsWith('taskforce_'));
+          const validKeys = keys.filter(k => k.startsWith('taskforce_') || k.startsWith('task_force_'));
 
           if (validKeys.length === 0) {
             alert('Yedek dosyasında TaskForce sistemine ait herhangi bir veri bulunamadı.');

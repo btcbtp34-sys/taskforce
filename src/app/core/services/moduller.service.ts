@@ -324,28 +324,31 @@ export class ModullerService {
 
   private loadForCustomer(custId: string): void {
     if (!custId) {
-      this.cardsList.set(DEFAULT_MODULE_CARDS);
+      this.cardsList.set([]);
       return;
     }
     try {
       // First check new storage key
       let saved = localStorage.getItem(STORAGE_PREFIX + custId);
-      if (!saved) {
+      if (saved === null) {
         // Fallback to legacy key
         saved = localStorage.getItem('taskforce_modules_' + custId);
       }
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
         const normalized = normalizeStoredCards(parsed);
-        if (normalized.length > 0) {
-          this.cardsList.set(normalized);
-          return;
-        }
+        this.cardsList.set(normalized);
+        return;
       }
     } catch (e) {
       console.warn('Failed to load modules from storage', e);
     }
-    this.cardsList.set(DEFAULT_MODULE_CARDS);
+    // Only the demo customer (cust-sigorta) gets default cards if none are saved; all other customers start empty
+    if (custId === 'cust-sigorta') {
+      this.cardsList.set(DEFAULT_MODULE_CARDS);
+    } else {
+      this.cardsList.set([]);
+    }
   }
 
   private saveCurrentCustomerData(): void {
@@ -389,7 +392,7 @@ export class ModullerService {
     const id = custId || this.customerService.activeCustomerId();
     if (id) {
       try {
-        localStorage.removeItem(STORAGE_PREFIX + id);
+        localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify([]));
         localStorage.removeItem('taskforce_modules_' + id);
       } catch (e) {}
     }

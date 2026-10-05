@@ -3139,10 +3139,10 @@ export class QuickPdfExportModalComponent {
   getActiveCustomerCleanName(): string {
     const cust = this.customerService.activeCustomer();
     const name = cust?.name || '';
-    if (name.includes('*') || cust?.id === 'cust-sigorta' || !name) {
+    if (cust?.id === 'cust-sigorta' || /k\*\*/i.test(name)) {
       return 'Kale Endüstri Holding';
     }
-    return name;
+    return name || 'Müşteri';
   }
 
   cleanCustomerText(text?: string): string {
@@ -3565,10 +3565,8 @@ export class QuickPdfExportModalComponent {
     if (item && item.captureScreenshot === false) return null;
     const custId = this.customerService.activeCustomerId();
     
-    const riseSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`)
-                || localStorage.getItem(`taskforce_arch_ss_rise_cust-sigorta`);
-    let asisSS = localStorage.getItem(`taskforce_arch_ss_asis_${custId}`)
-              || localStorage.getItem(`taskforce_arch_ss_asis_cust-sigorta`);
+    const riseSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`);
+    let asisSS = localStorage.getItem(`taskforce_arch_ss_asis_${custId}`);
 
     // If asisSS is identical to riseSS, then asisSS was mistakenly overwritten with RISE drawing
     if (asisSS && riseSS && asisSS === riseSS) {
@@ -3588,31 +3586,41 @@ export class QuickPdfExportModalComponent {
       } catch (e) {}
     }
 
-    // Fallback: render clean, official AS-IS architecture diagram
-    return this.renderDiagramToDataUrl('asis');
+    return null;
   }
 
   getRiseStudioDrawing(): string | null {
     const item = this.menuItems.find(m => m.id === 'architecture-asis');
     if (item && item.captureScreenshot === false) return null;
     const custId = this.customerService.activeCustomerId();
-    const savedSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`)
-                 || localStorage.getItem(`taskforce_arch_ss_rise_cust-sigorta`)
-                 || localStorage.getItem(`taskforce_arch_ss_rise`);
+    const savedSS = localStorage.getItem(`taskforce_arch_ss_rise_${custId}`);
     if (savedSS) return savedSS;
-    return this.renderDiagramToDataUrl('rise');
+
+    const customRise = localStorage.getItem(`taskforce_custom_arch_${custId}_rise`);
+    if (customRise) {
+      try {
+        const parsed = JSON.parse(customRise);
+        if (parsed.nodes && parsed.nodes.length > 0) {
+          return this.renderDiagramToDataUrl('rise');
+        }
+      } catch (e) {}
+    }
+
+    return null;
   }
 
   getPoDrawing(): string | null {
     const item = this.menuItems.find(m => m.id === 'architecture-po');
     if (item && item.captureScreenshot === false) return null;
     const custId = this.customerService.activeCustomerId();
-    const savedSS = localStorage.getItem(`taskforce_arch_ss_po_${custId}`)
-                 || localStorage.getItem(`taskforce_arch_ss_po_cust-sigorta`)
-                 || localStorage.getItem(`taskforce_arch_ss_po_cust-1`)
-                 || localStorage.getItem(`taskforce_arch_ss_po`);
+    const savedSS = localStorage.getItem(`taskforce_arch_ss_po_${custId}`);
     if (savedSS) return savedSS;
-    return this.renderDiagramToDataUrl('po');
+
+    if (this.importService.hasUploadedPoData() && this.importService.poDiagramNodes().length > 0) {
+      return this.renderDiagramToDataUrl('po');
+    }
+
+    return null;
   }
 
   getSolutionAsisImage(): string | null {

@@ -17,7 +17,7 @@ export class CustomerService {
 
   readonly activeCustomer = computed(() => {
     const cust = this.customersSignal().find(c => c.id === this.activeCustomerIdSignal()) || this.customersSignal()[0];
-    if (cust && (cust.id === 'cust-sigorta' || (cust.name && (/k\*\*/i.test(cust.name) || cust.name.includes('*'))))) {
+    if (cust && (cust.id === 'cust-sigorta' || (cust.name && /k\*\*/i.test(cust.name)))) {
       return {
         ...cust,
         name: 'Kale Endüstri Holding',
@@ -30,22 +30,23 @@ export class CustomerService {
   getActiveCustomerCleanName(): string {
     const cust = this.activeCustomer();
     const name = cust?.name || '';
-    if (!name || name.includes('*') || /k\*\*/i.test(name) || cust?.id === 'cust-sigorta') {
+    if (cust?.id === 'cust-sigorta' || /k\*\*/i.test(name)) {
       return 'Kale Endüstri Holding';
     }
-    return name;
+    return name || 'Müşteri';
   }
 
   cleanCustomerText(text?: string, fallbackName?: string): string {
     if (!text) return '';
     const cleanName = fallbackName || this.getActiveCustomerCleanName();
-    return text
-      .replace(/K\*\*\s*E\*\*\s*H\*\*/gi, cleanName)
-      .replace(/K\*\*\s*E\*\*/gi, cleanName)
-      .replace(/K\*\*/gi, cleanName)
-      .replace(/T\*\*\*A/gi, cleanName)
-      .replace(/F\*\*\*\*\*R/gi, cleanName)
-      .replace(/İ\*\s*H\*\*\*\*/gi, cleanName);
+    const cust = this.activeCustomer();
+    if (cust?.id === 'cust-sigorta' || /kale/i.test(cleanName)) {
+      return text
+        .replace(/K\*\*\s*E\*\*\s*H\*\*/gi, cleanName)
+        .replace(/K\*\*\s*E\*\*/gi, cleanName)
+        .replace(/K\*\*/gi, cleanName);
+    }
+    return text;
   }
 
   readonly totalCustomerCount = computed(() => this.customersSignal().length);
@@ -66,10 +67,19 @@ export class CustomerService {
     try {
       const list = this.customersSignal();
       let changed = false;
+      const mockMap = new Map(MOCK_CUSTOMERS.map(c => [c.id, c]));
       const sanitizedList = list.map(c => {
-        if (c.id === 'cust-sigorta' || (c.name && /k\*\*/i.test(c.name))) {
-          changed = true;
-          return { ...c, name: 'Kale Endüstri Holding', code: 'KEH' };
+        const mock = mockMap.get(c.id);
+        if (mock && c.id !== 'cust-sigorta') {
+          if (c.name !== mock.name || c.code !== mock.code) {
+            changed = true;
+            return { ...c, name: mock.name, code: mock.code };
+          }
+        } else if (c.id === 'cust-sigorta') {
+          if (c.name !== 'Kale Endüstri Holding' || c.code !== 'KEH') {
+            changed = true;
+            return { ...c, name: 'Kale Endüstri Holding', code: 'KEH' };
+          }
         }
         return c;
       });
@@ -109,17 +119,17 @@ export class CustomerService {
                 ...mock,
                 ...c,
                 name: (c.id === 'cust-sigorta' || mock.id === 'cust-sigorta') ? 'Kale Endüstri Holding' : mock.name,
-                sector: mock.sector,
+                sector: mock.sector || c.sector,
                 code: (c.id === 'cust-sigorta' || mock.id === 'cust-sigorta') ? 'KEH' : mock.code,
-                contactPerson: mock.contactPerson,
-                email: mock.email,
-                phone: mock.phone,
-                logo: mock.logo,
+                contactPerson: mock.contactPerson || c.contactPerson,
+                email: mock.email || c.email,
+                phone: mock.phone || c.phone,
+                logo: mock.logo || c.logo,
                 sapProducts: (c.sapProducts && c.sapProducts.length > 0) ? c.sapProducts : mock.sapProducts,
                 coreProblems: (c.coreProblems && c.coreProblems.length > 0) ? c.coreProblems : mock.coreProblems
               };
             }
-            if (c.id === 'cust-sigorta' || (c.name && c.name.includes('*') && c.name.toLowerCase().includes('k'))) {
+            if (c.id === 'cust-sigorta' || (c.name && /k\*\*/i.test(c.name))) {
               return { ...c, name: 'Kale Endüstri Holding', code: 'KEH' };
             }
             return c;
@@ -214,6 +224,41 @@ export class CustomerService {
             ...c,
             ...rest
           };
+        }
+        return c;
+      });
+      this.saveCustomers(updated);
+      return updated;
+    });
+  }
+
+  resetCustomerData(id: string): void {
+    const mock = MOCK_CUSTOMERS.find(m => m.id === id);
+    this.customersSignal.update(list => {
+      const updated = list.map(c => {
+        if (c.id === id) {
+          if (mock) {
+            return {
+              ...mock,
+              name: (mock.id === 'cust-sigorta') ? 'Kale Endüstri Holding' : mock.name,
+              code: (mock.id === 'cust-sigorta') ? 'KEH' : mock.code
+            };
+          } else {
+            return {
+              ...c,
+              sapUserCount: 0,
+              activeUserCount: 0,
+              lowUsageUserCount: 0,
+              totalLicenseCost: 0,
+              estimatedOpportunityValue: 0,
+              activeOpportunityCount: 0,
+              taskForceStatus: 'Data Collection' as const,
+              progressPercentage: 10,
+              sapProducts: [],
+              coreProblems: [],
+              lastAnalysisDate: 'Veri Yüklenmesi Bekleniyor'
+            };
+          }
         }
         return c;
       });

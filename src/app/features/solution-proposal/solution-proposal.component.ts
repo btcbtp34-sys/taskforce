@@ -112,7 +112,9 @@ export interface RecommendedMethodData {
 
 export function getDefaultRecommendedData(customerName: string): RecommendedMethodData {
   let name = customerName?.trim() || '';
-  if (!name || name === 'Müşteri' || name.includes('*') || /k\*\*/i.test(name)) {
+  if (!name || name === 'Müşteri') {
+    name = 'Müşteri';
+  } else if (/k\*\*/i.test(name)) {
     name = 'Kale Endüstri Holding';
   }
   return {
@@ -2104,7 +2106,9 @@ export class SolutionProposalComponent implements OnInit {
   }
 
   loadRecommendedData(custId: string, custName: string) {
-    const cleanName = (custName && !custName.includes('*') && !/k\*\*/i.test(custName) && custId !== 'cust-sigorta') ? custName : 'Kale Endüstri Holding';
+    const cleanName = (custId === 'cust-sigorta' || /k\*\*/i.test(custName))
+      ? 'Kale Endüstri Holding'
+      : (custName && custName !== 'Müşteri' ? custName : 'Müşteri');
     try {
       const saved = localStorage.getItem(`taskforce_recommended_method_${custId}`);
       if (saved) {

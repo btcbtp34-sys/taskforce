@@ -78,15 +78,7 @@ export class BasisSizingService {
   private loadForCustomer(customerId: string): void {
     try {
       const key = `taskforce_sizing_pkg_${customerId}`;
-      let saved = localStorage.getItem(key);
-      if (!saved && customerId === 'cust-2') {
-        const legacy = localStorage.getItem('taskforce_dynamic_sizing_v2');
-        if (legacy) {
-          saved = legacy;
-          localStorage.setItem(key, legacy);
-          localStorage.removeItem('taskforce_dynamic_sizing_v2');
-        }
-      }
+      const saved = localStorage.getItem(key);
       if (saved) {
         const pkg = JSON.parse(saved) as BasisSizingPackage;
         if (pkg && pkg.fileName && pkg.isUploaded) {
