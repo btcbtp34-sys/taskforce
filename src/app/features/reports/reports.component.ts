@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, computed, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -328,31 +328,37 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             <div class="score-ring-section">
               <div 
                 class="circular-score-badge-wrap"
-                [class.tooltip-active]="isRiseTooltipOpen()"
-                (mouseenter)="isRiseTooltipOpen.set(true)"
-                (mouseleave)="isRiseTooltipOpen.set(false)">
-                <a routerLink="/rise-score" class="circular-score-badge" title="Rise Skor Hesaplamayı İncele">
+                [class.tooltip-active]="isRiseTooltipOpen()">
+                <button 
+                  type="button" 
+                  class="circular-score-badge" 
+                  (click)="toggleRiseTooltip($event)"
+                  [attr.aria-expanded]="isRiseTooltipOpen()"
+                  title="Rise Kriter Detaylarını Göster">
                   <div class="score-number">%{{ content.heroScore?.matchScore || 84 }}</div>
                   <div class="score-label">{{ content.heroScore?.matchLabel || 'RISE SKORU' }}</div>
-                  <div 
-                    class="badge-hint-icon" 
-                    (click)="$event.preventDefault(); $event.stopPropagation(); isRiseTooltipOpen.set(!isRiseTooltipOpen())" 
-                    title="Kriter başlıklarını aç / kapat">
-                    <app-icon name="info" [size]="10" color="#059669"></app-icon>
-                  </div>
-                </a>
+                </button>
 
-                <!-- Hover & Click Tooltip: Sadece Kriterler -->
+                <!-- Kriterler Pop-up Dialog -->
                 <div 
                   class="rise-score-tooltip no-print" 
-                  role="tooltip"
-                  (mouseenter)="isRiseTooltipOpen.set(true)"
-                  (mouseleave)="isRiseTooltipOpen.set(false)">
+                  role="dialog"
+                  [attr.aria-hidden]="!isRiseTooltipOpen()"
+                  (click)="$event.stopPropagation()">
+                  <div class="tooltip-header">
+                    <div class="th-title">
+                      <app-icon name="check-circle" [size]="15" color="#059669"></app-icon>
+                      <span>Rise Değerlendirme Kriterleri ({{ riseScoreService.criteria().length }})</span>
+                    </div>
+                    <button type="button" class="th-close-btn" (click)="isRiseTooltipOpen.set(false)" title="Kapat">
+                      <app-icon name="x" [size]="14" color="#64748b"></app-icon>
+                    </button>
+                  </div>
                   <div class="tooltip-list">
                     @for (item of riseScoreService.criteria(); track item.id; let idx = $index) {
                       <div class="tooltip-item">
                         <span class="ti-num">{{ idx + 1 }}.</span>
-                        <span class="ti-title">{{ item.title }}</span>
+                        <span class="ti-title" [title]="item.title">{{ item.title }}</span>
                       </div>
                     }
                   </div>
@@ -846,8 +852,6 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           align-items: center;
           justify-content: center;
 
-          &:hover .rise-score-tooltip,
-          &:focus-within .rise-score-tooltip,
           &.tooltip-active .rise-score-tooltip {
             visibility: visible;
             opacity: 1;
@@ -872,25 +876,18 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           position: relative;
           cursor: pointer;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          padding: 0;
+          font-family: inherit;
+          outline: none;
 
           &:hover {
             transform: scale(1.04);
             box-shadow: 0 6px 20px rgba(5, 150, 105, 0.32);
           }
 
-          .badge-hint-icon {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          &:focus-visible {
+            outline: 2px solid #059669;
+            outline-offset: 3px;
           }
 
           .score-number {
@@ -929,15 +926,6 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           text-align: left;
           box-sizing: border-box;
 
-          &::after {
-            content: '';
-            position: absolute;
-            top: -12px;
-            left: 0;
-            right: 0;
-            height: 12px;
-          }
-
           &::before {
             content: '';
             position: absolute;
@@ -945,10 +933,46 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             left: 45px;
             width: 12px;
             height: 12px;
-            background: #ffffff;
+            background: #f8fafc;
             border-left: 1px solid #cbd5e1;
             border-top: 1px solid #cbd5e1;
             transform: rotate(45deg);
+          }
+
+          .tooltip-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            background: #f8fafc;
+            border-top-left-radius: 11px;
+            border-top-right-radius: 11px;
+
+            .th-title {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              font-size: 0.8rem;
+              font-weight: 700;
+              color: #0f172a;
+            }
+
+            .th-close-btn {
+              background: transparent;
+              border: none;
+              padding: 4px;
+              border-radius: 4px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: background 0.15s ease;
+
+              &:hover {
+                background: #e2e8f0;
+              }
+            }
           }
 
           .tooltip-list {
@@ -2101,6 +2125,21 @@ export class ReportsComponent implements OnInit {
 
   toggleEditMode(): void {
     this.isEditMode.update(v => !v);
+  }
+
+  toggleRiseTooltip(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isRiseTooltipOpen.update(v => !v);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.isRiseTooltipOpen()) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.circular-score-badge-wrap')) {
+        this.isRiseTooltipOpen.set(false);
+      }
+    }
   }
 
   getPillarColor(colorClass: string): string {
