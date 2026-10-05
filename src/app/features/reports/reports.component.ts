@@ -345,15 +345,6 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                   role="dialog"
                   [attr.aria-hidden]="!isRiseTooltipOpen()"
                   (click)="$event.stopPropagation()">
-                  <div class="tooltip-header">
-                    <div class="th-title">
-                      <app-icon name="check-circle" [size]="15" color="#059669"></app-icon>
-                      <span>Rise Değerlendirme Kriterleri ({{ riseScoreService.criteria().length }})</span>
-                    </div>
-                    <button type="button" class="th-close-btn" (click)="isRiseTooltipOpen.set(false)" title="Kapat">
-                      <app-icon name="x" [size]="14" color="#64748b"></app-icon>
-                    </button>
-                  </div>
                   <div class="tooltip-list">
                     @for (item of riseScoreService.criteria(); track item.id; let idx = $index) {
                       <div class="tooltip-item">
@@ -933,46 +924,10 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             left: 45px;
             width: 12px;
             height: 12px;
-            background: #f8fafc;
+            background: #ffffff;
             border-left: 1px solid #cbd5e1;
             border-top: 1px solid #cbd5e1;
             transform: rotate(45deg);
-          }
-
-          .tooltip-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.65rem 1rem;
-            border-bottom: 1px solid #f1f5f9;
-            background: #f8fafc;
-            border-top-left-radius: 11px;
-            border-top-right-radius: 11px;
-
-            .th-title {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              font-size: 0.8rem;
-              font-weight: 700;
-              color: #0f172a;
-            }
-
-            .th-close-btn {
-              background: transparent;
-              border: none;
-              padding: 4px;
-              border-radius: 4px;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              transition: background 0.15s ease;
-
-              &:hover {
-                background: #e2e8f0;
-              }
-            }
           }
 
           .tooltip-list {
