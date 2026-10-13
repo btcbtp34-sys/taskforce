@@ -14,7 +14,7 @@ import { IconComponent } from '../icon/icon.component';
   imports: [CommonModule, RouterModule, IconComponent],
   template: `
     <header class="header-container">
-      <!-- Search & Active Customer Context -->
+      <!-- Active Customer Context -->
       <div class="left-section">
         <!-- Customer Context Badge (Interactive Switcher) -->
         <div class="customer-badge-box interactive" (click)="toggleCustomerDropdown($event)" title="Müşteri Değiştirmek İçin Tıklayın">
@@ -48,109 +48,19 @@ import { IconComponent } from '../icon/icon.component';
             </div>
           </div>
         </div>
-
-        <!-- Global Search Bar -->
-        <div class="search-bar">
-          <app-icon name="search" [size]="14" color="#9ca3af"></app-icon>
-          <input type="text" placeholder="Müşteri, fırsat, SAP modülü ara..." class="search-input" />
-          <span class="search-shortcut">⌘K</span>
-        </div>
       </div>
 
-      <!-- Quick Upload Button, Notifications & Profile -->
+      <!-- Right Section: BTC Logo & User Profile -->
       <div class="right-section">
-        <!-- Hidden File Input for JSON Backup Import -->
-        <input 
-          type="file" 
-          id="taskforce-backup-input" 
-          accept=".json" 
-          (change)="onBackupFileSelected($event)" 
-          style="display: none" />
-
-        <!-- Yedek Al Menüsü / Butonu (Aktif müşteriye göre) -->
-        <div class="backup-dropdown-container">
-          <button 
-            class="btn-header-action btn-export" 
-            (click)="exportCustomerBackup()" 
-            [title]="customerService.activeCustomer().name + ' verilerini ve analizlerini JSON olarak indirin'">
-            <app-icon name="download" [size]="13" color="#16a34a"></app-icon>
-            <span>Yedek Al (JSON)</span>
-          </button>
-          <button 
-            class="btn-export-toggle"
-            (click)="toggleBackupMenu($event)"
-            title="Yedekleme Seçenekleri (Müşteri / Tam Sistem)">
-            <app-icon name="chevron-down" [size]="10" color="#16a34a"></app-icon>
-          </button>
-
-          <!-- Yedekleme Seçenekleri Açılır Menüsü -->
-          <div class="backup-menu-dropdown" *ngIf="showBackupMenu" (click)="$event.stopPropagation()">
-            <div class="backup-menu-item" (click)="exportCustomerBackup(); showBackupMenu = false;">
-              <div class="menu-item-icon active-icon"><app-icon name="download" [size]="14" color="#16a34a"></app-icon></div>
-              <div class="menu-item-text">
-                <strong>Seçili Müşteriyi Yedekle</strong>
-                <span>{{ customerService.activeCustomer().name }} verileri</span>
-              </div>
-            </div>
-            <div class="backup-menu-item" (click)="exportFullBackup(); showBackupMenu = false;">
-              <div class="menu-item-icon"><app-icon name="download" [size]="14" color="#6b7280"></app-icon></div>
-              <div class="menu-item-text">
-                <strong>Tüm Sistemi Yedekle</strong>
-                <span>Tüm müşteriler ve sistem verileri</span>
-              </div>
-            </div>
-          </div>
+        <!-- BTC Bilişim Hizmetleri Corporate Logo (Static, Non-clickable) -->
+        <div class="btc-logo-box" aria-label="BTC Logo">
+          <img src="https://www.btc-ag.com.tr/wp-content/uploads/2026/01/btc-logo.svg" 
+               alt="BTC Logo" 
+               class="btc-header-logo" 
+               (error)="$any($event.target).src='/btc-logo.svg'" />
         </div>
 
-        <!-- Yedek Yükle Butonu (Aktif müşteriye aktarır) -->
-        <button 
-          class="btn-header-action btn-import" 
-          (click)="triggerImport()" 
-          [title]="'Seçili müşteri (' + customerService.activeCustomer().name + ') için JSON yedeği yükleyin'">
-          <app-icon name="upload" [size]="13" color="#0284c7"></app-icon>
-          <span>Yedek Yükle</span>
-        </button>
-
-        <!-- Verileri Temizle Butonu (Her zaman üst barda) -->
-        <button 
-          class="btn-header-action btn-reset" 
-          (click)="resetCurrentCustomerData()" 
-          [title]="customerService.activeCustomer().name + ' için yüklenen verileri temizle'">
-          <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
-          <span>Verileri Temizle</span>
-        </button>
-
-
-        <!-- Notifications Bell -->
-        <div class="notification-box">
-          <button class="icon-btn" (click)="showNotifications = !showNotifications">
-            <app-icon name="bell" [size]="16" color="#4b5563"></app-icon>
-            <span class="notification-badge">3</span>
-          </button>
-
-          <div class="notification-dropdown" *ngIf="showNotifications">
-            <div class="dropdown-header">
-              <span>Bildirimler</span>
-              <span class="clear-all">Tümünü Okundu İşaretle</span>
-            </div>
-            <div class="dropdown-list">
-              <div class="dropdown-item unread">
-                <div class="item-body">
-                  <strong>Yeni Fırsat Tespit Edildi</strong>
-                  <p>{{ customerService.activeCustomer().name }} için €35.000 Lisans Optimizasyonu</p>
-                  <small>10 dakika önce</small>
-                </div>
-              </div>
-              <div class="dropdown-item">
-                <div class="item-body">
-                  <strong>Veri Yükleme Tamamlandı</strong>
-                  <p>Customer_SAP_Usage_Data.xlsx başarıyla işlendi</p>
-                  <small>1 saat önce</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="header-divider"></div>
 
         <!-- User Profile -->
         <div class="user-profile">
@@ -172,10 +82,10 @@ import { IconComponent } from '../icon/icon.component';
   `,
   styles: [`
     .header-container {
-      height: 56px;
+      height: 68px;
       background: #ffffff;
       border-bottom: 1px solid #e5e7eb;
-      padding: 0 1.5rem;
+      padding: 0 1.75rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -188,8 +98,6 @@ import { IconComponent } from '../icon/icon.component';
       display: flex;
       align-items: center;
       gap: 1rem;
-      flex: 1;
-      max-width: 650px;
     }
 
     .customer-badge-box {
@@ -346,137 +254,33 @@ import { IconComponent } from '../icon/icon.component';
       }
     }
 
-    .search-bar {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 0.35rem 0.65rem;
-      gap: 0.5rem;
-
-      .search-input {
-        border: none;
-        background: transparent;
-        width: 100%;
-        font-size: 0.8rem;
-        outline: none;
-        color: #111827;
-
-        &::placeholder { color: #9ca3af; }
-      }
-
-      .search-shortcut {
-        font-size: 0.65rem;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        padding: 0.1rem 0.3rem;
-        color: #9ca3af;
-        font-weight: 600;
-      }
-    }
-
     .right-section {
       display: flex;
       align-items: center;
-      gap: 0.85rem;
+      gap: 1.25rem;
     }
 
-    .upload-quick-btn {
-      display: inline-flex;
+    .btc-logo-box {
+      display: flex;
       align-items: center;
-      gap: 0.4rem;
-      background: #0284c7;
-      color: #ffffff;
-      padding: 0.35rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: background 0.15s;
+      justify-content: center;
+      background: #ffffff;
+      padding: 0.25rem 0.5rem;
+      user-select: none;
+      pointer-events: none;
 
-      &:hover { background: #0369a1; }
+      .btc-header-logo {
+        height: 28px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+      }
     }
 
-    .notification-box {
-      position: relative;
-
-      .icon-btn {
-        background: transparent;
-        border: 1px solid #e5e7eb;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        position: relative;
-
-        &:hover { background: #f9fafb; }
-
-        .notification-badge {
-          position: absolute;
-          top: -3px;
-          right: -3px;
-          background: #ef4444;
-          color: #fff;
-          font-size: 0.6rem;
-          font-weight: 700;
-          width: 15px;
-          height: 15px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid #fff;
-        }
-      }
-
-      .notification-dropdown {
-        position: absolute;
-        right: 0;
-        top: 40px;
-        width: 300px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-        overflow: hidden;
-        z-index: 120;
-
-        .dropdown-header {
-          padding: 0.6rem 0.85rem;
-          background: #f9fafb;
-          border-bottom: 1px solid #e5e7eb;
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.75rem;
-          font-weight: 700;
-
-          .clear-all { color: #0284c7; font-size: 0.7rem; cursor: pointer; }
-        }
-
-        .dropdown-list {
-          max-height: 250px;
-          overflow-y: auto;
-
-          .dropdown-item {
-            padding: 0.65rem 0.85rem;
-            border-bottom: 1px solid #f3f4f6;
-
-            &.unread { background: #f0f9ff; }
-
-            .item-body {
-              font-size: 0.78rem;
-              p { margin: 0.1rem 0; color: #4b5563; font-size: 0.72rem; }
-              small { color: #9ca3af; font-size: 0.65rem; }
-            }
-          }
-        }
-      }
+    .header-divider {
+      width: 1px;
+      height: 28px;
+      background: #e5e7eb;
     }
 
     .user-profile {

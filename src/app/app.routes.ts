@@ -18,6 +18,7 @@ import { SolutionProposalComponent } from './features/solution-proposal/solution
 import { ArchitectureGeneratorComponent } from './features/architecture-generator/architecture-generator.component';
 import { NotesComponent } from './features/notes/notes.component';
 import { RiseScoreComponent } from './features/rise-score/rise-score.component';
+import { SettingsComponent } from './features/settings/settings.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'reports', pathMatch: 'full' },
@@ -64,6 +65,8 @@ export const routes: Routes = [
   { path: 'rise-calculator', redirectTo: 'rise-score' },
   { path: 'rise-skoru', redirectTo: 'rise-score' },
   { path: 'opportunities', component: OpportunitiesComponent },
+  { path: 'settings', component: SettingsComponent },
+  { path: 'ayarlar', redirectTo: 'settings' },
   { path: 'workspace', redirectTo: 'reports' },
   { path: 'ai-assistant', redirectTo: 'reports' },
   { path: '**', redirectTo: 'login' }

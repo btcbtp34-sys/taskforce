@@ -194,6 +194,144 @@ export interface ThirdPartySystem {
   notes: string;
 }
 
+export const ASIS_ARCH_PROMPT_TEMPLATE = `1200x675 boyutlarında, 16:9 oranında, profesyonel ve kurumsal bir AS-IS Mimari diyagramı oluştur.
+Arka plan: Açık gri (#F2F4F6).
+Başlık alanı:
+- Sol üstte büyük, koyu lacivert ve kalın yazıyla “AS-IS Mimari” yaz.
+- Hemen altında gri-mavi renkte “Mevcut sistem ve entegrasyon yapısı” yaz.
+- Sağ üst köşede sağa hizalı “[Müşteri Adı]” metni yer alsın.
+Merkezdeki ERP kutusu:
+- Diyagramın ortasına büyük, koyu mavi (#084577), beyaz yazılı, hafif gölgeli ve yuvarlatılmış bir dikdörtgen yerleştir.
+- Ana başlık: “CORE ERP”
+- Alt başlık: “Noktadan noktaya bağlantı yükü”
+Sol taraftaki sistem kutuları:
+ERP'nin sol tarafına dikey olarak hizalanmış üç beyaz, yuvarlatılmış dikdörtgen yerleştir. Her kutunun içinde aşağıdaki isimler yazsın:
+1. Sol üst kutu: “SAP PORTAL”
+2. Sol orta kutu: “SAP BW”
+3. Sol alt kutu: “SAP HR”
+Kutuların kenarlıkları ince, açık mavi-gri olsun. Metinler koyu gri-mavi, kalın ve ortalanmış olsun.
+Sağ taraftaki sistem kutuları:
+ERP'nin sağ tarafına dikey olarak hizalanmış üç beyaz, yuvarlatılmış dikdörtgen yerleştir. Her kutunun içinde aşağıdaki isimler yazsın:
+1. Sağ üst kutu: “SALESFORCE”
+2. Sağ orta kutu: “BANKS”
+3. Sağ alt kutu: “POWER BI”
+Kutuların boyutları ve görsel stilleri sol taraftakilerle aynı olsun. Metinler kutuların içine düzgün şekilde yerleşsin.
+Bağlantı çizgileri:
+- SAP PORTAL ile CORE ERP arasında düz bir bağlantı çizgisi oluştur.
+- SAP BW ile CORE ERP arasında yatay ve kesintisiz bir bağlantı çizgisi oluştur.
+- SAP HR ile CORE ERP arasında düz bir bağlantı çizgisi oluştur.
+- SALESFORCE ile CORE ERP arasında düz bir bağlantı çizgisi oluştur.
+- BANKS ile CORE ERP arasında yatay ve kesintisiz bir bağlantı çizgisi oluştur.
+- POWER BI ile CORE ERP arasında düz bir bağlantı çizgisi oluştur.
+- Üst ve alt sistemlerle ERP arasında ayrıca çapraz kesikli bağlantılar göster.
+- Sol taraftaki üç sistem arasında dikey kesikli bağlantılar oluştur.
+- Çizgiler ince, mavi-gri (#8FA6BC) olsun.
+- Kesintisiz çizgiler ile kesikli çizgiler görsel olarak birbirinden ayırt edilsin.
+- Bağlantıların uygun uçlarında küçük ok uçları bulunsun.
+- Çizgiler kutuların arkasından geçsin; metinlerin üzerine gelmesin.
+Alt bilgi etiketleri:
+Diyagramın alt bölümünde yan yana üç adet açık mavi-gri dolgulu, yuvarlatılmış kapsül etiket yer alsın:
+1. “Point-to-Point Entegrasyonlar”
+2. “Artan entegrasyon karmaşıklığı”
+3. “Tutarsız bağlantı yolları”
+Etiket metinleri koyu gri-mavi ve kalın olsun.
+Alt açıklama:
+Sol alt köşede küçük, gri-mavi yazıyla şu cümle yer alsın:
+“Her yeni sistem, yeni bir noktadan noktaya bağlantı anlamına gelir.”
+Genel tasarım:
+- Minimalist, kurumsal ve profesyonel sunum estetiği kullan.
+- ERP kutusu merkezde ve diğer kutulardan daha büyük olsun.
+- Sol ve sağ sistemler dengeli ve simetrik yerleşsin.
+- Tüm kutuların aralıkları düzenli olsun.
+- Yazılar okunaklı ve düzgün hizalanmış olsun.
+- Gereksiz ikonlar, dekoratif görseller veya gradyanlar ekleme.
+- Türkçe karakterleri doğru göster.
+- Bütün diyagram temiz, dengeli ve PowerPoint sunumuna uygun görünsün.`;
+
+export const TOBE_ARCH_PROMPT_TEMPLATE = `1200x675 boyutlarında, 16:9 oranında, profesyonel ve kurumsal bir TO-BE Mimari diyagramı oluştur.
+
+**Arka plan:** Açık gri (#F2F4F6).
+
+**Başlık alanı:**
+- Sol üstte büyük, koyu lacivert ve kalın yazıyla “TO-BE Mimari” yaz.
+- Hemen altında gri-mavi renkte “Merkezi entegrasyon katmanı ile hedef mimari” yaz.
+- Sağ üst köşede sağa hizalanmış “[Müşteri Adı]” metni yer alsın.
+
+**Sol taraftaki dış sistem kutusu:**
+- Diyagramın sol tarafına büyük, açık gri-mavi dolgulu (#E7EDF3), yuvarlatılmış bir dikdörtgen yerleştir.
+- Yaklaşık konumu: x=52, y=257.
+- Yaklaşık boyutu: 300x165 px.
+- Kenarlık rengi #C5D0DC, kalınlığı 2 px.
+- Ortasında koyu gri-mavi, kalın ve büyük harflerle “3RD PARTY SYSTEMS” yazsın.
+- Altında daha küçük gri-mavi yazıyla “Dış ekosistem” açıklaması bulunsun.
+
+**Ortadaki entegrasyon katmanı:**
+- Diyagramın orta bölümüne, yaklaşık x=412, y=214 konumunda, 420x250 px boyutlarında, kesikli mavi kenarlıklı ve yuvarlatılmış bir dış çerçeve yerleştir.
+- Bu çerçevenin üst sol iç kısmına koyu mavi, kalın yazıyla “SAP BTP” yaz.
+- Çerçevenin içine yaklaşık x=446, y=257 konumunda, 352x165 px boyutlarında parlak mavi (#0875F5), yuvarlatılmış bir dikdörtgen yerleştir.
+- Bu kutunun ortasına beyaz, kalın ve büyük harflerle “SAP Integration Suite” yaz. Metin genişliğe göre iki satıra bölünebilir.
+- Altında beyaz, daha küçük yazıyla “Tek yönetişim noktası” açıklaması bulunsun.
+- İç kutuya hafif, yumuşak bir gölge uygula.
+- Dış çerçevenin kesikli kenarlıkları belirgin ama zarif olsun. Çizgi rengi #0875F5, kalınlığı yaklaşık 2 px.
+
+**Sağ taraftaki ERP kutusu:**
+- Diyagramın sağ tarafına yaklaşık x=892, y=257 konumunda, 300x165 px boyutlarında bir dikdörtgen yerleştir.
+- Dolgu rengi koyu mavi (#084577).
+- Köşeleri yuvarlatılmış ve hafif gölgeli olsun.
+- Ortasında beyaz, kalın ve büyük harflerle “CORE ERP” yazsın.
+
+**Bağlantı çizgileri:**
+- Sol taraftaki “3RD PARTY SYSTEMS” kutusu ile ortadaki “SAP Integration Suite” kutusu arasında yatay, kesintisiz, mavi (#0875F5) bir bağlantı çizgisi oluştur.
+- Çizginin iki ucunda da küçük ok uçları bulunsun.
+- “SAP Integration Suite” ile sağdaki “CORE ERP” kutusu arasında aynı stilde yatay bir bağlantı oluştur.
+- Her iki bağlantı da kutuların yatay merkezinden geçsin.
+- Çizgiler kutuların arkasında kalsın ve metinlerin üzerinden geçmesin.
+- Ok uçları kutuların kenarlarına düzgün şekilde bağlansın.
+
+**Gelecekte eklenebilecek sistemler:**
+- Tasarımı yeni dış sistemlerin ve yeni ERP sistemlerinin eklenmesine uygun, genişletilebilir bir mimari olarak düzenle.
+- Başlangıç görselinde solda tek bir “3RD PARTY SYSTEMS” kutusu ve sağda tek bir “CORE ERP” kutusu bulunsun.
+- Ek sistemler eklenebilmesi için kutuların konumları, boyutları ve bağlantı noktaları esnek bir yerleşime uygun olsun.
+- Yeni dış sistemler gerektiğinde sol tarafta veya SAP BTP çerçevesinin dışında uygun bir bölgede konumlandırılabilsin.
+- Yeni ERP sistemleri gerektiğinde sağ tarafta yerleştirilebilsin.
+- Birden fazla dış sistem veya ERP olduğunda düzenli aralıklarla hizalanabilsin; mevcut kutular üst üste binmesin.
+- Yeni sistemler, entegrasyon katmanına uygun bağlantılarla bağlanabilsin.
+- Başlangıç görseline kullanıcı tarafından belirtilmeyen ilave sistemler ekleme. Yalnızca genişletilebilir bir yerleşim kullan.
+
+**Alt bilgi etiketleri:**
+
+SAP BTP çerçevesinin altında yan yana iki adet kapsül biçiminde etiket oluştur:
+
+1. “Ölçeklenebilir”
+2. “Yönetilebilir”
+
+Birinci etiket:
+- Açık mavi-gri dolgu (#E7EDF3).
+- İnce gri-mavi kenarlık.
+- Koyu gri-mavi, kalın yazı.
+
+İkinci etiket:
+- Parlak mavi dolgu (#0875F5).
+- Beyaz, kalın yazı.
+- Kenarlık olmadan veya çok ince bir kenarlıkla.
+
+Her iki etiket de yatay ve dikey olarak ortalanmış metne sahip olsun.
+
+**Alt açıklama:**
+
+Tuvalin sol alt köşesinde küçük, gri-mavi yazıyla şu cümleyi göster:
+
+“Entegrasyon sorumluluğu doğru mimari katmana taşınır.”
+
+**Genel tasarım kuralları:**
+- Referans görseldeki yerleşimi, boşlukları ve renk hiyerarşisini koru.
+- SAP BTP dış çerçevesi, içindeki SAP Integration Suite kutusunu görsel olarak kapsamalıdır.
+- CORE ERP ve dış sistem kutuları birbirinden açıkça ayrılmalıdır.
+- Bütün metinler okunaklı ve düzgün hizalanmış olmalıdır.
+- Gereksiz ikonlar, dekoratif görseller ve gradyanlar ekleme.
+- Türkçe karakterleri doğru göster.
+- Diyagramı temiz, dengeli ve PowerPoint sunumuna uygun biçimde oluştur.`;
+
 // Solution Proposal Component
 @Component({
   selector: 'app-solution-proposal',
@@ -381,7 +519,6 @@ export interface ThirdPartySystem {
       </div>
 
 
-      <!-- ================= TAB 2: HEDEF MİMARİ & 3RD PARTİLER ================= -->
       <!-- ================= TAB 2: HEDEF MİMARİ GÖRSEL YÜKLEME ALANI ================= -->
       <div class="tab-content" *ngIf="activeTab() === 'target-architecture'">
         <!-- Toast Notification -->
@@ -399,21 +536,28 @@ export interface ThirdPartySystem {
                 <span class="panel-tag tag-warning">MEVCUT MİMARİ (AS-IS)</span>
                 <h3>Mevcut Altyapı & Mimari Diyagramı</h3>
               </div>
-              <div class="header-actions-right" *ngIf="asisArchImage()">
-                <button type="button" class="btn-img-action" (click)="openLightbox(asisArchImage()!, 'Mevcut Mimari (AS-IS)')" title="Tam Ekran İncele">
-                  <app-icon name="search" [size]="13"></app-icon>
-                  <span>Büyüt</span>
+              <div class="header-actions-right">
+                <button type="button" class="btn-prompt-pill asis" (click)="openPromptModal('asis')" title="ChatGPT İçin Örnek Promptu Görüntüle">
+                  <app-icon name="sparkles" [size]="13" color="#d97706"></app-icon>
+                  <span>Örnek Prompt</span>
                 </button>
-                <button type="button" class="btn-img-action" (click)="asisFileInput.click()" title="Görseli Değiştir">
-                  <app-icon name="edit" [size]="13"></app-icon>
-                  <span>Değiştir</span>
-                </button>
-                <button type="button" class="btn-img-action danger" (click)="removeArchImage('asis')" title="Görseli Kaldır">
-                  <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
-                  <span>Kaldır</span>
-                </button>
+                <ng-container *ngIf="asisArchImage()">
+                  <button type="button" class="btn-img-action" (click)="openLightbox(asisArchImage()!, 'Mevcut Mimari (AS-IS)')" title="Tam Ekran İncele">
+                    <app-icon name="search" [size]="13"></app-icon>
+                    <span>Büyüt</span>
+                  </button>
+                  <button type="button" class="btn-img-action" (click)="asisFileInput.click()" title="Görseli Değiştir">
+                    <app-icon name="edit" [size]="13"></app-icon>
+                    <span>Değiştir</span>
+                  </button>
+                  <button type="button" class="btn-img-action danger" (click)="removeArchImage('asis')" title="Görseli Kaldır">
+                    <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
+                    <span>Kaldır</span>
+                  </button>
+                </ng-container>
               </div>
             </div>
+
 
             <!-- Upload Area / Image Container -->
             <div class="arch-image-card">
@@ -461,21 +605,28 @@ export interface ThirdPartySystem {
                 <span class="panel-tag tag-success">HEDEF MİMARİ (TO-BE)</span>
                 <h3>RISE with SAP & Bulut Hedef Mimarisi</h3>
               </div>
-              <div class="header-actions-right" *ngIf="tobeArchImage()">
-                <button type="button" class="btn-img-action" (click)="openLightbox(tobeArchImage()!, 'Hedef Mimari (TO-BE)')" title="Tam Ekran İncele">
-                  <app-icon name="search" [size]="13"></app-icon>
-                  <span>Büyüt</span>
+              <div class="header-actions-right">
+                <button type="button" class="btn-prompt-pill tobe" (click)="openPromptModal('tobe')" title="ChatGPT İçin Örnek Promptu Görüntüle">
+                  <app-icon name="sparkles" [size]="13" color="#059669"></app-icon>
+                  <span>Örnek Prompt</span>
                 </button>
-                <button type="button" class="btn-img-action" (click)="tobeFileInput.click()" title="Görseli Değiştir">
-                  <app-icon name="edit" [size]="13"></app-icon>
-                  <span>Değiştir</span>
-                </button>
-                <button type="button" class="btn-img-action danger" (click)="removeArchImage('tobe')" title="Görseli Kaldır">
-                  <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
-                  <span>Kaldır</span>
-                </button>
+                <ng-container *ngIf="tobeArchImage()">
+                  <button type="button" class="btn-img-action" (click)="openLightbox(tobeArchImage()!, 'Hedef Mimari (TO-BE)')" title="Tam Ekran İncele">
+                    <app-icon name="search" [size]="13"></app-icon>
+                    <span>Büyüt</span>
+                  </button>
+                  <button type="button" class="btn-img-action" (click)="tobeFileInput.click()" title="Görseli Değiştir">
+                    <app-icon name="edit" [size]="13"></app-icon>
+                    <span>Değiştir</span>
+                  </button>
+                  <button type="button" class="btn-img-action danger" (click)="removeArchImage('tobe')" title="Görseli Kaldır">
+                    <app-icon name="trash" [size]="13" color="#dc2626"></app-icon>
+                    <span>Kaldır</span>
+                  </button>
+                </ng-container>
               </div>
             </div>
+
 
             <!-- Upload Area / Image Container -->
             <div class="arch-image-card">
@@ -518,6 +669,56 @@ export interface ThirdPartySystem {
         </div>
       </div>
 
+      <!-- Prompt Modal (Popup) -->
+      <div class="prompt-modal-backdrop" *ngIf="activePromptType() as pType" (click)="closePromptModal()">
+        <div class="prompt-modal-dialog" (click)="$event.stopPropagation()">
+          <div class="pm-header">
+            <div class="pm-title-group">
+              <span class="pm-badge" [class.asis]="pType === 'asis'" [class.tobe]="pType === 'tobe'">
+                <app-icon name="sparkles" [size]="12"></app-icon>
+                {{ pType === 'asis' ? 'AS-IS MEVCUT MİMARİ' : 'TO-BE HEDEF MİMARİ' }} PROMPTU
+              </span>
+              <h3>{{ pType === 'asis' ? 'Mevcut Mimari (AS-IS) — ChatGPT Çizim Promptu' : 'Hedef Mimari (TO-BE) — ChatGPT Çizim Promptu' }}</h3>
+              <p class="pm-subtitle">Bu promptu kopyalayıp ChatGPT (GPT-4o / DALL-E) içine yapıştırarak 16:9 kurumsal mimari şeması üretebilirsiniz.</p>
+            </div>
+            <button type="button" class="pm-close-btn" (click)="closePromptModal()" title="Kapat">✕</button>
+          </div>
+
+          <div class="pm-toolbar">
+            <div class="pm-customer-pill">
+              <span class="cust-tag">Hedef Müşteri:</span>
+              <strong>{{ customerService.activeCustomer().name }}</strong>
+            </div>
+
+            <div class="pm-actions">
+              <button 
+                type="button" 
+                class="btn-copy-prompt" 
+                [class.copied]="promptCopied()"
+                (click)="copyCurrentPrompt()">
+                <app-icon [name]="promptCopied() ? 'check' : 'copy'" [size]="14"></app-icon>
+                <span>{{ promptCopied() ? '✓ Kopyalandı!' : 'Promptu Kopyala' }}</span>
+              </button>
+              <a href="https://chatgpt.com" target="_blank" rel="noopener noreferrer" class="btn-open-chatgpt" title="ChatGPT Web Sitesini Yeni Sekmede Aç">
+                <span>ChatGPT'de Aç</span>
+                <app-icon name="arrow-right" [size]="12"></app-icon>
+              </a>
+            </div>
+          </div>
+
+          <div class="pm-body">
+            <div class="prompt-text-container">
+              <pre class="prompt-pre">{{ getCurrentPromptText() }}</pre>
+            </div>
+          </div>
+
+          <div class="pm-footer">
+            <span class="pm-hint">💡 İpucu: ChatGPT'ye bu metni yapıştırdıktan sonra üretilen görseli bilgisayarınıza kaydedip buradaki "Görsel Seç" alanından sisteme doğrudan yükleyebilirsiniz.</span>
+            <button type="button" class="btn-pm-close" (click)="closePromptModal()">Kapat</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Lightbox Modal (Full Screen Image Viewer) -->
       <div class="img-lightbox-backdrop" *ngIf="lightboxImage() as lb" (click)="closeLightbox()">
         <div class="lightbox-dialog" (click)="$event.stopPropagation()">
@@ -531,7 +732,6 @@ export interface ThirdPartySystem {
           <div class="lightbox-body">
             <img [src]="lb.url" [alt]="lb.title" class="lightbox-full-img" />
           </div>
-        </div>
       </div>
 
       <!-- ================= TAB 3: ÖNERİLEN GEÇİŞ YÖNTEMİ ================= -->
@@ -1527,6 +1727,260 @@ export interface ThirdPartySystem {
       margin-bottom: 1rem;
     }
 
+    /* Prompt Action Buttons & Quick Cards */
+    .btn-prompt-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 750;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+      &.asis {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #b45309;
+        &:hover {
+          background: #fef3c7;
+          border-color: #f59e0b;
+          transform: translateY(-1px);
+        }
+      }
+
+      &.tobe {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #15803d;
+        &:hover {
+          background: #dcfce7;
+          border-color: #10b981;
+          transform: translateY(-1px);
+        }
+      }
+    }
+
+    /* Prompt Popup Modal */
+    .prompt-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(6px);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      animation: fadeIn 0.15s ease-out;
+
+      .prompt-modal-dialog {
+        background: #ffffff;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 860px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+      }
+
+      .pm-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+
+        .pm-title-group {
+          .pm-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.64rem;
+            font-weight: 800;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+
+            &.asis { background: #fef3c7; color: #b45309; }
+            &.tobe { background: #dcfce7; color: #15803d; }
+          }
+
+          h3 {
+            font-size: 1.15rem;
+            font-weight: 850;
+            color: #0f172a;
+            margin: 0;
+          }
+
+          .pm-subtitle {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin: 0.25rem 0 0;
+          }
+        }
+
+        .pm-close-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          font-size: 1.15rem;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 0.25rem 0.5rem;
+          border-radius: 6px;
+          line-height: 1;
+
+          &:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+          }
+        }
+      }
+
+      .pm-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1.5rem;
+        background: #ffffff;
+        border-bottom: 1px solid #f1f5f9;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .pm-customer-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.76rem;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          padding: 0.25rem 0.65rem;
+          border-radius: 6px;
+
+          .cust-tag { color: #0284c7; font-weight: 600; }
+          strong { color: #0369a1; font-weight: 800; }
+        }
+
+        .pm-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+
+          .btn-copy-prompt {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.5rem 1.1rem;
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 750;
+            cursor: pointer;
+            background: #0284c7;
+            color: #ffffff;
+            border: 1px solid #0284c7;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+
+            &:hover {
+              background: #0369a1;
+            }
+
+            &.copied {
+              background: #16a34a;
+              border-color: #16a34a;
+              box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+            }
+          }
+
+          .btn-open-chatgpt {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: #10a37f;
+            color: #ffffff;
+            text-decoration: none;
+            transition: background 0.2s ease;
+            box-shadow: 0 2px 6px rgba(16, 163, 127, 0.2);
+
+            &:hover {
+              background: #0e8c6d;
+            }
+          }
+        }
+      }
+
+      .pm-body {
+        padding: 1.25rem 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+        background: #0f172a;
+
+        .prompt-text-container {
+          background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          padding: 1.25rem 1.5rem;
+
+          .prompt-pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.8rem;
+            line-height: 1.65;
+            color: #e2e8f0;
+          }
+        }
+      }
+
+      .pm-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        gap: 1rem;
+
+        .pm-hint {
+          font-size: 0.72rem;
+          color: #64748b;
+          line-height: 1.4;
+        }
+
+        .btn-pm-close {
+          padding: 0.45rem 1rem;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+          }
+        }
+      }
+    }
+
     /* Lightbox Modal */
     .img-lightbox-backdrop {
       position: fixed;
@@ -1939,6 +2393,10 @@ export class SolutionProposalComponent implements OnInit {
   lightboxImage = signal<{ url: string; title: string } | null>(null);
   imageToastMessage = signal<string>('');
 
+  // AI Prompt Modal State
+  activePromptType = signal<'asis' | 'tobe' | null>(null);
+  promptCopied = signal<boolean>(false);
+
   constructor() {
     effect(() => {
       const custId = this.customerService.activeCustomerId();
@@ -2051,6 +2509,59 @@ export class SolutionProposalComponent implements OnInit {
 
   closeLightbox() {
     this.lightboxImage.set(null);
+  }
+
+  openPromptModal(type: 'asis' | 'tobe') {
+    this.activePromptType.set(type);
+    this.promptCopied.set(false);
+  }
+
+  closePromptModal() {
+    this.activePromptType.set(null);
+    this.promptCopied.set(false);
+  }
+
+  getCurrentPromptText(): string {
+    const type = this.activePromptType();
+    if (!type) return '';
+    const custName = this.customerService.activeCustomer().name || 'Müşteri';
+    if (type === 'asis') {
+      return ASIS_ARCH_PROMPT_TEMPLATE.replace(/\[Müşteri Adı\]/g, custName);
+    } else {
+      return TOBE_ARCH_PROMPT_TEMPLATE.replace(/\[Müşteri Adı\]/g, custName);
+    }
+  }
+
+  copyCurrentPrompt() {
+    const text = this.getCurrentPromptText();
+    if (!text) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.promptCopied.set(true);
+        setTimeout(() => this.promptCopied.set(false), 2500);
+      }).catch(() => {
+        this.fallbackCopyText(text);
+      });
+    } else {
+      this.fallbackCopyText(text);
+    }
+  }
+
+  private fallbackCopyText(text: string) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      this.promptCopied.set(true);
+      setTimeout(() => this.promptCopied.set(false), 2500);
+    } catch (e) {
+      console.error('Kopyalama hatası:', e);
+    }
+    document.body.removeChild(ta);
   }
 
   loadMethodCards(custId: string) {

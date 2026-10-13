@@ -13,13 +13,13 @@ import { NotesService } from '../../../core/services/notes.service';
     <aside class="sidebar-container" [class.collapsed]="collapsed">
       <!-- Sidebar Header -->
       <div class="sidebar-header">
-        <div class="logo-area">
+        <div class="logo-area" routerLink="/reports" title="Task Force – SAP RISE Transformation">
           <div class="logo-icon">
-            <app-icon name="layers" [size]="18" color="#0284c7"></app-icon>
+            <img src="/taskforce-logo.png" alt="Task Force Logo" class="brand-logo-img" />
           </div>
           <div class="logo-text" *ngIf="!collapsed">
             <span class="brand-name">TASK FORCE</span>
-            <span class="brand-tag">SAP Opportunity Engine</span>
+            <span class="brand-tag">SAP RISE TRANSFORMATION</span>
           </div>
         </div>
         <button class="toggle-btn" (click)="toggleSidebar.emit()" title="Sidebar Daralt/Genişlet">
@@ -266,6 +266,13 @@ import { NotesService } from '../../../core/services/notes.service';
           <span class="nav-label" *ngIf="!collapsed">PDF İndir</span>
           <span class="nav-badge highlight-green" *ngIf="!collapsed">Tüm Menüler</span>
         </a>
+
+        <!-- Ayarlar -->
+        <a routerLink="/settings" routerLinkActive="active" class="nav-item" [title]="collapsed ? 'Ayarlar & Sistem Yönetimi' : ''">
+          <div class="nav-icon"><app-icon name="settings" [size]="17" color="#475569"></app-icon></div>
+          <span class="nav-label" *ngIf="!collapsed">Ayarlar</span>
+          <span class="nav-badge" *ngIf="!collapsed" style="background: #f1f5f9; color: #475569;">Yedekleme</span>
+        </a>
       </nav>
     </aside>
   `,
@@ -291,43 +298,102 @@ import { NotesService } from '../../../core/services/notes.service';
       overflow: hidden;
 
       &.collapsed {
-        width: 64px;
+        width: 70px;
+        .sidebar-header {
+          padding: 0 0.5rem;
+          justify-content: center;
+          gap: 0.35rem;
+        }
+        .logo-area {
+          gap: 0;
+        }
+        .logo-icon {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+        }
+        .toggle-btn {
+          padding: 0.2rem;
+        }
         .nav-item { justify-content: center; padding: 0.75rem; }
       }
     }
 
     .sidebar-header {
-      height: 56px;
-      padding: 0 1rem;
+      height: 68px;
+      padding: 0 0.85rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid #e5e7eb;
       flex-shrink: 0;
+      background: #ffffff;
     }
 
     .logo-area {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      min-width: 0;
+      transition: all 0.2s ease;
+
+      &:hover {
+        .logo-icon {
+          transform: scale(1.05);
+          box-shadow: 0 0 18px rgba(2, 132, 199, 0.55), 0 0 0 2px rgba(56, 189, 248, 0.75);
+        }
+        .brand-name {
+          color: #0284c7;
+        }
+      }
     }
 
     .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 6px;
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: radial-gradient(circle at 35% 35%, #0f172a 0%, #020617 100%);
+      border: 1.5px solid rgba(56, 189, 248, 0.55);
+      box-shadow: 0 3px 12px rgba(2, 132, 199, 0.35);
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      .brand-logo-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+      }
     }
 
     .logo-text {
       display: flex;
       flex-direction: column;
-      .brand-name { font-weight: 800; font-size: 0.9rem; color: #111827; letter-spacing: 0.02em; }
-      .brand-tag { font-size: 0.65rem; color: #0284c7; font-weight: 600; }
+      line-height: 1.15;
+      min-width: 0;
+      user-select: none;
+
+      .brand-name {
+        font-weight: 850;
+        font-size: 1.02rem;
+        color: #0f172a;
+        letter-spacing: 0.035em;
+        transition: color 0.2s ease;
+      }
+      .brand-tag {
+        font-size: 0.62rem;
+        color: #0284c7;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
     }
 
     .toggle-btn {

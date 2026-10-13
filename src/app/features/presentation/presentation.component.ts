@@ -35,11 +35,11 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         <div class="doc-header">
           <div class="brand-logo">
             <div class="logo-box">
-              <app-icon name="layers" [size]="22" color="#0284c7"></app-icon>
+              <img src="/taskforce-logo.png" alt="Task Force Logo" class="doc-logo-img" />
             </div>
             <div>
               <strong class="brand-title">TASK FORCE</strong>
-              <span class="brand-sub">SAP Customer Opportunity & Business Case Platform</span>
+              <span class="brand-sub">SAP RISE Transformation & Business Case Platform</span>
             </div>
           </div>
 
@@ -265,14 +265,25 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         gap: 0.75rem;
 
         .logo-box {
-          width: 36px;
-          height: 36px;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          border-radius: 6px;
+          width: 42px;
+          height: 42px;
+          min-width: 42px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: radial-gradient(circle at 35% 35%, #0f172a 0%, #020617 100%);
+          border: 1.5px solid rgba(56, 189, 248, 0.4);
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+          overflow: hidden;
+
+          .doc-logo-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+          }
         }
 
         .brand-title { font-size: 1.1rem; font-weight: 900; color: #111827; letter-spacing: 0.03em; }

@@ -17,10 +17,10 @@ import { Customer } from '../../core/models/customer.model';
         <!-- Logo & Header -->
         <div class="login-header">
           <div class="logo-box">
-            <app-icon name="layers" [size]="26" color="#0284c7"></app-icon>
+            <img src="/taskforce-logo.png" alt="Task Force Logo" class="login-logo-img" />
           </div>
           <h1 class="brand-title">TASK FORCE</h1>
-          <p class="brand-sub">SAP Fırsat & Mimari Analiz Platformu</p>
+          <p class="brand-sub">SAP RISE Transformation Platformu</p>
         </div>
 
         <!-- Form Fields -->
@@ -167,15 +167,25 @@ import { Customer } from '../../core/models/customer.model';
       margin-bottom: 1.8rem;
 
       .logo-box {
-        width: 48px;
-        height: 48px;
-        background: #f0f9ff;
-        border: 1px solid #bae6fd;
-        border-radius: 10px;
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.8rem;
+        background: radial-gradient(circle at 35% 35%, #0f172a 0%, #020617 100%);
+        border: 2px solid rgba(56, 189, 248, 0.45);
+        box-shadow: 0 4px 18px rgba(2, 132, 199, 0.35);
+        overflow: hidden;
+
+        .login-logo-img {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+        }
       }
 
       .brand-title {
