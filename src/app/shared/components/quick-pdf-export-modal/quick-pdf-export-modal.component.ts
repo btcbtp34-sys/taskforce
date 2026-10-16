@@ -568,7 +568,7 @@ export interface ReportMenuItem {
                   </div>
                   <div class="kpi-box">
                     <span class="k-label">Gereken RISE FUE</span>
-                    <strong class="k-val text-blue">{{ basisService.fueSummary()?.calculatedFUE || 0 }} FUE</strong>
+                    <strong class="k-val text-blue">{{ basisService.recommendedFue() || basisService.fueSummary()?.calculatedFUE || 0 }} FUE</strong>
                     <span class="k-sub">Optimize Edilmiş Model</span>
                   </div>
                   <div class="kpi-box">
@@ -1033,34 +1033,6 @@ export interface ReportMenuItem {
                   <span>Bu müşteri için henüz sisteme kaydedilmiş TCO (Toplam Sahip Olma Maliyeti) finansal simülasyon verisi bulunmamaktadır.</span>
                 </div>
               }
-            </div>
-          </div>
-        }
-
-        <!-- ========================================================================= -->
-        <!-- 14. NOTLAR                                                                -->
-        <!-- ========================================================================= -->
-        @if (isItemIncluded('notes')) {
-          <div class="pdf-page-section">
-            <div class="section-badge-header">
-              <div class="sb-title">14. NOTLAR (DEĞERLENDİRME KAYITLARI)</div>
-              <div class="sb-meta">Satış, Presales ve Müşteri Özelinde Zaman Damgalı Notlar</div>
-            </div>
-
-            <div class="section-content-box">
-              <div class="notes-summary-box">
-                @if (notesService.currentCustomerNotes().length > 0) {
-                  @for (note of notesService.currentCustomerNotes(); track note.id) {
-                    <div class="note-bullet-line">
-                      <span class="n-date">[{{ note.formattedDate }}]</span>
-                      <span class="n-author">{{ note.author }}:</span>
-                      <span class="n-text">{{ note.text }}</span>
-                    </div>
-                  }
-                } @else {
-                  <p class="text-muted" style="padding: 10px; font-style: italic;">Henüz kaydedilmiş not veya yorum bulunmamaktadır.</p>
-                }
-              </div>
             </div>
           </div>
         }
@@ -2975,13 +2947,13 @@ export class QuickPdfExportModalComponent {
 
   currentDateStr = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  // 14 DISTINCT MENUS AND SUB-MENUS MATCHING THE SIDEBAR 1-TO-1
+  // 13 DISTINCT MENUS AND SUB-MENUS MATCHING THE SIDEBAR 1-TO-1
   menuItems: ReportMenuItem[] = [
     {
       id: 'reports',
       name: '1. Yönetici Özeti',
       group: 'ÖZET',
-      desc: 'RISE Skoru, Bulut Uyumu, 1. Amaç (8 Sütun), 2. Nasıl Yapıyoruz (4 Aşama) ve Notlar',
+      desc: 'RISE Skoru, Bulut Uyumu, 1. Amaç (8 Sütun) ve 2. Nasıl Yapıyoruz (4 Aşama)',
       icon: 'file-text',
       selected: true
     },
@@ -3088,14 +3060,6 @@ export class QuickPdfExportModalComponent {
       group: 'FİNANSAL ANALİZ',
       desc: '5 yıllık finansal simülasyon, On-Premise vs RISE karşılaştırması ve ROI analizi',
       icon: 'dollar',
-      selected: true
-    },
-    {
-      id: 'notes',
-      name: '14. Notlar',
-      group: 'DEĞERLENDİRME',
-      desc: 'Satış, Presales ve müşteri için kaydedilmiş tüm zaman damgalı notlar',
-      icon: 'file-text',
       selected: true
     }
   ];

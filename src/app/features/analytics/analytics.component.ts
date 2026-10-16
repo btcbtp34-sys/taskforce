@@ -90,12 +90,42 @@ Chart.register(...registerables);
 
           <!-- EXECUTIVE RECOMMENDATION SUMMARY -->
           <div class="clean-summary-grid">
-            <!-- Exact FUE Card (No arbitrary %15 addition) -->
+            <!-- Exact FUE Card (Mevcut Durum) -->
             <div class="card-summary-highlight">
-              <div class="badge-label">TAVSİYE EDİLEN RISE PAKETİ</div>
+              <div class="badge-label">MEVCUT DURUM</div>
               <div class="big-number">{{ activeCalculatedFue() }} <span class="unit">FUE</span></div>
               <div class="sub-desc">{{ activeFueFormulaShort() }}</div>
               <div class="pill-exact">✓ Doğrudan SAP Formülü (Tam Değer)</div>
+            </div>
+
+            <!-- Recommended FUE Card (Tavsiye Edilen Rise Paketi - Manuel Giriş) -->
+            <div class="card-summary-highlight card-recommended">
+              <div class="badge-label">TAVSİYE EDİLEN RISE PAKETİ</div>
+              <div class="big-number editable-number-wrap">
+                <input 
+                  type="number" 
+                  class="fue-input" 
+                  [value]="basisService.recommendedFue()" 
+                  (input)="onRecommendedFueInput($event)"
+                  min="0"
+                  step="1"
+                  placeholder="FUE"
+                  title="Tavsiye edilen FUE değerini manuel olarak girebilirsiniz"
+                />
+                <span class="unit">FUE</span>
+                <button 
+                  *ngIf="basisService.customRecommendedFue() !== null" 
+                  (click)="resetCustomFue()" 
+                  class="btn-fue-reset" 
+                  title="Hesaplanan formül değerine sıfırla">
+                  ↺
+                </button>
+              </div>
+              <div class="sub-desc">Manuel Hedef / Tavsiye Edilen Değer</div>
+              <div class="pill-exact pill-rec">
+                <span *ngIf="basisService.customRecommendedFue() !== null">✎ Manuel Giriş: {{ basisService.recommendedFue() }} FUE</span>
+                <span *ngIf="basisService.customRecommendedFue() === null">✓ Hesaplanan Değer (Düzenlenebilir)</span>
+              </div>
             </div>
 
             <!-- Consultant Note Box -->
@@ -220,7 +250,7 @@ Chart.register(...registerables);
                 </span>
               </div>
               <div class="calc-right">
-                <span class="recom-badge">➔ Gereken RISE Sözleşmesi: <strong>{{ activeCalculatedFue() }} FUE Paketi</strong></span>
+                <span class="recom-badge">➔ Gereken RISE Sözleşmesi: <strong>{{ basisService.recommendedFue() }} FUE Paketi</strong></span>
               </div>
             </div>
           </div>
@@ -475,22 +505,46 @@ Chart.register(...registerables);
     /* 2. CLEAN SUMMARY GRID (Göz Yormayan Sade Yapı) */
     .clean-summary-grid {
       display: grid;
-      grid-template-columns: 200px 1fr 270px;
+      grid-template-columns: minmax(170px, 205px) minmax(170px, 205px) 1fr 270px;
       gap: 1rem;
       align-items: stretch;
+
+      @media (max-width: 1300px) {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
     }
 
     .card-summary-highlight {
       background: #ffffff;
       border: 2px solid #0284c7;
       border-radius: 10px;
-      padding: 1rem;
+      padding: 0.9rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
       box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+
+      &.card-recommended {
+        border-color: #2563eb;
+        background: #f8faff;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+
+        .badge-label {
+          color: #2563eb;
+        }
+
+        .pill-rec {
+          color: #1d4ed8;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+        }
+      }
 
       .badge-label {
         font-size: 0.64rem;
@@ -510,6 +564,55 @@ Chart.register(...registerables);
           font-size: 1.1rem;
           color: #0284c7;
           font-weight: 800;
+        }
+      }
+
+      .editable-number-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+
+        .fue-input {
+          font-family: inherit;
+          font-size: 1.85rem;
+          font-weight: 900;
+          color: #1e3a8a;
+          width: 90px;
+          text-align: center;
+          border: 2px dashed #93c5fd;
+          border-radius: 6px;
+          background: #ffffff;
+          padding: 0 0.2rem;
+          outline: none;
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: #2563eb;
+          }
+
+          &:focus {
+            border-color: #2563eb;
+            border-style: solid;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background: #ffffff;
+          }
+        }
+
+        .btn-fue-reset {
+          background: transparent;
+          border: none;
+          color: #64748b;
+          cursor: pointer;
+          font-size: 0.95rem;
+          padding: 2px 4px;
+          border-radius: 4px;
+          transition: all 0.15s;
+
+          &:hover {
+            color: #dc2626;
+            background: #fee2e2;
+          }
         }
       }
 
@@ -930,7 +1033,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
   consultantNoteText = computed(() => {
     if (this.basisService.hasUploadedData() && this.basisService.fueSummary()) {
       const s = this.basisService.fueSummary()!;
-      const fue = Math.round(s.calculatedFUE);
+      const fue = this.basisService.recommendedFue();
       const hcPart = (s.hcCount / 5).toFixed(1);
       const hdPart = (s.hdCount / 30).toFixed(2);
       return `"FUE sınıflandırma matrisine göre sistemdeki ${s.totalUsers} kullanıcıdan ${s.hbCount} Professional (HB), ${s.hcCount} Functional (HC) ve ${s.hdCount} Productivity (HD) kullanıcısı doğrulanmıştır. SAP standart dönüşüm formülüyle (${s.hbCount} + ${hcPart} + ${hdPart}) RISE with SAP geçişinde ${fue} FUE paketi tam ve optimum seviye olarak belirlenmiştir. İlave %15 tampon eklenmeden doğrudan net değer önerilmektedir."`;
@@ -1062,5 +1165,22 @@ export class AnalyticsComponent implements OnInit, AfterViewInit {
         plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
       }
     });
+  }
+
+  onRecommendedFueInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const val = target.value.trim();
+    if (val === '') {
+      this.basisService.setCustomRecommendedFue(null);
+    } else {
+      const num = Number(val);
+      if (!isNaN(num) && num >= 0) {
+        this.basisService.setCustomRecommendedFue(num);
+      }
+    }
+  }
+
+  resetCustomFue(): void {
+    this.basisService.setCustomRecommendedFue(null);
   }
 }

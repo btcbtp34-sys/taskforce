@@ -64,10 +64,10 @@ export const DEFAULT_RISE_CRITERIA: RiseCriterion[] = [
     radioValue: false,
     radioPoints: 0,
     highlighted: false,
-    description: 'Mevcut altyapının kurum içi (OnPrem) veya dış kaynaklı (OutSource) barındırılma modeli.',
+    description: 'Mevcut altyapının kurum içi (OnPrem) veya dış kaynaklı (Dc) barındırılma modeli.',
     options: [
       { label: 'OnPrem', points: 8 },
-      { label: 'OutSource', points: 3 }
+      { label: 'Dc', points: 3 }
     ]
   },
   {
@@ -635,8 +635,12 @@ export class RiseScoreService {
                 item.options.every((opt: RiseCriterionOption, idx: number) => opt.label === def.options[idx]?.label);
 
               const resolvedOptions = optionsMatch ? item.options : JSON.parse(JSON.stringify(def.options));
-              const isValidSelection = resolvedOptions.some((o: RiseCriterionOption) => o.label === item.selectedOptionLabel);
-              const resolvedSelected = isValidSelection ? item.selectedOptionLabel : def.selectedOptionLabel;
+              let currentSelected = item.selectedOptionLabel;
+              if (item.id === 'veri_merkezi_yonetimi' && (currentSelected === 'OutSource' || currentSelected === 'outsource')) {
+                currentSelected = 'Dc';
+              }
+              const isValidSelection = resolvedOptions.some((o: RiseCriterionOption) => o.label === currentSelected);
+              const resolvedSelected = isValidSelection ? currentSelected : def.selectedOptionLabel;
 
               return { 
                 ...item, 

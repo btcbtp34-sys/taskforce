@@ -63,6 +63,7 @@ export class BasisSizingService {
   // Upload State - Default FALSE, no pre-filled data!
   hasUploadedData = signal<boolean>(false);
   basisPackage = signal<BasisSizingPackage | null>(null);
+  customRecommendedFue = signal<number | null>(null);
 
   constructor() {
     try {
@@ -76,6 +77,13 @@ export class BasisSizingService {
   }
 
   private loadForCustomer(customerId: string): void {
+    try {
+      const customFueStr = localStorage.getItem(`taskforce_custom_fue_${customerId}`);
+      this.customRecommendedFue.set(customFueStr !== null ? Number(customFueStr) : null);
+    } catch (e) {
+      this.customRecommendedFue.set(null);
+    }
+
     try {
       const key = `taskforce_sizing_pkg_${customerId}`;
       const saved = localStorage.getItem(key);
@@ -139,6 +147,30 @@ export class BasisSizingService {
     const pkg = this.basisPackage();
     return (pkg && pkg.fueSummary) ? pkg.fueSummary : null;
   });
+
+  readonly recommendedFue = computed(() => {
+    const custom = this.customRecommendedFue();
+    if (custom !== null && custom !== undefined && !isNaN(custom)) {
+      return custom;
+    }
+    const summary = this.fueSummary();
+    if (summary && summary.calculatedFUE) {
+      return Math.round(summary.calculatedFUE);
+    }
+    return 0;
+  });
+
+  setCustomRecommendedFue(val: number | null): void {
+    this.customRecommendedFue.set(val);
+    try {
+      const activeId = this.customerService.activeCustomerId();
+      if (val !== null && val !== undefined && !isNaN(val)) {
+        localStorage.setItem(`taskforce_custom_fue_${activeId}`, val.toString());
+      } else {
+        localStorage.removeItem(`taskforce_custom_fue_${activeId}`);
+      }
+    } catch (e) {}
+  }
 
   readonly fueRows = computed(() => {
     const pkg = this.basisPackage();
@@ -615,9 +647,11 @@ export class BasisSizingService {
   clearUploadedData(): void {
     this.basisPackage.set(null);
     this.hasUploadedData.set(false);
+    this.customRecommendedFue.set(null);
     try {
       const activeId = this.customerService.activeCustomerId();
       localStorage.removeItem(`taskforce_sizing_pkg_${activeId}`);
+      localStorage.removeItem(`taskforce_custom_fue_${activeId}`);
     } catch (e) {}
   }
 }
