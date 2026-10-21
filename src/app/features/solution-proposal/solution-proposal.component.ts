@@ -5,6 +5,36 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
+export interface ProposalNavTabConfig {
+  id: 'recommended' | 'target-architecture' | 'methods';
+  title: string;
+  desc: string;
+  icon: string;
+}
+
+export function getDefaultNavTabs(): ProposalNavTabConfig[] {
+  return [
+    {
+      id: 'recommended',
+      title: '1. Önerilen Yöntem',
+      desc: 'Brownfield Yol Haritası, Fazlar & Süreç Modeli',
+      icon: 'sparkles'
+    },
+    {
+      id: 'target-architecture',
+      title: '2. Hedef Mimari',
+      desc: 'Mevcut (Solda) vs Hedef (Sağda) + Müşteri Entegrasyon Tablosu',
+      icon: 'layers'
+    },
+    {
+      id: 'methods',
+      title: '3. Geçiş Yöntemleri',
+      desc: 'Brownfield, Selective Data Transition & Strateji',
+      icon: 'shuffle'
+    }
+  ];
+}
+
 export interface MethodBullet {
   dotColor: 'green' | 'blue' | 'amber' | 'red';
   label: string;
@@ -229,44 +259,95 @@ export interface ThirdPartySystem {
         </div>
       </div>
 
-      <!-- Navigation Tabs (Sıralama: 1. Önerilen Yöntem, 2. Hedef Mimari, 3. Geçiş Yöntemleri) -->
+      <!-- Navigation Tabs (Sıralama: 1. Önerilen Yöntem, 2. Hedef Mimari, 3. Geçiş Yöntemleri - DÜZENLENEBİLİR) -->
       <div class="tab-navigation-card">
-        <div class="nav-tabs-bar">
-          <button 
-            type="button" 
-            class="tab-btn" 
-            [class.active]="activeTab() === 'recommended'"
-            (click)="selectTab('recommended')">
-            <app-icon name="sparkles" [size]="16" [color]="activeTab() === 'recommended' ? '#0284c7' : '#64748b'"></app-icon>
-            <div class="tab-label-group">
-              <span class="tab-title">1. Önerilen Yöntem</span>
-              <span class="tab-desc">Brownfield Yol Haritası, Fazlar & Süreç Modeli</span>
-            </div>
-          </button>
+        <div class="tab-card-header no-print">
+          <div class="tab-header-left">
+            <span *ngIf="isNavTabsCustomized()" class="tab-customized-pill">
+              <app-icon name="edit" [size]="12" color="#b45309"></app-icon>
+              Özelleştirilmiş Başlıklar
+            </span>
+            <span *ngIf="navTabsToastMessage()" class="save-toast-pill">
+              <app-icon name="check" [size]="13" color="#15803d"></app-icon>
+              {{ navTabsToastMessage() }}
+            </span>
+          </div>
+          <div class="tab-header-actions">
+            <button 
+              *ngIf="!isEditingNavTabs()" 
+              type="button" 
+              class="btn-tab-action" 
+              (click)="startEditNavTabs()" 
+              title="Sekme başlık ve açıklamalarını düzenle">
+              <app-icon name="edit" [size]="13" color="#0284c7"></app-icon>
+              <span>Sekmeleri Düzenle</span>
+            </button>
+            <button 
+              *ngIf="!isEditingNavTabs() && isNavTabsCustomized()" 
+              type="button" 
+              class="btn-tab-action btn-tab-reset" 
+              (click)="resetNavTabs()" 
+              title="Varsayılan sekme başlıklarına dön">
+              <app-icon name="refresh" [size]="13" color="#64748b"></app-icon>
+              <span>Sıfırla</span>
+            </button>
+            <button 
+              *ngIf="isEditingNavTabs()" 
+              type="button" 
+              class="btn-tab-action btn-tab-cancel" 
+              (click)="cancelEditNavTabs()">
+              <app-icon name="x" [size]="13" color="#475569"></app-icon>
+              <span>İptal</span>
+            </button>
+            <button 
+              *ngIf="isEditingNavTabs()" 
+              type="button" 
+              class="btn-tab-action btn-tab-save" 
+              (click)="saveNavTabs()">
+              <app-icon name="check" [size]="13" color="#ffffff"></app-icon>
+              <span>Kaydet</span>
+            </button>
+          </div>
+        </div>
 
+        <!-- VIEW MODE TABS -->
+        <div class="nav-tabs-bar" *ngIf="!isEditingNavTabs()">
           <button 
             type="button" 
             class="tab-btn" 
-            [class.active]="activeTab() === 'target-architecture'"
-            (click)="selectTab('target-architecture')">
-            <app-icon name="layers" [size]="16" [color]="activeTab() === 'target-architecture' ? '#0284c7' : '#64748b'"></app-icon>
+            *ngFor="let tab of navTabs()"
+            [class.active]="activeTab() === tab.id"
+            (click)="selectTab(tab.id)">
+            <app-icon [name]="tab.icon" [size]="16" [color]="activeTab() === tab.id ? '#0284c7' : '#64748b'"></app-icon>
             <div class="tab-label-group">
-              <span class="tab-title">2. Hedef Mimari</span>
-              <span class="tab-desc">Mevcut (Solda) vs Hedef (Sağda) + Müşteri Entegrasyon Tablosu</span>
+              <span class="tab-title">{{ tab.title }}</span>
+              <span class="tab-desc">{{ tab.desc }}</span>
             </div>
           </button>
+        </div>
 
-          <button 
-            type="button" 
-            class="tab-btn" 
-            [class.active]="activeTab() === 'methods'"
-            (click)="selectTab('methods')">
-            <app-icon name="shuffle" [size]="16" [color]="activeTab() === 'methods' ? '#0284c7' : '#64748b'"></app-icon>
-            <div class="tab-label-group">
-              <span class="tab-title">3. Geçiş Yöntemleri</span>
-              <span class="tab-desc">Brownfield, Selective Data Transition & Strateji</span>
+        <!-- EDIT MODE TABS -->
+        <div class="nav-tabs-bar edit-grid" *ngIf="isEditingNavTabs()">
+          <div 
+            class="tab-edit-box" 
+            *ngFor="let tab of editNavTabsModel; let idx = index"
+            [class.active-edit]="activeTab() === tab.id">
+            <div class="tab-icon-wrap">
+              <app-icon [name]="tab.icon" [size]="16" color="#0284c7"></app-icon>
             </div>
-          </button>
+            <div class="tab-inputs-group">
+              <input 
+                type="text" 
+                class="edit-tab-input-title" 
+                [(ngModel)]="tab.title" 
+                placeholder="Sekme Başlığı" />
+              <input 
+                type="text" 
+                class="edit-tab-input-desc" 
+                [(ngModel)]="tab.desc" 
+                placeholder="Alt Açıklama Metni" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -754,10 +835,86 @@ export interface ThirdPartySystem {
     /* Tabs Navigation Card */
     .tab-navigation-card {
       background: #ffffff;
-      padding: 0.5rem;
+      padding: 0.75rem;
       border-radius: 12px;
       border: 1px solid #e2e8f0;
       box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .tab-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0.25rem 0.25rem;
+
+        .tab-header-left {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .tab-customized-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #b45309;
+            background: #fef3c7;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            border: 1px solid #fde68a;
+          }
+        }
+
+        .tab-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+        }
+
+        .btn-tab-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.3rem 0.65rem;
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          color: #0369a1;
+          border-radius: 6px;
+          font-size: 0.74rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: #f0f9ff;
+            border-color: #7dd3fc;
+          }
+
+          &.btn-tab-save {
+            background: #0284c7;
+            border-color: #0284c7;
+            color: #ffffff;
+            &:hover { background: #0369a1; }
+          }
+
+          &.btn-tab-cancel {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #475569;
+            &:hover { background: #f1f5f9; }
+          }
+
+          &.btn-tab-reset {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            color: #64748b;
+            &:hover { background: #f8fafc; color: #1e293b; }
+          }
+        }
+      }
 
       .nav-tabs-bar {
         display: grid;
@@ -766,6 +923,80 @@ export interface ThirdPartySystem {
 
         @media (max-width: 992px) {
           grid-template-columns: 1fr;
+        }
+
+        &.edit-grid {
+          gap: 0.6rem;
+        }
+      }
+
+      .tab-edit-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1.5px dashed #93c5fd;
+        transition: all 0.15s ease;
+
+        &.active-edit {
+          background: #eff6ff;
+          border-color: #3b82f6;
+        }
+
+        .tab-icon-wrap {
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .tab-inputs-group {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+          min-width: 0;
+
+          .edit-tab-input-title {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.25rem 0.45rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #ffffff;
+
+            &:focus {
+              outline: none;
+              border-color: #0284c7;
+              box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+            }
+          }
+
+          .edit-tab-input-desc {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.2rem 0.45rem;
+            font-size: 0.72rem;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: #ffffff;
+
+            &:focus {
+              outline: none;
+              border-color: #0284c7;
+            }
+          }
         }
       }
 
@@ -1944,6 +2175,13 @@ export class SolutionProposalComponent implements OnInit {
   lightboxImage = signal<{ url: string; title: string } | null>(null);
   imageToastMessage = signal<string>('');
 
+  // Proposal Nav Tabs State (Düzenlenebilir Sekme Başlıkları)
+  navTabs = signal<ProposalNavTabConfig[]>(getDefaultNavTabs());
+  isEditingNavTabs = signal<boolean>(false);
+  editNavTabsModel: ProposalNavTabConfig[] = [];
+  isNavTabsCustomized = signal<boolean>(false);
+  navTabsToastMessage = signal<string>('');
+
   constructor() {
     effect(() => {
       const custId = this.customerService.activeCustomerId();
@@ -1952,8 +2190,62 @@ export class SolutionProposalComponent implements OnInit {
         this.loadRecommendedData(custId, cust?.name || '');
         this.loadMethodCards(custId);
         this.loadArchImages(custId);
+        this.loadNavTabs(custId);
       }
     });
+  }
+
+  loadNavTabs(custId: string) {
+    try {
+      const saved = localStorage.getItem(`taskforce_proposal_nav_tabs_${custId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 3) {
+          this.navTabs.set(parsed);
+          this.isNavTabsCustomized.set(true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Error loading proposal nav tabs:', e);
+    }
+    this.navTabs.set(getDefaultNavTabs());
+    this.isNavTabsCustomized.set(false);
+  }
+
+  startEditNavTabs() {
+    this.editNavTabsModel = JSON.parse(JSON.stringify(this.navTabs()));
+    this.isEditingNavTabs.set(true);
+  }
+
+  cancelEditNavTabs() {
+    this.isEditingNavTabs.set(false);
+  }
+
+  saveNavTabs() {
+    const custId = this.customerService.activeCustomerId();
+    const updated = JSON.parse(JSON.stringify(this.editNavTabsModel));
+    this.navTabs.set(updated);
+    if (custId) {
+      localStorage.setItem(`taskforce_proposal_nav_tabs_${custId}`, JSON.stringify(updated));
+      this.isNavTabsCustomized.set(true);
+    }
+    this.isEditingNavTabs.set(false);
+    this.navTabsToastMessage.set('Sekme başlıkları başarıyla kaydedildi!');
+    setTimeout(() => this.navTabsToastMessage.set(''), 3000);
+  }
+
+  resetNavTabs() {
+    const custId = this.customerService.activeCustomerId();
+    const confirmed = window.confirm('Sekme başlıkları varsayılan ayarlara döndürülsün mü?');
+    if (confirmed && custId) {
+      localStorage.removeItem(`taskforce_proposal_nav_tabs_${custId}`);
+      this.navTabs.set(getDefaultNavTabs());
+      this.isNavTabsCustomized.set(false);
+      this.isEditingNavTabs.set(false);
+      this.navTabsToastMessage.set('Varsayılana sıfırlandı.');
+      setTimeout(() => this.navTabsToastMessage.set(''), 3000);
+    }
   }
 
   loadArchImages(custId: string) {
