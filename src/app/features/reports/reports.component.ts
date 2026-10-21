@@ -496,30 +496,97 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
                   [(ngModel)]="content.objectiveSubtitle"></textarea>
               </div>
             </div>
-            <span class="pillar-badge emerald">Temel Vizyon</span>
+            <div class="sec-header-right">
+              <button 
+                type="button" 
+                class="btn-add-pillar no-print" 
+                *ngIf="isEditMode()" 
+                (click)="addObjectivePillar()">
+                <app-icon name="plus" [size]="14" color="#166534"></app-icon>
+                <span>+ Kart Ekle</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn-reset-pillars no-print" 
+                *ngIf="isEditMode() && (!content.objectivePillars || content.objectivePillars.length === 0)" 
+                (click)="restoreDefaultObjectivePillars()">
+                <app-icon name="refresh" [size]="13" color="#475569"></app-icon>
+                <span>Varsayılanları Getir</span>
+              </button>
+              <span class="pillar-badge emerald">Temel Vizyon</span>
+            </div>
           </div>
 
-          <!-- 8 Temel Değer Taşı Grid -->
+          <!-- Temel Değer Taşı Grid (Dinamik ve Düzenlenebilir) -->
           <div class="pillars-grid-8">
-            <div class="purpose-card" *ngFor="let pillar of content.objectivePillars; let idx = index">
+            <div class="purpose-card" [class.edit-card-active]="isEditMode()" *ngFor="let pillar of content.objectivePillars; let idx = index">
+              <!-- Düzenleme Modunda Sil Butonu -->
+              <button 
+                type="button" 
+                class="card-delete-btn no-print" 
+                *ngIf="isEditMode()" 
+                (click)="removeObjectivePillar(idx)" 
+                title="Bu kartı sil">
+                <app-icon name="trash" [size]="13" color="#ef4444"></app-icon>
+              </button>
+
               <div class="p-icon-box">
                 <app-icon [name]="pillar.icon || 'check'" [size]="17" color="#0284c7"></app-icon>
               </div>
               <div class="p-text-body">
                 <h4 *ngIf="!isEditMode()">{{ pillar.title }}</h4>
-                <input 
-                  type="text" 
-                  class="edit-input-card-title" 
-                  *ngIf="isEditMode()" 
-                  [(ngModel)]="pillar.title" />
+                <div class="card-edit-controls" *ngIf="isEditMode()">
+                  <div class="card-icon-picker">
+                    <span class="mini-lbl">İkon:</span>
+                    <select [(ngModel)]="pillar.icon" class="edit-select-icon">
+                      <option value="sparkles">✨ AI / Sparkles</option>
+                      <option value="layers">🧱 Katmanlar / Altyapı</option>
+                      <option value="bolt">⚡ Yıldırım / Çeviklik</option>
+                      <option value="sliders">🎚 Ayar / Ölçeklenebilirlik</option>
+                      <option value="shield">🛡 Kalkan / Siber Güvenlik</option>
+                      <option value="users">👥 Yetkinlik / Ekip</option>
+                      <option value="database">💾 Veritabanı / Clean Core</option>
+                      <option value="cpu">⚙ İşlemci / Otonom</option>
+                      <option value="cloud">☁ Bulut / Cloud</option>
+                      <option value="server">🖥 Sunucu / Altyapı</option>
+                      <option value="chart">📈 Grafik / Analitik</option>
+                      <option value="check">✔ Onay / Standart</option>
+                    </select>
+                  </div>
+                  <input 
+                    type="text" 
+                    class="edit-input-card-title" 
+                    [(ngModel)]="pillar.title" 
+                    placeholder="Kart Başlığı" />
+                  <textarea 
+                    class="edit-textarea-card-desc" 
+                    rows="2" 
+                    [(ngModel)]="pillar.desc" 
+                    placeholder="Kart Açıklaması..."></textarea>
+                </div>
 
                 <p *ngIf="!isEditMode()">{{ pillar.desc }}</p>
-                <textarea 
-                  class="edit-textarea-card-desc" 
-                  rows="2" 
-                  *ngIf="isEditMode()" 
-                  [(ngModel)]="pillar.desc"></textarea>
               </div>
+            </div>
+
+            <!-- Kart Listesi Boş İse -->
+            <div class="empty-pillars-notice" *ngIf="!content.objectivePillars || content.objectivePillars.length === 0">
+              <app-icon name="info" [size]="20" color="#64748b"></app-icon>
+              <span>Henüz tanımlı vizyon kartı bulunmuyor.</span>
+              <button 
+                type="button" 
+                class="btn btn-xs btn-primary no-print" 
+                *ngIf="isEditMode()" 
+                (click)="addObjectivePillar()">
+                <app-icon name="plus" [size]="13" color="#ffffff"></app-icon>
+                <span>+ Kart Ekle</span>
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-xs btn-secondary no-print" 
+                (click)="restoreDefaultObjectivePillars()">
+                <span>Varsayılan Kartları Yükle</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1121,6 +1188,54 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           }
         }
 
+        .sec-header-right {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          flex-wrap: wrap;
+
+          .btn-add-pillar {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+
+            &:hover {
+              background: #d1fae5;
+              border-color: #34d399;
+              color: #047857;
+            }
+          }
+
+          .btn-reset-pillars {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.65rem;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+
+            &:hover {
+              background: #f1f5f9;
+              color: #1e293b;
+            }
+          }
+        }
+
         .pillar-badge {
           font-size: 0.72rem;
           font-weight: 800;
@@ -1143,6 +1258,7 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
       gap: 1rem;
 
       .purpose-card {
+        position: relative;
         min-width: 0;
         box-sizing: border-box;
         background: #f8fafc;
@@ -1161,6 +1277,64 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
           transform: translateY(-1px);
         }
 
+        &.edit-card-active {
+          background: #ffffff;
+          border-color: #93c5fd;
+          box-shadow: 0 2px 10px rgba(2, 132, 199, 0.08);
+          padding-top: 1.5rem;
+        }
+
+        .card-delete-btn {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          border: 1px solid #fecaca;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: #fee2e2;
+            border-color: #ef4444;
+          }
+        }
+
+        .card-edit-controls {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+          width: 100%;
+
+          .card-icon-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.15rem;
+
+            .mini-lbl {
+              font-size: 0.68rem;
+              font-weight: 700;
+              color: #64748b;
+            }
+
+            .edit-select-icon {
+              padding: 0.2rem 0.4rem;
+              font-size: 0.72rem;
+              border-radius: 4px;
+              border: 1px solid #cbd5e1;
+              background: #fff;
+              color: #1e293b;
+              font-weight: 600;
+            }
+          }
+        }
+
         .p-icon-box {
           width: 34px;
           height: 34px;
@@ -1175,6 +1349,7 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
 
         .p-text-body {
           flex: 1;
+          min-width: 0;
 
           h4 {
             margin: 0 0 0.35rem;
@@ -1189,6 +1364,27 @@ export function getDefaultExecutiveData(customerName: string): ExecutiveSummaryD
             color: #64748b;
             line-height: 1.45;
           }
+        }
+      }
+
+      .empty-pillars-notice {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 2.2rem 1.5rem;
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        color: #64748b;
+        font-size: 0.88rem;
+        font-weight: 500;
+        text-align: center;
+
+        .btn {
+          margin: 0 0.25rem;
         }
       }
     }
@@ -2184,6 +2380,29 @@ export class ReportsComponent implements OnInit {
     }
   }
 
+  addObjectivePillar(): void {
+    if (!this.content.objectivePillars) {
+      this.content.objectivePillars = [];
+    }
+    const newId = 'pillar_' + Date.now();
+    this.content.objectivePillars.push({
+      id: newId,
+      icon: 'sparkles',
+      title: 'Yeni Vizyon Maddesi',
+      desc: 'Bu alan için vizyon veya dönüşüm hedefi detayını buraya ekleyebilirsiniz.'
+    });
+  }
+
+  removeObjectivePillar(index: number): void {
+    if (!this.content.objectivePillars || index < 0 || index >= this.content.objectivePillars.length) return;
+    this.content.objectivePillars.splice(index, 1);
+  }
+
+  restoreDefaultObjectivePillars(): void {
+    const custName = this.activeCustomerName();
+    this.content.objectivePillars = getDefaultExecutiveData(custName).objectivePillars;
+  }
+
   resetToDefault(): void {
     const custName = this.activeCustomerName();
     this.content = getDefaultExecutiveData(custName);
@@ -2215,8 +2434,17 @@ export class ReportsComponent implements OnInit {
             this.content.objectiveSubtitle = `${custName} için RISE with SAP dönüşümü; mevcut ERP omurgasını modern bulut standartlarına taşıyarak işletmeye yüksek çeviklik, güvenlik ve esneklik kazandırmayı hedeflemektedir.`;
           }
         }
+        if (!this.content.objectiveTitle) {
+          this.content.objectiveTitle = '1. Amaç: RISE with SAP ile Yeni Nesil Kurumsal Dönüşüm';
+        }
+        if (!this.content.objectivePillars || !Array.isArray(this.content.objectivePillars) || this.content.objectivePillars.length === 0) {
+          this.content.objectivePillars = getDefaultExecutiveData(custName).objectivePillars;
+        }
         if (this.content.howSubtitle && this.content.howSubtitle.includes('3 temel sacayağı')) {
           this.content.howSubtitle = 'Dönüşümün güvenle ve en düşük operasyonel risk ile tamamlanması için planlanan stratejik geçiş yaklaşımı ve temel metrikler:';
+        }
+        if (!this.content.howPillars || !Array.isArray(this.content.howPillars) || this.content.howPillars.length === 0) {
+          this.content.howPillars = getDefaultExecutiveData(custName).howPillars;
         }
         if (!this.content.recommendedMethod) {
           try {

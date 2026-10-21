@@ -3151,6 +3151,15 @@ export class QuickPdfExportModalComponent {
             }
           }
         }
+        if (!data.objectiveTitle) {
+          data.objectiveTitle = '1. Amaç: RISE with SAP ile Yeni Nesil Kurumsal Dönüşüm';
+        }
+        if (!data.objectivePillars || !Array.isArray(data.objectivePillars) || data.objectivePillars.length === 0) {
+          data.objectivePillars = getDefaultExecutiveData(custName).objectivePillars;
+        }
+        if (!data.howPillars || !Array.isArray(data.howPillars) || data.howPillars.length === 0) {
+          data.howPillars = getDefaultExecutiveData(custName).howPillars;
+        }
         return data;
       }
     } catch (e) {}
