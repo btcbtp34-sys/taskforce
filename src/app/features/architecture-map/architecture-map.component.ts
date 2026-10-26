@@ -118,38 +118,57 @@ export interface ArchitectureEdge {
       <!-- PO Specific Quick Action Bar -->
       <div class="mode-toolbar-card po-toolbar" *ngIf="architectureMode() === 'po'">
         <div class="po-toolbar-badge-group">
-          <span class="po-main-tag">{{ customerService.activeCustomer().name }} PO Entegrasyon Mimarisi</span>
-          <span class="po-stat-pill green">{{ outboundCount() }} Verici (Outbound)</span>
-          <span class="po-stat-pill blue">{{ inboundCount() }} Alıcı (Inbound)</span>
-          <span class="po-stat-pill purple">{{ syncCount() }} Senkron</span>
-          <span class="po-stat-pill gray">{{ asyncCount() }} Asenkron</span>
-          <span class="po-stat-pill dark">{{ nodes().length - 1 > 0 ? nodes().length - 1 : 0 }} Dış Sistem</span>
+          <span class="po-main-tag">{{ customerService.activeCustomer().name }} Entegrasyon Mimarisi</span>
+          <span class="po-stat-pill green" *ngIf="outboundCount() > 0">{{ outboundCount() }} Verici (Outbound)</span>
+          <span class="po-stat-pill blue" *ngIf="inboundCount() > 0">{{ inboundCount() }} Alıcı (Inbound)</span>
+          <span class="po-stat-pill purple" *ngIf="syncCount() > 0">{{ syncCount() }} Senkron</span>
+          <span class="po-stat-pill gray" *ngIf="asyncCount() > 0">{{ asyncCount() }} Asenkron</span>
+          <span class="po-stat-pill dark">{{ nodes().length }} Sistem Düğümü</span>
         </div>
 
-        <div class="toolbar-right-actions">
-          <button class="btn btn-services-nav" (click)="scrollToPoServices()" title="Canlı Entegrasyon Servisleri Listesine Git">
-            <app-icon name="layers" [size]="15" color="#ffffff"></app-icon>
-            <span>Servisler ({{ poIntegrationInterfaces().length }})</span>
+        <div class="toolbar-right-actions studio-actions">
+          <button class="btn btn-studio-add" (click)="openCreateNodeModal()" title="Yeni Entegrasyon Sistemi / Bileşen Ekle">
+            <app-icon name="plus" [size]="14" color="#ffffff"></app-icon>
+            <span>+ Bileşen Ekle</span>
           </button>
 
-          <button class="btn btn-secondary" (click)="clearPoData()" title="Entegrasyon verisini temizle ve boş duruma dön">
-            <app-icon name="trash" [size]="15" color="#dc2626"></app-icon>
-            <span>Haritayı Temizle</span>
+          <button 
+            class="btn" 
+            [ngClass]="isConnectingMode() ? 'btn-studio-connect-active' : 'btn-secondary'" 
+            (click)="toggleConnectingMode()" 
+            title="İki entegrasyon sistemi arasında bağlantı oku çek">
+            <app-icon name="link" [size]="14" [color]="isConnectingMode() ? '#ffffff' : '#0284c7'"></app-icon>
+            <span>{{ isConnectingMode() ? (connectSourceNode() ? '2. Hedefe Tıkla' : '1. Kaynağa Tıkla') : 'Bağlantı Kur' }}</span>
           </button>
 
-          <button class="btn btn-secondary" (click)="resetDiagram()" title="Düğümleri İlk Konumuna Getir">
-            <app-icon name="refresh" [size]="15"></app-icon>
-            <span>Haritayı Sıfırla</span>
+          <button class="btn btn-secondary" (click)="openManageEdgesModal()" title="Mevcut kabloları listele ve sil" *ngIf="currentEdges().length > 0">
+            <app-icon name="link" [size]="14" color="#dc2626"></app-icon>
+            <span>Kabloları Sil ({{ currentEdges().length }})</span>
           </button>
 
-          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="PO Entegrasyon mimari çizimini ve ekran görüntüsünü tarayıcıya kaydet">
+          <button class="btn btn-secondary" (click)="clearCanvas()" title="Haritayı temizle ve sıfırdan yeni çizim alanı aç" *ngIf="nodes().length > 0 || currentEdges().length > 0">
+            <app-icon name="trash" [size]="14" color="#dc2626"></app-icon>
+            <span>Yeni Çizim Alanı</span>
+          </button>
+
+          <button class="btn btn-secondary" (click)="loadSampleTemplate()" title="Excel verisinden veya hazır şablondan haritayı doldur">
+            <app-icon name="refresh" [size]="14" color="#0284c7"></app-icon>
+            <span>{{ (importService.hasUploadedPoData() && importService.poDiagramNodes().length > 0) ? 'Excel Haritasını Yükle' : 'Excel / Şablon Yükle' }}</span>
+          </button>
+
+          <button class="btn btn-studio-save" (click)="saveCustomLayout()" title="Entegrasyon mimari çizimini ve ekran görüntüsünü tarayıcıya kaydet">
             <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
             <span>Çizimi Kaydet</span>
           </button>
 
-          <button class="btn btn-primary" (click)="exportDiagram()" title="Entegrasyon Haritasını PNG Olarak İndir">
-            <app-icon name="download" [size]="15"></app-icon>
-            <span>Haritayı İndir (PNG)</span>
+          <button class="btn btn-primary" (click)="exportDiagram()" title="Entegrasyon Haritasını PNG Olarak İndir" *ngIf="nodes().length > 0">
+            <app-icon name="download" [size]="14"></app-icon>
+            <span>PNG İndir</span>
+          </button>
+
+          <button class="btn btn-services-nav" (click)="scrollToPoServices()" title="Canlı Entegrasyon Servisleri Listesine Git" *ngIf="poIntegrationInterfaces().length > 0">
+            <app-icon name="layers" [size]="14" color="#ffffff"></app-icon>
+            <span>Servisler ({{ poIntegrationInterfaces().length }})</span>
           </button>
         </div>
       </div>
@@ -174,11 +193,21 @@ export interface ArchitectureEdge {
               }
             </div>
           </div>
-        } @else if (architectureMode() === 'po' && importService.hasUploadedPoData()) {
+        } @else if (architectureMode() === 'po') {
           <div class="banner-content po-info">
             <app-icon name="bolt" [size]="18" color="#0284c7"></app-icon>
             <div class="b-text">
-              <strong>{{ customerService.activeCustomer().name }} PO Canlı Entegrasyon Haritası:</strong> <code>{{ importService.uploadedFileName() }}</code> dosyasındaki <strong>{{ poIntegrationInterfaces().length }} canlı servis</strong>, alıcı/verici (Inbound/Outbound) akış yönleri ve sistem altyapısıyla haritalandırılmıştır.
+              @if (nodes().length === 0) {
+                <strong>Entegrasyon (PO & BTP) Çizim Alanı:</strong> Sisteminize ait entegrasyon servislerini <code>+ Bileşen Ekle</code> ile manuel ekleyebilir, <code>Bağlantı Kur</code> ile akışları çizebilir veya <code>Excel / Şablon Yükle</code> butonuyla haritayı doldurabilirsiniz.
+              } @else {
+                <strong>{{ customerService.activeCustomer().name }} Entegrasyon Akış Haritası ({{ nodes().length }} Sistem, {{ currentEdges().length }} Bağlantı):</strong>
+                @if (importService.hasUploadedPoData()) {
+                  <span>Excel dosyasından gelen {{ poIntegrationInterfaces().length }} canlı servis haritalandırılmıştır.</span>
+                } @else {
+                  <span>Entegrasyon düğümleri ve veri akışları aşağıda listelenmektedir.</span>
+                }
+                Bileşenleri sürükleyebilir, üzerlerindeki araçlarla düzenleyebilir ve <code>Çizimi Kaydet</code> ile kalıcı yapabilirsiniz.
+              }
             </div>
           </div>
         } @else {
@@ -195,19 +224,8 @@ export interface ArchitectureEdge {
         }
       </div>
 
-      <!-- EMPTY STATE WHEN NO PO INTEGRATION EXCEL IS UPLOADED -->
-      <div class="empty-upload-card" *ngIf="architectureMode() === 'po' && !importService.hasUploadedPoData()" style="padding: 2.5rem 1.5rem; margin: 2rem auto; max-width: 650px; text-align: center; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 12px;">
-        <div class="empty-icon-wrap" style="background: #f1f5f9; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-          <app-icon name="bolt" [size]="28" color="#64748b"></app-icon>
-        </div>
-        <h3 style="color: #334155; font-size: 1.15rem; margin-bottom: 0.5rem;">Veri Yok</h3>
-        <p style="color: #64748b; font-size: 0.88rem; line-height: 1.5; margin: 0;">
-          Entegrasyon mimarisi ve canlı servis listesi için henüz veri bulunmamaktadır. Verilerinizi sol menüdeki <strong>Hızlı Araçlar > Veri Yükleme</strong> ekranından <em>(PO Canlı Entegrasyon Listesi)</em> içeri aktarabilirsiniz.
-        </p>
-      </div>
-
       <!-- Main Map Grid -->
-      <div class="map-grid" [class.sidebar-collapsed]="isSidebarCollapsed()" *ngIf="architectureMode() !== 'po' || importService.hasUploadedPoData()">
+      <div class="map-grid" [class.sidebar-collapsed]="isSidebarCollapsed()">
 
         <!-- Sidebar Controls & Configurator -->
         <div class="card-box config-panel" [class.collapsed]="isSidebarCollapsed()">
@@ -840,35 +858,39 @@ export interface ArchitectureEdge {
           <div class="canvas-empty-state" *ngIf="nodes().length === 0" (mousedown)="$event.stopPropagation()">
             <div class="empty-badge">
               <span class="empty-badge-dot"></span>
-              <span>{{ architectureMode() === 'rise' ? 'RISE with SAP Hedef Çizim Konsolu' : 'İnteraktif Mimari Çizim Alanı' }}</span>
+              <span>{{ architectureMode() === 'po' ? 'Entegrasyon (PO / BTP) Çizim Konsolu' : (architectureMode() === 'rise' ? 'RISE with SAP Hedef Çizim Konsolu' : 'İnteraktif Mimari Çizim Alanı') }}</span>
             </div>
 
             <div class="empty-icon-wrapper">
               <div class="empty-icon-glow"></div>
               <div class="empty-icon-circle">
-                <app-icon [name]="architectureMode() === 'rise' ? 'sparkles' : 'map'" [size]="32" [color]="architectureMode() === 'rise' ? '#059669' : '#0284c7'"></app-icon>
+                <app-icon [name]="architectureMode() === 'po' ? 'bolt' : (architectureMode() === 'rise' ? 'sparkles' : 'map')" [size]="32" [color]="architectureMode() === 'po' ? '#0284c7' : (architectureMode() === 'rise' ? '#059669' : '#0284c7')"></app-icon>
               </div>
             </div>
 
             <h3 class="empty-title">
-              {{ architectureMode() === 'rise' ? 'RISE with SAP Çizim Alanı Hazır' : 'Mevcut Durum (AS-IS) Çizim Alanı Hazır' }}
+              {{ architectureMode() === 'po' 
+                ? 'Entegrasyon Çizim Alanı Hazır' 
+                : (architectureMode() === 'rise' ? 'RISE with SAP Çizim Alanı Hazır' : 'Mevcut Durum (AS-IS) Çizim Alanı Hazır') }}
             </h3>
 
             <p class="empty-desc">
-              {{ architectureMode() === 'rise' 
-                ? 'Hedef bulut mimarinizi tasarlamak için yeni bileşenler ekleyebilir veya hazır referans şablonu yükleyerek hemen özelleştirmeye başlayabilirsiniz.' 
-                : 'Mevcut sunucu ve sistemlerinizi ekleyerek veri akışlarını çizebilir veya hazır örnek şablonla hemen başlayabilirsiniz.' }}
+              {{ architectureMode() === 'po'
+                ? 'SAP PO ve BTP entegrasyonlarınızı sıfırdan manuel olarak çizebilir veya Excel verilerinden / hazır şablondan haritayı doldurup dilediğiniz gibi özelleştirebilirsiniz.'
+                : (architectureMode() === 'rise' 
+                  ? 'Hedef bulut mimarinizi tasarlamak için yeni bileşenler ekleyebilir veya hazır referans şablonu yükleyerek hemen özelleştirmeye başlayabilirsiniz.' 
+                  : 'Mevcut sunucu ve sistemlerinizi ekleyerek veri akışlarını çizebilir veya hazır örnek şablonla hemen başlayabilirsiniz.') }}
             </p>
 
             <div class="empty-actions-row">
               <button class="btn btn-empty-primary" (click)="openCreateNodeModal()">
                 <app-icon name="plus" [size]="16" color="#ffffff"></app-icon>
-                <span>+ İlk Bileşeni Ekle</span>
+                <span>+ İlk Bileşeni Ekle (Manuel Çiz)</span>
               </button>
               
               <button class="btn btn-empty-secondary" (click)="loadSampleTemplate()">
                 <app-icon name="refresh" [size]="15" color="#0284c7"></app-icon>
-                <span>Örnek Şablonu Yükle</span>
+                <span>{{ (architectureMode() === 'po' && importService.hasUploadedPoData()) ? 'Excel Verisinden Haritayı Çiz' : 'Excel / Örnek Şablonu Yükle' }}</span>
               </button>
             </div>
 
@@ -1343,8 +1365,22 @@ export interface ArchitectureEdge {
             <button class="modal-close-btn" (click)="closeStudioNodeModal()">✕</button>
           </div>
 
-          <!-- Quick SAP Landscape Presets (Only displayed when adding new node) -->
-          <div class="presets-section" *ngIf="!editingNodeId">
+          <!-- Quick Presets when adding new node -->
+          <div class="presets-section" *ngIf="!editingNodeId && architectureMode() === 'po'">
+            <span class="presets-label">⚡ Entegrasyon Şablonu Seçin:</span>
+            <div class="preset-chips">
+              <button type="button" class="preset-chip" (click)="applyPreset('po-hub')">⚡ SAP PO 7.5 (Merkezi Hub)</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('btp')">☁️ SAP BTP Integration Suite</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('bank')">🏦 Banka Gateway (SFTP/MT940)</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('efatura')">📄 E-Fatura & E-İrsaliye</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('ws-out')">▲ Web Servis (Outbound)</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('ws-in')">▼ Web Servis (Inbound)</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('jdbc')">💾 Harici DB (JDBC)</button>
+              <button type="button" class="preset-chip" (click)="applyPreset('rest')">🔄 REST / OData API</button>
+            </div>
+          </div>
+
+          <div class="presets-section" *ngIf="!editingNodeId && architectureMode() !== 'po'">
             <span class="presets-label">⚡ Hızlı SAP Şablonu Seçin:</span>
             <div class="preset-chips">
               <button type="button" class="preset-chip" (click)="applyPreset('erp')">🏢 SAP ERP / S4HANA</button>
@@ -1358,12 +1394,29 @@ export interface ArchitectureEdge {
           </div>
 
           <form class="studio-form" (ngSubmit)="saveNodeForm()">
-            <div class="form-row">
+            <!-- PO Entegrasyon Rolü ve Akış Yönü -->
+            <div class="form-row" *ngIf="architectureMode() === 'po'">
               <div class="form-group flex-2">
-                <label>Bileşen / Sunucu Adı <span class="req">*</span></label>
-                <input type="text" [(ngModel)]="nodeForm.name" name="name" required placeholder="Örn: SAP ERP EHP7, S4HANA Private Cloud, PO 7.5" class="form-control" />
+                <label>Entegrasyon Rolü / Akış Yönü <span class="req">*</span></label>
+                <select [(ngModel)]="nodeForm.role" name="role" class="form-control">
+                  <option value="hub">★ Merkezi Entegrasyon Hub (SAP PO 7.5 / BTP)</option>
+                  <option value="outbound">▲ Verici (Outbound) — SAP ➔ Dış Kurum</option>
+                  <option value="inbound">▼ Alıcı (Inbound) — Dış Kurum ➔ SAP</option>
+                  <option value="sync">⇄ İki Yönlü / Senkron — Canlı RFC / REST API</option>
+                </select>
               </div>
               <div class="form-group flex-1">
+                <label>Sunucu / Instance</label>
+                <input type="number" [(ngModel)]="nodeForm.instanceCount" name="instanceCount" min="1" max="50" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>{{ architectureMode() === 'po' ? 'Entegrasyon / Dış Sistem Adı' : 'Bileşen / Sunucu Adı' }} <span class="req">*</span></label>
+                <input type="text" [(ngModel)]="nodeForm.name" name="name" required [placeholder]="architectureMode() === 'po' ? 'Örn: A Bankası Ödeme Gateway, E-Fatura Sistemi, PO 7.5' : 'Örn: SAP ERP EHP7, S4HANA Private Cloud, PO 7.5'" class="form-control" />
+              </div>
+              <div class="form-group flex-1" *ngIf="architectureMode() !== 'po'">
                 <label>Sunucu / Instance Adedi</label>
                 <input type="number" [(ngModel)]="nodeForm.instanceCount" name="instanceCount" min="1" max="50" class="form-control" />
               </div>
@@ -1373,8 +1426,8 @@ export interface ArchitectureEdge {
               <div class="form-group">
                 <label>Kategori</label>
                 <select [(ngModel)]="nodeForm.category" name="category" class="form-control">
-                  <option value="Core">Core (ERP / S4)</option>
                   <option value="Integration">Integration (PO / BTP / Gateway)</option>
+                  <option value="Core">Core (ERP / S4)</option>
                   <option value="Cloud App">Cloud App (SaaS / Private Cloud)</option>
                   <option value="Analytics">Analytics (BW / SAC)</option>
                   <option value="Automation">Automation</option>
@@ -1382,30 +1435,30 @@ export interface ArchitectureEdge {
                 </select>
               </div>
               <div class="form-group">
+                <label>{{ architectureMode() === 'po' ? 'Protokol / Entegrasyon Arayüzü' : 'Protokol / Entegrasyon Türü' }}</label>
+                <input type="text" [(ngModel)]="nodeForm.protocol" name="protocol" [placeholder]="architectureMode() === 'po' ? 'Örn: SI_OUT_SYNC_MakeOnlineProcessMoney / SOAP / SFTP' : 'Örn: SAP BTP OData / RFC / HTTPS / JDBC'" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>{{ architectureMode() === 'po' ? 'Bağlantı Türü / Altyapı' : 'Veritabanı / Altyapı Motoru' }}</label>
+                <input type="text" [(ngModel)]="nodeForm.dbInfo" name="dbInfo" [placeholder]="architectureMode() === 'po' ? 'Örn: SOAP ➔ HTTP WebService, SFTP ➔ Inbound RFC' : 'Örn: HANA 2.0 In-Memory / Sybase ASE 16 / Oracle 19c'" class="form-control" />
+              </div>
+              <div class="form-group">
                 <label>Aktif Kullanıcı Sayısı</label>
                 <input type="number" [(ngModel)]="nodeForm.userCount" name="userCount" min="0" class="form-control" />
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>Veritabanı / Altyapı Motoru</label>
-                <input type="text" [(ngModel)]="nodeForm.dbInfo" name="dbInfo" placeholder="Örn: HANA 2.0 In-Memory / Sybase ASE 16 / Oracle 19c" class="form-control" />
-              </div>
+            <div class="form-row" *ngIf="architectureMode() !== 'po'">
               <div class="form-group">
                 <label>Veritabanı İşletim Sistemi (DB OS)</label>
                 <input type="text" [(ngModel)]="nodeForm.dbOsInfo" name="dbOsInfo" placeholder="Örn: SLES 15 SP7 for SAP / RHEL 8.4" class="form-control" />
               </div>
-            </div>
-
-            <div class="form-row">
               <div class="form-group">
                 <label>Uygulama İşletim Sistemi (App OS)</label>
                 <input type="text" [(ngModel)]="nodeForm.osInfo" name="osInfo" placeholder="Örn: SLES 15 SP7 for SAP / Windows Server 2022" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label>Protokol / Entegrasyon Türü</label>
-                <input type="text" [(ngModel)]="nodeForm.protocol" name="protocol" placeholder="Örn: SAP BTP OData / RFC / HTTPS / JDBC" class="form-control" />
               </div>
             </div>
 
@@ -4850,6 +4903,8 @@ export class ArchitectureMapComponent {
     osInfo: string;
     status: ArchitectureNode['status'];
     protocol: string;
+    role: 'outbound' | 'inbound' | 'sync' | 'hub';
+    roleLabel: string;
     isEosRisk: boolean;
     eosDate: string;
   } = {
@@ -4862,6 +4917,8 @@ export class ArchitectureMapComponent {
     osInfo: 'SLES 15 SP7 for SAP',
     status: 'Active',
     protocol: 'SAP BTP OData / RFC',
+    role: 'outbound',
+    roleLabel: 'Verici (Outbound) Konumdasınız',
     isEosRisk: false,
     eosDate: ''
   };
@@ -4889,24 +4946,11 @@ export class ArchitectureMapComponent {
       }
     });
 
-    // Reactive Effect: Customer change or Excel PO data
+    // Reactive Effect: Customer change or mode change
     effect(() => {
       const activeCust = this.customerService.activeCustomerId();
-      if (this.importService.hasUploadedPoData() && this.architectureMode() === 'po') {
-        const customNodes = this.importService.poDiagramNodes();
-        const customEdges = this.importService.poDiagramEdges();
-        if (customNodes && customNodes.length > 0) {
-          this.nodes.set(JSON.parse(JSON.stringify(customNodes)));
-          this.currentEdges.set(JSON.parse(JSON.stringify(customEdges)));
-          this.coreNode = { x: 520, y: 300 };
-        }
-      } else {
-        // Load saved diagram for the new active customer if on asis or rise
-        const mode = this.architectureMode();
-        if (mode !== 'po') {
-          this.loadDiagramForMode(mode);
-        }
-      }
+      const mode = this.architectureMode();
+      this.loadDiagramForMode(mode);
     });
   }
 
@@ -5025,10 +5069,10 @@ export class ArchitectureMapComponent {
     if (mode === 'po') {
       const activePoNodes = this.importService.hasUploadedPoData() && this.importService.poDiagramNodes().length > 0
         ? this.importService.poDiagramNodes()
-        : [];
+        : this.poNodes;
       const activePoEdges = this.importService.hasUploadedPoData() && this.importService.poDiagramEdges().length > 0
         ? this.importService.poDiagramEdges()
-        : [];
+        : this.poEdges;
       this.nodes.set(JSON.parse(JSON.stringify(activePoNodes)));
       this.currentEdges.set(JSON.parse(JSON.stringify(activePoEdges)));
       this.coreNode = { x: 520, y: 300 };
@@ -5057,16 +5101,19 @@ export class ArchitectureMapComponent {
   /* --- Interactive Studio: Node Modal & Presets --- */
   openCreateNodeModal(): void {
     this.editingNodeId = null;
+    const isPo = this.architectureMode() === 'po';
     this.nodeForm = {
       name: '',
       instanceCount: 1,
-      category: 'Core' as const,
-      userCount: 50,
-      dbInfo: 'HANA 2.0 In-Memory',
+      category: isPo ? ('Integration' as const) : ('Core' as const),
+      userCount: isPo ? 10 : 50,
+      dbInfo: isPo ? 'SOAP ➔ HTTP WebService' : 'HANA 2.0 In-Memory',
       dbOsInfo: 'SLES 15 SP7 for SAP',
-      osInfo: 'SLES 15 SP7 for SAP',
+      osInfo: isPo ? 'Windows Server 2022' : 'SLES 15 SP7 for SAP',
       status: 'Active' as const,
-      protocol: 'SAP BTP OData / RFC',
+      protocol: isPo ? 'SI_OUT_SYNC_WebService' : 'SAP BTP OData / RFC',
+      role: 'outbound',
+      roleLabel: 'Verici (Outbound) Konumdasınız',
       isEosRisk: false,
       eosDate: ''
     };
@@ -5086,6 +5133,8 @@ export class ArchitectureMapComponent {
       osInfo: node.osInfo || '',
       status: node.status,
       protocol: node.protocol || '',
+      role: node.role || (node.id === 'node-core' ? 'hub' : 'outbound'),
+      roleLabel: node.roleLabel || '',
       isEosRisk: !!node.isEosRisk,
       eosDate: node.eosDate || ''
     };
@@ -5099,6 +5148,93 @@ export class ArchitectureMapComponent {
 
   applyPreset(presetKey: string): void {
     switch (presetKey) {
+      // PO Entegrasyon Presets
+      case 'po-hub':
+        this.nodeForm.name = 'SAP PO 7.5 (Merkezi Hub)';
+        this.nodeForm.instanceCount = 3;
+        this.nodeForm.category = 'Core';
+        this.nodeForm.role = 'hub';
+        this.nodeForm.roleLabel = 'Merkezi Entegrasyon Hub';
+        this.nodeForm.dbInfo = 'Sybase ASE 16 • Windows Server 2019';
+        this.nodeForm.userCount = 10;
+        this.nodeForm.protocol = 'Central Integration Hub (ESR & ID)';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'bank':
+        this.nodeForm.name = 'Banka Online Ödeme Gateway (MT940)';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'outbound';
+        this.nodeForm.roleLabel = 'Verici (Outbound) Konumdasınız';
+        this.nodeForm.dbInfo = 'SOAP ➔ HTTP WebService';
+        this.nodeForm.userCount = 10;
+        this.nodeForm.protocol = 'SI_OUT_SYNC_BankPayment';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'efatura':
+        this.nodeForm.name = 'Gelen/Giden E-Fatura & E-İrsaliye';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'inbound';
+        this.nodeForm.roleLabel = 'Alıcı (Inbound) Konumdasınız';
+        this.nodeForm.dbInfo = 'SOAP ➔ SAP MM/FI Inbound';
+        this.nodeForm.userCount = 25;
+        this.nodeForm.protocol = 'SI_IN_SYNC_EFATURA_RECEIVE';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'ws-out':
+        this.nodeForm.name = 'Dış Web Servis (Outbound Gateway)';
+        this.nodeForm.instanceCount = 1;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'outbound';
+        this.nodeForm.roleLabel = 'Verici (Outbound) Konumdasınız';
+        this.nodeForm.dbInfo = 'SOAP / WSDL ➔ External API';
+        this.nodeForm.userCount = 5;
+        this.nodeForm.protocol = 'SI_OUT_SYNC_Webservice_Data';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'ws-in':
+        this.nodeForm.name = 'Gelen Web Servis (Inbound API)';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'inbound';
+        this.nodeForm.roleLabel = 'Alıcı (Inbound) Konumdasınız';
+        this.nodeForm.dbInfo = 'REST / SOAP ➔ RFC Inbound';
+        this.nodeForm.userCount = 15;
+        this.nodeForm.protocol = 'SI_IN_SYNC_External_Order_In';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'jdbc':
+        this.nodeForm.name = 'Harici Veritabanı (JDBC Database Sync)';
+        this.nodeForm.instanceCount = 1;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'outbound';
+        this.nodeForm.roleLabel = 'Verici (Outbound) Konumdasınız';
+        this.nodeForm.dbInfo = 'SOAP ➔ JDBC Database';
+        this.nodeForm.userCount = 5;
+        this.nodeForm.protocol = 'SI_OUT_SYNC_JDBC_SYNC';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+      case 'rest':
+        this.nodeForm.name = 'REST API / OData Canlı Entegrasyon';
+        this.nodeForm.instanceCount = 2;
+        this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'sync';
+        this.nodeForm.roleLabel = 'İki Yönlü (Senkron)';
+        this.nodeForm.dbInfo = 'HTTPS JSON ⇄ RFC / BAPI';
+        this.nodeForm.userCount = 30;
+        this.nodeForm.protocol = 'SI_SYNC_REST_API_GW';
+        this.nodeForm.isEosRisk = false;
+        this.nodeForm.eosDate = '';
+        break;
+
+      // Standart SAP Presets
       case 'erp':
         this.nodeForm.name = 'SAP S/4HANA Private Cloud';
         this.nodeForm.instanceCount = 3;
@@ -5151,6 +5287,8 @@ export class ArchitectureMapComponent {
         this.nodeForm.name = 'SAP BTP Integration Suite';
         this.nodeForm.instanceCount = 1;
         this.nodeForm.category = 'Integration';
+        this.nodeForm.role = 'sync';
+        this.nodeForm.roleLabel = 'İki Yönlü (Senkron)';
         this.nodeForm.dbInfo = 'SAP Cloud Platform';
         this.nodeForm.dbOsInfo = 'SAP Managed Cloud';
         this.nodeForm.osInfo = 'SAP Managed Cloud';
@@ -5189,6 +5327,21 @@ export class ArchitectureMapComponent {
   saveNodeForm(): void {
     if (!this.nodeForm.name.trim()) return;
 
+    const isPo = this.architectureMode() === 'po';
+    const role = isPo ? (this.nodeForm.role || 'outbound') : undefined;
+    const roleLabel = isPo ? (role === 'hub' ? 'Merkezi Entegrasyon Hub' 
+      : (role === 'outbound' ? 'Verici (Outbound) Konumdasınız' 
+      : (role === 'inbound' ? 'Alıcı (Inbound) Konumdasınız' 
+      : 'İki Yönlü (Senkron)'))) : undefined;
+
+    const iconName = isPo 
+      ? (role === 'hub' ? 'layers' : (role === 'outbound' ? 'bolt' : (role === 'inbound' ? 'database' : 'search')))
+      : (this.nodeForm.category === 'Core' ? 'database' : (this.nodeForm.category === 'Integration' ? 'layers' : (this.nodeForm.category === 'Cloud App' ? 'cloud' : 'server')));
+
+    const color = isPo
+      ? (role === 'outbound' ? '#059669' : (role === 'inbound' ? '#0284c7' : (role === 'sync' ? '#7e22ce' : '#0284c7')))
+      : (this.nodeForm.isEosRisk ? '#ef4444' : '#0284c7');
+
     if (this.editingNodeId) {
       // Update existing node
       this.nodes.update(list => list.map(n => {
@@ -5204,6 +5357,10 @@ export class ArchitectureMapComponent {
             osInfo: this.nodeForm.osInfo,
             status: this.nodeForm.status,
             protocol: this.nodeForm.protocol,
+            role: role as any,
+            roleLabel: roleLabel,
+            iconName: iconName,
+            color: color,
             isEosRisk: this.nodeForm.isEosRisk,
             eosDate: this.nodeForm.isEosRisk ? this.nodeForm.eosDate : undefined
           };
@@ -5229,9 +5386,11 @@ export class ArchitectureMapComponent {
         status: this.nodeForm.status,
         x: posX,
         y: posY,
-        iconName: this.nodeForm.category === 'Core' ? 'database' : (this.nodeForm.category === 'Integration' ? 'layers' : (this.nodeForm.category === 'Cloud App' ? 'cloud' : 'server')),
-        color: this.nodeForm.isEosRisk ? '#ef4444' : '#0284c7',
+        iconName: iconName,
+        color: color,
         protocol: this.nodeForm.protocol,
+        role: role as any,
+        roleLabel: roleLabel,
         isEosRisk: this.nodeForm.isEosRisk,
         eosDate: this.nodeForm.isEosRisk ? this.nodeForm.eosDate : undefined
       };
@@ -5240,6 +5399,7 @@ export class ArchitectureMapComponent {
       this.showToast(`"${newNode.name}" eklendi! İstediğiniz konuma sürükleyebilirsiniz.`);
     }
 
+    this.autoSave();
     this.closeStudioNodeModal();
   }
 
@@ -5401,7 +5561,11 @@ export class ArchitectureMapComponent {
   }
 
   clearCanvas(): void {
-    if (confirm('Tüm bileşenleri ve bağlantıları silip sıfırdan çizim yapmak istiyor musunuz?')) {
+    const isPo = this.architectureMode() === 'po';
+    const msg = isPo
+      ? 'Entegrasyon haritasını temizleyip sıfırdan yeni bir çizim alanı açmak istiyor musunuz?'
+      : 'Tüm bileşenleri ve bağlantıları silip sıfırdan çizim yapmak istiyor musunuz?';
+    if (confirm(msg)) {
       this.nodes.set([]);
       this.currentEdges.set([]);
       this.selectedNode.set(null);
@@ -5409,7 +5573,9 @@ export class ArchitectureMapComponent {
       const mode = this.architectureMode();
       const key = this.getStorageKey(mode);
       localStorage.removeItem(key);
-      this.showToast('Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
+      this.showToast(isPo
+        ? 'Entegrasyon çizim alanı temizlendi. "+ Bileşen Ekle" ile sıfırdan çizebilir veya "Excel / Şablon Yükle" ile geri yükleyebilirsiniz.'
+        : 'Harita temizlendi. "+ Bileşen Ekle" ile sıfırdan çizmeye başlayabilirsiniz.');
     }
   }
 
@@ -5419,13 +5585,25 @@ export class ArchitectureMapComponent {
       this.nodes.set(JSON.parse(JSON.stringify(this.asisNodes)));
       this.currentEdges.set(JSON.parse(JSON.stringify(this.asisEdges)));
       this.coreNode = { x: 520, y: 160 };
+      this.showToast('Örnek referans şablon yüklendi. Değişikliklerinizi "Çizimi Kaydet" ile kalıcı yapabilirsiniz.');
     } else if (mode === 'rise') {
       const riseTarget = this.generateRiseNodesFromCurrentData();
       this.nodes.set(riseTarget.nodes);
       this.currentEdges.set(riseTarget.edges);
       this.coreNode = { x: 520, y: 300 };
+      this.showToast('Örnek referans şablon yüklendi. Değişikliklerinizi "Çizimi Kaydet" ile kalıcı yapabilirsiniz.');
+    } else if (mode === 'po') {
+      if (this.importService.hasUploadedPoData() && this.importService.poDiagramNodes().length > 0) {
+        this.nodes.set(JSON.parse(JSON.stringify(this.importService.poDiagramNodes())));
+        this.currentEdges.set(JSON.parse(JSON.stringify(this.importService.poDiagramEdges())));
+        this.showToast('Excel dosyasındaki entegrasyon arayüzleri haritaya aktarıldı. Kartları sürükleyebilir veya düzenleyebilirsiniz.');
+      } else {
+        this.nodes.set(JSON.parse(JSON.stringify(this.poNodes)));
+        this.currentEdges.set(JSON.parse(JSON.stringify(this.poEdges)));
+        this.showToast('Örnek PO entegrasyon şablonu yüklendi. İstediğiniz gibi düzenleyebilir veya yeni bileşenler ekleyebilirsiniz.');
+      }
+      this.coreNode = { x: 520, y: 300 };
     }
-    this.showToast('Örnek referans şablon yüklendi. Değişikliklerinizi "Çizimi Kaydet" ile kalıcı yapabilirsiniz.');
   }
 
   scrollToPoServices(): void {
