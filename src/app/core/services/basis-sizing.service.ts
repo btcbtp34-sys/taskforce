@@ -6,9 +6,12 @@ import {
   FueClassificationItem,
   FueSummary,
   LargestTableRecord,
+  MonthlyGrowthData,
+  MonthlyGrowthRecord,
   SapLicenseItem,
   SizingDiskDetails,
   SizingMemoryDetails,
+  SizingPageOverrides,
   SizingSystemInfo,
   SourceTargetMatrixItem
 } from '../models/basis-sizing.model';
@@ -64,6 +67,7 @@ export class BasisSizingService {
   hasUploadedData = signal<boolean>(false);
   basisPackage = signal<BasisSizingPackage | null>(null);
   customRecommendedFue = signal<number | null>(null);
+  sizingOverrides = signal<SizingPageOverrides>({});
 
   constructor() {
     try {
@@ -82,6 +86,13 @@ export class BasisSizingService {
       this.customRecommendedFue.set(customFueStr !== null ? Number(customFueStr) : null);
     } catch (e) {
       this.customRecommendedFue.set(null);
+    }
+
+    try {
+      const ovStr = localStorage.getItem(`taskforce_sizing_overrides_${customerId}`);
+      this.sizingOverrides.set(ovStr ? JSON.parse(ovStr) : {});
+    } catch (e) {
+      this.sizingOverrides.set({});
     }
 
     try {
@@ -172,6 +183,18 @@ export class BasisSizingService {
     } catch (e) {}
   }
 
+  setSizingOverrides(ov: SizingPageOverrides): void {
+    this.sizingOverrides.set(ov);
+    try {
+      const activeId = this.customerService.activeCustomerId();
+      if (Object.keys(ov).length > 0) {
+        localStorage.setItem(`taskforce_sizing_overrides_${activeId}`, JSON.stringify(ov));
+      } else {
+        localStorage.removeItem(`taskforce_sizing_overrides_${activeId}`);
+      }
+    } catch (e) {}
+  }
+
   readonly fueRows = computed(() => {
     const pkg = this.basisPackage();
     return (pkg && pkg.fueRows && pkg.fueRows.length > 0) ? pkg.fueRows : [];
@@ -181,6 +204,27 @@ export class BasisSizingService {
     const pkg = this.basisPackage();
     return (pkg && pkg.licenses && pkg.licenses.length > 0) ? pkg.licenses : [];
   });
+
+  readonly monthlyGrowth = computed(() => {
+    const pkg = this.basisPackage();
+    return (pkg && pkg.monthlyGrowth && pkg.monthlyGrowth.records.length > 0) ? pkg.monthlyGrowth : null;
+  });
+
+  // Converts sizes like "2850 GB", " 3 TB", "3,5 TB" or plain numbers (GB) to GB
+  parseSizeGB(val: any): number {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    let str = String(val ?? '').trim();
+    // Turkish formats: "5.632 GB" / "5.632,5 GB" (dot = thousands), "3,5 TB" (comma = decimal)
+    if (/\d\.\d{3}(?!\d)/.test(str) && (str.includes(',') || !/\d\.\d{1,2}(?!\d)/.test(str))) {
+      str = str.replace(/\./g, '');
+    }
+    str = str.replace(',', '.');
+    const match = str.match(/(-?\d+(?:\.\d+)?)\s*(t|g)?/i);
+    if (!match) return 0;
+    const num = parseFloat(match[1]);
+    if (isNaN(num)) return 0;
+    return (match[2] || '').toLowerCase() === 't' ? num * 1024 : num;
+  }
 
   // PARSER ENGINE: Parses any SAP Basis & Sizing Workbook dynamically
   parseBasisWorkbook(workbook: XLSX.WorkBook, fileName: string, fileSize: number): BasisSizingPackage {
@@ -292,6 +336,13 @@ export class BasisSizingService {
       licenses = this.parseLicensesSheet(workbook.Sheets[licenseSheetName]);
     }
 
+    // 6. Monthly Growth Sheet Parser (Aylık Büyüme)
+    const growthSheetName = sheetNames.find(n => /b[uü]y[uü]me|growth/i.test(n));
+    let monthlyGrowth: MonthlyGrowthData | null = null;
+    if (growthSheetName && workbook.Sheets[growthSheetName]) {
+      monthlyGrowth = this.parseMonthlyGrowthSheet(workbook.Sheets[growthSheetName], sourceTargetMatrix);
+    }
+
     const pkg: BasisSizingPackage = {
       fileName,
       fileSize: `${(fileSize / (1024 * 1024)).toFixed(2)} MB`,
@@ -304,7 +355,8 @@ export class BasisSizingService {
       largestTables,
       fueSummary,
       fueRows,
-      licenses
+      licenses,
+      monthlyGrowth
     };
 
     // Commit to reactive signals and localStorage
@@ -350,8 +402,8 @@ export class BasisSizingService {
 
     const systemInfo: SizingSystemInfo = {
       reportName: getStr('sizing report', '/SDF/HDB_SIZING'),
-      version: kvMap.get('version of the report') || 99,
-      analysisDate: new Date().toISOString().split('T')[0],
+      version: kvMap.get('version of the report') ?? '',
+      analysisDate: this.excelDateToIso(kvMap.get('date of analysis')),
       sid: getStr('sid', ''),
       nwRelease: getStr('nw release', ''),
       kernelVersion: getStr('kernel version', ''),
@@ -364,16 +416,17 @@ export class BasisSizingService {
       tablesWithError: getNum('number of tables with error', 0)
     };
 
-    const columnLoadable = getNum('column loadable data', 978.6);
-    const rowStore = getNum('row store data', 0.9);
-    const changesFI = getNum('changes in fi', 35.5);
-    const changesMMSD = getNum('changes in mm/sd', 19.3);
-    const changesML = getNum('changes in ml', 1.5);
+    // Missing rows default to 0 (or to the sum of their parts) — no sample values
+    const columnLoadable = getNum('column loadable data');
+    const rowStore = getNum('row store data');
+    const changesFI = getNum('changes in fi');
+    const changesMMSD = getNum('changes in mm/sd');
+    const changesML = getNum('changes in ml');
     const initialLoadable = getNum('memory requirement for the initial loadable data', columnLoadable + rowStore + changesFI + changesMMSD + changesML);
-    const hybridLobCache = getNum('hybrid lob cache', 22.1);
-    const nseCache = getNum('nse cache', 10.9);
-    const workSpace = getNum('work space', columnLoadable);
-    const fixedSize = getNum('fixed size', 50.0);
+    const hybridLobCache = getNum('hybrid lob cache');
+    const nseCache = getNum('nse cache');
+    const workSpace = getNum('work space', columnLoadable + rowStore * 0.5);
+    const fixedSize = getNum('fixed size');
     const anticipatedInitialMemoryGiB = getNum('anticipated initial memory requirement', initialLoadable + hybridLobCache + nseCache + workSpace + fixedSize);
 
     const memoryDetails: SizingMemoryDetails = {
@@ -390,21 +443,39 @@ export class BasisSizingService {
       anticipatedInitialMemoryGiB
     };
 
-    const initialNetDiskGiB = getNum('initial net data size on disk', 1382.2);
+    const hybridLobs = getNum('hybrid lobs');
+    const nsePageLoadable = getNum('page loadable data (nse)');
+    const spaceForMerges = getNum('space required for merges');
+    const metadataStats = getNum('metadata and statistics');
+    const initialNetDiskGiB = getNum('initial net data size on disk',
+      columnLoadable + rowStore + changesFI + changesMMSD + changesML + hybridLobs + nsePageLoadable + spaceForMerges + metadataStats);
     const diskDetails: SizingDiskDetails = {
       columnLoadable,
       rowStore,
       changesFI,
       changesMMSD,
       changesML,
-      hybridLobs: getNum('hybrid lobs', 221.5),
-      nsePageLoadable: getNum('page loadable data (nse)', 43.6),
-      spaceForMerges: getNum('space required for merges', 56.3),
-      metadataStats: getNum('metadata and statistics', 25.0),
+      hybridLobs,
+      nsePageLoadable,
+      spaceForMerges,
+      metadataStats,
       initialNetDiskGiB
     };
 
     return { systemInfo, memoryDetails, diskDetails };
+  }
+
+  // Target size + N years of rounded growth, rounded up to 0.5 TB steps
+  projectYearEndGB(baseGB: number, yearlyGrowthGB: number, year: number): number {
+    return Math.ceil((baseGB + yearlyGrowthGB * year) / 512) * 512;
+  }
+
+  private excelDateToIso(val: any): string {
+    if (typeof val === 'number' && val > 0) {
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return d.toISOString().split('T')[0];
+    }
+    return val ? String(val).trim() : '';
   }
 
   // Parses Source_Target Sheet
@@ -418,7 +489,7 @@ export class BasisSizingService {
 
       const current = String(row['Current'] || row['current'] || '—').trim();
       const targetDb = row['Target DB'] || row['target db'] || undefined;
-      const target = String(row['Target'] || row['target'] || targetDb || 'Planlanan').trim();
+      const target = String(row['Target'] || row['target'] || targetDb || '—').trim();
 
       const isDb = product.toLowerCase().includes('db') || product.toLowerCase().includes('database') || product.toLowerCase().includes('hana');
 
@@ -615,6 +686,88 @@ export class BasisSizingService {
   }
 
 
+  // Parses Aylık Büyüme Sheet: monthly Memory / Disk rows + summary rows (ortalama, yıllık, yuvarlama, N. yılın sonunda)
+  private parseMonthlyGrowthSheet(sheet: XLSX.WorkSheet, matrix: SourceTargetMatrixItem[]): MonthlyGrowthData | null {
+    const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+
+    // Locate columns from header row (Year, Month, Memory, Disk Data, Disk Log)
+    let yearCol = 0, monthCol = 1, memCol = 2, diskDataCol = 3, diskLogCol = 4;
+    for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+      const cells = (rawRows[i] || []).map((c: any) => String(c).trim().toLowerCase());
+      const hasMonth = cells.some(c => c === 'month' || c === 'ay');
+      const hasMemory = cells.some(c => c.includes('memory') || c.includes('bellek') || c.includes('ram'));
+      if (!hasMonth || !hasMemory) continue;
+      cells.forEach((c, j) => {
+        if (c === 'year' || c === 'yıl') yearCol = j;
+        else if (c === 'month' || c === 'ay') monthCol = j;
+        else if (c.includes('memory') || c.includes('bellek') || c.includes('ram')) memCol = j;
+        else if (c.includes('log')) diskLogCol = j;
+        else if (c.includes('disk') || c.includes('data')) diskDataCol = j;
+      });
+      break;
+    }
+
+    const records: MonthlyGrowthRecord[] = [];
+    const excelYearEnd = new Map<number, number>();
+    let excelAvg = 0, excelYearly = 0, excelRounded = 0;
+
+    for (const r of rawRows) {
+      if (!r || r.every((c: any) => c === '' || c === null)) continue;
+      const year = Number(r[yearCol]);
+      const month = Number(r[monthCol]);
+
+      const isYearCell = /^\s*\d{4}\s*$/.test(String(r[yearCol]));
+      if (isYearCell && Number.isInteger(month) && month >= 1 && month <= 12) {
+        records.push({
+          year,
+          month,
+          memoryGB: this.parseSizeGB(r[memCol]),
+          diskDataGB: this.parseSizeGB(r[diskDataCol]),
+          diskLogGB: this.parseSizeGB(r[diskLogCol])
+        });
+        continue;
+      }
+
+      // Summary rows: label in first column, value in second
+      const label = String(r[0] || '').trim().toLowerCase();
+      const value = this.parseSizeGB(r[1]);
+      if (!label || !value) continue;
+      const yearEndMatch = label.match(/^(\d+)\s*\./);
+      if (yearEndMatch && label.includes('sonu')) {
+        excelYearEnd.set(Number(yearEndMatch[1]), value);
+      } else if (label.includes('yuvarla') || label.includes('round')) {
+        excelRounded = value;
+      } else if (label.includes('ortalama') || label.includes('average')) {
+        excelAvg = value;
+      } else if (label.includes('yıllık') || label.includes('yillik') || label.includes('yearly') || label.includes('annual')) {
+        excelYearly = value;
+      }
+    }
+
+    if (records.length === 0) return null;
+    records.sort((a, b) => a.year - b.year || a.month - b.month);
+
+    // Fallback calculations when summary rows are missing in Excel
+    const first = records[0].memoryGB;
+    const last = records[records.length - 1].memoryGB;
+    const calcAvg = records.length > 1 ? (last - first) / (records.length - 1) : 0;
+    const avgMonthlyGrowthGB = excelAvg || Math.max(0, calcAvg);
+    const yearlyGrowthGB = excelYearly || avgMonthlyGrowthGB * 12;
+    const roundedYearlyGrowthGB = excelRounded || Math.ceil(yearlyGrowthGB / 128) * 128;
+
+    // Projection base: target size of the Prod HANA DB after RISE migration
+    const prodRow = matrix.find(m => m.isDb && m.product.toLowerCase().includes('prod')) || matrix.find(m => m.isDb);
+    const baseGB = prodRow ? this.parseSizeGB(prodRow.target) : last;
+
+    const yearEndProjections = [1, 2, 3, 4, 5].map(year => ({
+      year,
+      requiredGB: excelYearEnd.get(year) || this.projectYearEndGB(baseGB, roundedYearlyGrowthGB, year),
+      fromExcel: excelYearEnd.has(year)
+    }));
+
+    return { records, avgMonthlyGrowthGB, yearlyGrowthGB, roundedYearlyGrowthGB, yearEndProjections };
+  }
+
   // Parses me.sap Lisanslar Sheet
   private parseLicensesSheet(sheet: XLSX.WorkSheet): SapLicenseItem[] {
     const rawRows = XLSX.utils.sheet_to_json<any>(sheet);
@@ -648,10 +801,12 @@ export class BasisSizingService {
     this.basisPackage.set(null);
     this.hasUploadedData.set(false);
     this.customRecommendedFue.set(null);
+    this.sizingOverrides.set({});
     try {
       const activeId = this.customerService.activeCustomerId();
       localStorage.removeItem(`taskforce_sizing_pkg_${activeId}`);
       localStorage.removeItem(`taskforce_custom_fue_${activeId}`);
+      localStorage.removeItem(`taskforce_sizing_overrides_${activeId}`);
     } catch (e) {}
   }
 }

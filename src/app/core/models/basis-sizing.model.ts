@@ -87,6 +87,51 @@ export interface LargestTableRecord {
   archivingPotential: string;
 }
 
+export interface MonthlyGrowthRecord {
+  year: number;
+  month: number;
+  memoryGB: number;
+  diskDataGB: number;
+  diskLogGB: number;
+}
+
+export interface YearEndProjection {
+  year: number;
+  requiredGB: number;
+  fromExcel?: boolean;
+}
+
+// Manual entries on the Mevcut / Hedef Sistem page (per customer, stored in localStorage)
+export interface SizingMatrixRowOverride {
+  current?: string;
+  target?: string;
+  fiveYear?: string;
+  description?: string;
+}
+
+export interface SizingPageOverrides {
+  serverCount?: number | null;
+  consolidationPill?: string;
+  targetConsolidation?: string;
+  operationalState?: string;
+  saps?: string;
+  cpuCount?: number | null;
+  cpuUsagePct?: number | null;
+  traceGB?: number | null;
+  memOptimizationPct?: number | null;
+  diskArchivingPct?: number | null;
+  logCachePct?: number | null;
+  matrix?: Record<string, SizingMatrixRowOverride>;
+}
+
+export interface MonthlyGrowthData {
+  records: MonthlyGrowthRecord[];
+  avgMonthlyGrowthGB: number;
+  yearlyGrowthGB: number;
+  roundedYearlyGrowthGB: number;
+  yearEndProjections: YearEndProjection[];
+}
+
 export interface BasisSizingPackage {
   fileName: string;
   fileSize: string;
@@ -100,4 +145,5 @@ export interface BasisSizingPackage {
   fueSummary: FueSummary;
   fueRows: FueClassificationItem[];
   licenses: SapLicenseItem[];
+  monthlyGrowth?: MonthlyGrowthData | null;
 }
